@@ -8,6 +8,7 @@ import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { UserAvatar } from "@/components/common/Avatars";
 import { Field, PageHeader, RowSkeleton, Section } from "@/components/common/Misc";
+import { InstallSection } from "@/components/layout/InstallPrompt";
 import { CurrencyPicker } from "@/components/dialogs/pickers";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
@@ -93,6 +94,7 @@ export function AccountPage() {
           </Field>
         </div>
       </Section>
+      <InstallSection />
       <Section title="Preferences">
         <div className="space-y-4 p-4">
           <Field label="Default currency" hint="New expenses start in this currency, and totals are shown in it where possible.">

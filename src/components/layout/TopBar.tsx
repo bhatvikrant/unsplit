@@ -29,7 +29,7 @@ export function TopBar() {
             <Menu />
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="flex w-[288px] flex-col gap-4 px-3 pt-3 pb-3">
+        <SheetContent side="left" className="flex w-[288px] flex-col gap-4 px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <SheetTitle className="sr-only">Navigation</SheetTitle>
           <div className="px-2 py-1.5">
             <Logo />

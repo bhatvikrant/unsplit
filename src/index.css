@@ -230,6 +230,24 @@
     @apply bg-background text-foreground antialiased;
     overscroll-behavior-y: none;
     -webkit-tap-highlight-color: transparent;
+    /* Installed on a phone the page runs under the status bar (viewport-fit=cover). */
+    padding-top: env(safe-area-inset-top);
+  }
+  /* No double-tap-to-zoom delay on controls. */
+  a,
+  button,
+  input,
+  select,
+  textarea,
+  [role="button"] {
+    touch-action: manipulation;
+  }
+  /* From the home screen: no link preview sheet on a long press. */
+  @media (display-mode: standalone) {
+    a,
+    button {
+      -webkit-touch-callout: none;
+    }
   }
   button:not(:disabled),
   [role="button"]:not(:disabled) {

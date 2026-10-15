@@ -1,8 +1,10 @@
 import { Activity, LayoutDashboard, Plus, ReceiptText, UserRound } from "lucide-react";
-import { NavLink, Outlet, useMatch } from "react-router";
+import { useEffect } from "react";
+import { NavLink, Outlet, useMatch, useSearchParams } from "react-router";
 import type { Id } from "@convex/_generated/dataModel";
 import { DialogProvider, useDialogs } from "@/components/dialogs/DialogProvider";
 import { cn } from "@/lib/utils";
+import { InstallBanner } from "./InstallPrompt";
 import { OfflineBanner } from "./OfflineBanner";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
@@ -52,15 +54,31 @@ function MobileTabBar() {
   );
 }
 
+/** `?add=expense` (the home-screen shortcut) opens the add-expense dialog once, then clears itself. */
+function ShortcutActions() {
+  const dialogs = useDialogs();
+  const [params, setParams] = useSearchParams();
+  useEffect(() => {
+    if (params.get("add") !== "expense") return;
+    dialogs.addExpense();
+    const next = new URLSearchParams(params);
+    next.delete("add");
+    setParams(next, { replace: true });
+  }, [params, setParams, dialogs]);
+  return null;
+}
+
 export function AppShell() {
   return (
     <DialogProvider>
+      <ShortcutActions />
       <div className="flex min-h-dvh">
         <Sidebar />
         <main className="min-w-0 flex-1 px-4 pt-4 pb-24 sm:px-6 lg:px-8 lg:pt-5 lg:pb-12" id="main">
           <div className="mx-auto w-full max-w-[1040px]">
             <TopBar />
             <OfflineBanner />
+            <InstallBanner />
             <Outlet />
           </div>
         </main>

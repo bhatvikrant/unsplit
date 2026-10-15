@@ -59,6 +59,22 @@ app shell and caches receipts and avatars as they are seen. Things that need
 the server say so instead of hanging: receipt scanning, currency conversion,
 reminders, exports, file uploads, invite links of groups created offline.
 
+## Install on a phone
+
+Unsplit is a PWA: the manifest and icons come from `vite.config.ts`, the iOS
+meta tags from `index.html`. On Android (Chrome, Edge, Samsung Internet) the
+browser fires `beforeinstallprompt`; `src/lib/install.ts` keeps that event so
+the Install button in the banner and on the Account page can open the
+browser's own dialog. iPhones have no such API, so there the same button
+shows the Share → Add to Home Screen steps. Once installed the app runs full
+screen, starts on `/dashboard`, has an "Add expense" shortcut on the Android
+icon (`/dashboard?add=expense`), and a new build is offered with an "Update"
+toast rather than reloading under the user.
+
+Icons are rendered from `public/icon.svg` with `npm run icons` (Playwright's
+Chromium): rounded ones for browsers, full-bleed maskable ones for Android,
+and a 180px `apple-touch-icon.png` with no transparency for iOS.
+
 ## Test
 
 ```bash

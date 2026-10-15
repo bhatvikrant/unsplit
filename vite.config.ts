@@ -4,28 +4,45 @@ import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
+const icon192 = { src: "/icon-192.png", sizes: "192x192", type: "image/png" };
+
 export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
-    // Service worker: precaches the app shell so it opens with no network.
+    // Installable app: the manifest makes phones offer "Add to Home Screen",
+    // the service worker precaches the shell so it opens with no network.
     // Data comes from the offline cache in src/offline; the Convex socket is
     // a different origin and is never intercepted.
     VitePWA({
-      registerType: "autoUpdate",
-      includeAssets: ["icon.svg", "icon-192.png", "icon-512.png"],
+      // A new build waits until the user taps "Update" in the toast
+      // (src/main.tsx) instead of reloading under them mid-edit.
+      registerType: "prompt",
+      includeAssets: ["*.svg", "*.png"],
       manifest: {
+        id: "/",
         name: "Unsplit",
         short_name: "Unsplit",
         description: "Split shared expenses with friends, flatmates and travel groups.",
         theme_color: "#f6f5f1",
         background_color: "#f6f5f1",
         display: "standalone",
+        display_override: ["standalone", "minimal-ui"],
         start_url: "/dashboard",
+        scope: "/",
+        lang: "en",
+        categories: ["finance", "productivity"],
         icons: [
-          { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
+          icon192,
           { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
-          { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+          // Android crops these into its own shape; the mark sits in the safe zone.
+          { src: "/icon-maskable-192.png", sizes: "192x192", type: "image/png", purpose: "maskable" },
+          { src: "/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+        ],
+        // Long-press on the Android icon.
+        shortcuts: [
+          { name: "Add expense", url: "/dashboard?add=expense", icons: [icon192] },
+          { name: "Activity", url: "/activity", icons: [icon192] },
         ],
       },
       workbox: {

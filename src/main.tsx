@@ -3,7 +3,7 @@ import { ConvexReactClient } from "convex/react";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider } from "react-router";
-import { Toaster } from "sonner";
+import { toast, Toaster } from "sonner";
 import { registerSW } from "virtual:pwa-register";
 import { FullPageLoader } from "@/components/layout/RequireAuth";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,6 +12,8 @@ import { OfflineStore } from "@/offline/store";
 import { SyncEngine } from "@/offline/sync";
 import { router } from "./App";
 import "./index.css";
+// Catches the browser's install event before React mounts (see useInstall).
+import "@/lib/install";
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 
@@ -19,8 +21,22 @@ const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 const store = new OfflineStore();
 const engine = new SyncEngine(convex, store);
 
-// App shell served by the service worker when there is no network.
-registerSW({ immediate: true });
+// App shell served by the service worker when there is no network. A new
+// build is offered, not forced: the queue in IndexedDB survives the reload.
+const updateSW = registerSW({
+  immediate: true,
+  onNeedRefresh() {
+    toast("A new version of Unsplit is ready", {
+      id: "sw-update",
+      duration: Infinity,
+      action: { label: "Update", onClick: () => void updateSW(true) },
+    });
+  },
+  onRegisteredSW(_url, registration) {
+    // An installed app can stay open for days; look for a new build hourly.
+    if (registration) setInterval(() => void registration.update(), 60 * 60 * 1000);
+  },
+});
 
 // Follow the system colour scheme. Tokens for both modes live in index.css.
 const scheme = window.matchMedia("(prefers-color-scheme: dark)");
@@ -34,7 +50,8 @@ createRoot(document.getElementById("root")!).render(
       <OfflineProvider store={store} engine={engine} fallback={<FullPageLoader />}>
         <TooltipProvider delayDuration={300}>
           <RouterProvider router={router} />
-          <Toaster position="bottom-center" richColors closeButton />
+          {/* On phones, sit above the tab bar and the home indicator. */}
+          <Toaster position="bottom-center" richColors closeButton mobileOffset={{ bottom: "calc(4.5rem + env(safe-area-inset-bottom))" }} />
         </TooltipProvider>
       </OfflineProvider>
     </ConvexAuthProvider>
