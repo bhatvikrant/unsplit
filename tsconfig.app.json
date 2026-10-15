@@ -16,7 +16,6 @@
     "noEmit": true,
     "strict": true,
     "jsx": "react-jsx",
-    "baseUrl": ".",
     "paths": { "@/*": ["./src/*"], "@convex/*": ["./convex/*"] },
 
     /* Linting */

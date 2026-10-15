@@ -1,0 +1,482 @@
+import { useAction, useMutation, useQuery } from "convex/react";
+import { Camera, Loader2, Repeat, Users, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { toast } from "sonner";
+import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
+import { suggestCategory } from "@convex/lib/categories";
+import { minorToDecimalString, parseMoney } from "@convex/lib/money";
+import { REPEAT_LABELS, type RepeatInterval } from "@convex/lib/recurring";
+import { buildShares, SplitError } from "@convex/lib/split";
+import { UserAvatar } from "@/components/common/Avatars";
+import { Money } from "@/components/common/Money";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { errorMessage, fromDateInputValue, toDateInputValue } from "@/lib/format";
+import { useDefaultCurrency, useMe } from "@/lib/hooks";
+import { cn } from "@/lib/utils";
+import { CategoryPicker, CurrencyPicker } from "./pickers";
+import { SplitEditor } from "./SplitEditor";
+import { emptySplit, fromSpec, itemizedTotal, newItem, toSpec, type SplitState } from "./splitState";
+
+export type AddExpenseOptions = { groupId?: Id<"groups">; friendId?: Id<"users">; expenseId?: Id<"expenses"> };
+
+type Scope = { kind: "group"; id: Id<"groups"> } | { kind: "friend"; id: Id<"users"> } | null;
+
+export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOptions; onClose: () => void }) {
+  const me = useMe();
+  const defaultCurrency = useDefaultCurrency();
+  const groups = useQuery(api.groups.list);
+  const friends = useQuery(api.friends.list);
+  const existing = useQuery(api.expenses.get, options.expenseId ? { id: options.expenseId } : "skip");
+  const create = useMutation(api.expenses.create);
+  const update = useMutation(api.expenses.update);
+  const uploadUrl = useMutation(api.files.generateUploadUrl);
+  const scanReceipt = useAction(api.receipts.scan);
+
+  const [scope, setScope] = useState<Scope>(options.groupId ? { kind: "group", id: options.groupId } : options.friendId ? { kind: "friend", id: options.friendId } : null);
+  const group = useQuery(api.groups.get, scope?.kind === "group" ? { groupId: scope.id } : "skip");
+  const friend = useQuery(api.friends.get, scope?.kind === "friend" ? { friendId: scope.id } : "skip");
+
+  const [description, setDescription] = useState("");
+  const [amount, setAmount] = useState("");
+  const [currency, setCurrency] = useState<string>(defaultCurrency);
+  const [currencyTouched, setCurrencyTouched] = useState(false);
+  const [date, setDate] = useState(() => Date.now());
+  const [category, setCategory] = useState("general");
+  const [categoryTouched, setCategoryTouched] = useState(false);
+  const [notes, setNotes] = useState("");
+  const [payerMode, setPayerMode] = useState<"single" | "multiple">("single");
+  const [payer, setPayer] = useState<string | null>(null);
+  const [payers, setPayers] = useState<Record<string, string>>({});
+  const [split, setSplit] = useState<SplitState | null>(null);
+  const [repeat, setRepeat] = useState<RepeatInterval>("never");
+  const [emailReminder, setEmailReminder] = useState(false);
+  const [receipt, setReceipt] = useState<{ storageId: Id<"_storage">; previewUrl: string } | null | "remove">(null);
+  const [uploading, setUploading] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [showMore, setShowMore] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const hydrated = useRef(false);
+
+  const people = useMemo(() => {
+    if (scope?.kind === "group" && group) return group.members;
+    if (scope?.kind === "friend" && friend && me) return [me, friend.user];
+    return [];
+  }, [scope, group, friend, me]);
+  const peopleIds = useMemo(() => people.map((p) => p._id), [people]);
+  const peopleKey = peopleIds.join(",");
+
+  // Reset split state when the participant set changes (and apply the group's default split).
+  useEffect(() => {
+    if (peopleIds.length === 0) return;
+    if (options.expenseId && !hydrated.current) return;
+    setSplit((prev) => {
+      if (prev && Object.keys(prev.selected).join(",") === peopleKey && prev.method !== "equal") return prev;
+      if (scope?.kind === "group" && group?.defaultSplit && !options.expenseId) {
+        try {
+          return fromSpec(group.defaultSplit, peopleIds, currency, (m) => minorToDecimalString(m, currency));
+        } catch {
+          /* fall through */
+        }
+      }
+      return emptySplit(peopleIds);
+    });
+    if (!payer && me) setPayer(me._id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [peopleKey]);
+
+  // Currency defaults to the group's last currency.
+  useEffect(() => {
+    if (currencyTouched || options.expenseId) return;
+    if (scope?.kind === "group" && group?.lastCurrency) setCurrency(group.lastCurrency);
+    else setCurrency(defaultCurrency);
+  }, [scope, group?.lastCurrency, defaultCurrency, currencyTouched, options.expenseId]);
+
+  // Hydrate for editing.
+  useEffect(() => {
+    if (!existing || hydrated.current || !me) return;
+    hydrated.current = true;
+    if (existing.groupId) setScope({ kind: "group", id: existing.groupId });
+    else if (existing.friend) setScope({ kind: "friend", id: existing.friend._id });
+    setDescription(existing.description);
+    setAmount(minorToDecimalString(existing.amountMinor, existing.currency));
+    setCurrency(existing.currency);
+    setCurrencyTouched(true);
+    setDate(existing.date);
+    setCategory(existing.category);
+    setCategoryTouched(true);
+    setNotes(existing.notes ?? "");
+    setRepeat(existing.repeat);
+    setEmailReminder(existing.emailReminder);
+    if (existing.receiptUrl && existing.receiptId) setReceipt({ storageId: existing.receiptId, previewUrl: existing.receiptUrl });
+    const paid = existing.shares.filter((s) => s.paidMinor > 0);
+    if (paid.length === 1) {
+      setPayerMode("single");
+      setPayer(paid[0].userId);
+    } else {
+      setPayerMode("multiple");
+      setPayers(Object.fromEntries(paid.map((s) => [s.userId, minorToDecimalString(s.paidMinor, existing.currency)])));
+    }
+    const ids = existing.participants.map((p) => p._id);
+    if (existing.splitSpec) setSplit(fromSpec(existing.splitSpec, ids, existing.currency, (m) => minorToDecimalString(m, existing.currency)));
+    else setSplit({ ...emptySplit(ids), method: "exact", exact: Object.fromEntries(existing.shares.filter((s) => s.owedMinor > 0).map((s) => [s.userId, minorToDecimalString(s.owedMinor, existing.currency)])) });
+    setShowMore(Boolean(existing.notes || existing.repeat !== "never" || existing.receiptUrl));
+  }, [existing, me]);
+
+  // Category suggestion from the description.
+  useEffect(() => {
+    if (categoryTouched) return;
+    const s = suggestCategory(description);
+    setCategory(s ?? "general");
+  }, [description, categoryTouched]);
+
+  // Itemized drives the total.
+  const itemTotal = split?.method === "itemized" ? itemizedTotal(split, currency) : null;
+  useEffect(() => {
+    if (itemTotal !== null && itemTotal >= 0) setAmount(minorToDecimalString(itemTotal, currency));
+  }, [itemTotal, currency]);
+
+  const totalMinor = parseMoney(amount, currency);
+  const payerList = useMemo(() => {
+    if (totalMinor === null) return [];
+    if (payerMode === "single") return payer ? [{ userId: payer, paidMinor: totalMinor }] : [];
+    return Object.entries(payers)
+      .filter(([, v]) => v.trim() !== "")
+      .map(([userId, v]) => ({ userId, paidMinor: parseMoney(v, currency) ?? NaN }));
+  }, [payerMode, payer, payers, totalMinor, currency]);
+
+  const preview = useMemo(() => {
+    if (!split || totalMinor === null || totalMinor <= 0 || payerList.length === 0) return null;
+    try {
+      const spec = toSpec(split, currency);
+      const shares = buildShares(totalMinor, payerList, spec);
+      const owed: Record<string, number> = {};
+      for (const s of shares) if (s.owedMinor > 0 || spec.method === "reimbursement") owed[s.userId] = s.owedMinor;
+      return { owed };
+    } catch (e) {
+      return { error: e instanceof SplitError ? e.message : typeof e === "string" ? e : "Check the split" };
+    }
+  }, [split, totalMinor, payerList, currency]);
+
+  const payerNames = people.filter((p) => payerList.some((x) => x.userId === p._id)).map((p) => p.name).join(", ");
+
+  const onFile = async (file: File) => {
+    if (!/^image\//.test(file.type)) return toast.error("Receipts must be an image");
+    if (file.size > 10 * 1024 * 1024) return toast.error("Image is larger than 10 MB");
+    setUploading(true);
+    try {
+      const url = await uploadUrl();
+      const res = await fetch(url, { method: "POST", headers: { "Content-Type": file.type }, body: file });
+      const { storageId } = (await res.json()) as { storageId: Id<"_storage"> };
+      setReceipt({ storageId, previewUrl: URL.createObjectURL(file) });
+    } catch (e) {
+      toast.error(errorMessage(e));
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const scan = async () => {
+    if (!receipt || receipt === "remove") return;
+    setScanning(true);
+    try {
+      const r = await scanReceipt({ storageId: receipt.storageId, fallbackCurrency: currency });
+      if (r.currency && r.currency !== currency) {
+        setCurrency(r.currency);
+        setCurrencyTouched(true);
+      }
+      if (r.merchant && !description) setDescription(r.merchant);
+      if (r.date) setDate(fromDateInputValue(r.date, date));
+      const cur = r.currency ?? currency;
+      if (r.items.length > 0) {
+        setSplit((s) => ({
+          ...(s ?? emptySplit(peopleIds)),
+          method: "itemized",
+          items: r.items.map((it) => ({ ...newItem(peopleIds), name: it.name, amount: minorToDecimalString(it.amountMinor, cur) })),
+          tax: r.taxMinor ? minorToDecimalString(r.taxMinor, cur) : "",
+          tip: r.tipMinor ? minorToDecimalString(r.tipMinor, cur) : "",
+          discount: r.discountMinor ? minorToDecimalString(r.discountMinor, cur) : "",
+        }));
+        toast.success(`Found ${r.items.length} items. Assign each one.`);
+      } else if (r.totalMinor) {
+        setAmount(minorToDecimalString(r.totalMinor, cur));
+        toast.success("Read the total. No line items found.");
+      } else toast.error("Couldn't read anything useful from that receipt");
+    } catch (e) {
+      toast.error(errorMessage(e));
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (!scope) return setError("Choose a group or a friend");
+    if (!split) return;
+    if (totalMinor === null || totalMinor <= 0) return setError("Enter an amount greater than zero");
+    if (payerList.length === 0 || payerList.some((p) => Number.isNaN(p.paidMinor))) return setError("Say who paid");
+    let spec;
+    try {
+      spec = toSpec(split, currency);
+    } catch (err) {
+      return setError(typeof err === "string" ? err : "Check the split");
+    }
+    setBusy(true);
+    try {
+      const common = {
+        description,
+        notes: notes || undefined,
+        amountMinor: totalMinor,
+        currency,
+        date,
+        category,
+        payers: payerList.map((p) => ({ userId: p.userId as Id<"users">, paidMinor: p.paidMinor })),
+        split: spec as never,
+        repeat,
+        emailReminder,
+      };
+      if (options.expenseId) {
+        await update({
+          id: options.expenseId,
+          ...common,
+          groupId: scope.kind === "group" ? scope.id : null,
+          friendId: scope.kind === "friend" ? scope.id : undefined,
+          receiptId: receipt === "remove" ? null : receipt ? receipt.storageId : undefined,
+        });
+        toast.success("Expense updated");
+      } else {
+        await create({
+          ...common,
+          groupId: scope.kind === "group" ? scope.id : undefined,
+          friendId: scope.kind === "friend" ? scope.id : undefined,
+          receiptId: receipt && receipt !== "remove" ? receipt.storageId : undefined,
+        });
+        toast.success("Expense added");
+      }
+      onClose();
+    } catch (err) {
+      setError(errorMessage(err));
+      setBusy(false);
+    }
+  };
+
+  const editing = Boolean(options.expenseId);
+  const loadingEdit = editing && !existing;
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-h-[92dvh] overflow-y-auto p-0 sm:max-w-lg">
+        <form onSubmit={submit} className="flex flex-col">
+          <DialogHeader className="border-b px-5 py-4">
+            <DialogTitle>{editing ? "Edit expense" : "Add an expense"}</DialogTitle>
+            <DialogDescription className="sr-only">Record a shared expense.</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 px-5 py-4">
+            {/* Scope */}
+            <div className="flex items-center gap-2 text-sm">
+              <Users className="text-text-faint size-4" />
+              <span className="text-text-muted">With</span>
+              <Select
+                value={scope ? `${scope.kind}:${scope.id}` : ""}
+                onValueChange={(v) => {
+                  const [kind, id] = v.split(":");
+                  setScope(kind === "group" ? { kind: "group", id: id as Id<"groups"> } : { kind: "friend", id: id as Id<"users"> });
+                }}
+                disabled={loadingEdit}
+              >
+                <SelectTrigger className="h-8 w-auto min-w-40 max-w-[260px]" aria-label="Group or friend">
+                  <SelectValue placeholder="Choose a group or friend" />
+                </SelectTrigger>
+                <SelectContent>
+                  {groups?.map((g) => (
+                    <SelectItem key={g._id} value={`group:${g._id}`}>
+                      {g.name}
+                    </SelectItem>
+                  ))}
+                  {friends?.map((f) => (
+                    <SelectItem key={f.user._id} value={`friend:${f.user._id}`}>
+                      {f.user.name} (no group)
+                    </SelectItem>
+                  ))}
+                  {groups?.length === 0 && friends?.length === 0 ? <div className="text-text-muted px-2 py-1.5 text-xs">Create a group or add a friend first.</div> : null}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Description + amount */}
+            <div className="flex items-start gap-3">
+              <CategoryPicker
+                value={category}
+                onChange={(c) => {
+                  setCategory(c);
+                  setCategoryTouched(true);
+                }}
+              />
+              <div className="flex-1 space-y-2">
+                <Input aria-label="Description" placeholder="What was it for?" required maxLength={200} value={description} onChange={(e) => setDescription(e.target.value)} autoFocus={!editing} />
+                <div className="flex gap-2">
+                  <CurrencyPicker
+                    value={currency}
+                    compact
+                    onChange={(c) => {
+                      setCurrency(c);
+                      setCurrencyTouched(true);
+                    }}
+                  />
+                  <Input
+                    aria-label="Amount"
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    required
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    readOnly={split?.method === "itemized"}
+                    className={cn("tnum text-lg font-semibold", split?.method === "itemized" && "bg-surface")}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Paid by */}
+            {people.length > 0 && split ? (
+              <div className="bg-surface space-y-3 rounded-md p-3">
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  <span className="text-text-muted">Paid by</span>
+                  {payerMode === "single" ? (
+                    <Select value={payer ?? ""} onValueChange={setPayer}>
+                      <SelectTrigger className="bg-bg h-8 w-auto min-w-28" aria-label="Who paid">
+                        <SelectValue placeholder="Who paid?" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {people.map((p) => (
+                          <SelectItem key={p._id} value={p._id}>
+                            {p._id === me?._id ? "You" : p.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <span className="font-medium">several people</span>
+                  )}
+                  <button
+                    type="button"
+                    className="text-brand ml-auto text-xs font-medium hover:underline"
+                    onClick={() => {
+                      if (payerMode === "single") {
+                        setPayerMode("multiple");
+                        if (payer && totalMinor !== null) setPayers({ [payer]: minorToDecimalString(totalMinor, currency) });
+                      } else setPayerMode("single");
+                    }}
+                  >
+                    {payerMode === "single" ? "Multiple people paid" : "One person paid"}
+                  </button>
+                </div>
+                {payerMode === "multiple" ? (
+                  <ul className="bg-bg divide-y rounded-md border">
+                    {people.map((p) => (
+                      <li key={p._id} className="flex items-center gap-3 px-3 py-1.5">
+                        <UserAvatar user={p} size="xs" />
+                        <span className="flex-1 truncate text-sm">{p.name}</span>
+                        <Input inputMode="decimal" aria-label={`${p.name} paid`} className="tnum w-28 text-right" placeholder="0" value={payers[p._id] ?? ""} onChange={(e) => setPayers((x) => ({ ...x, [p._id]: e.target.value }))} />
+                      </li>
+                    ))}
+                    <li className="text-text-muted flex justify-between px-3 py-1.5 text-xs">
+                      <span>Paid so far</span>
+                      <Money minor={payerList.reduce((a, b) => a + (Number.isNaN(b.paidMinor) ? 0 : b.paidMinor), 0)} currency={currency} />
+                      {totalMinor !== null ? (
+                        <span>
+                          of <Money minor={totalMinor} currency={currency} />
+                        </span>
+                      ) : null}
+                    </li>
+                  </ul>
+                ) : null}
+                <SplitEditor state={split} onChange={setSplit} people={people} currency={currency} totalMinor={totalMinor} preview={preview} payerNames={payerNames} />
+              </div>
+            ) : scope ? (
+              <div className="text-text-muted flex items-center gap-2 text-sm">
+                <Loader2 className="size-4 animate-spin" /> Loading people…
+              </div>
+            ) : null}
+
+            {/* Date + more */}
+            <div className="flex flex-wrap items-center gap-2">
+              <Input type="date" aria-label="Date" className="w-auto" value={toDateInputValue(date)} onChange={(e) => e.target.value && setDate(fromDateInputValue(e.target.value, date))} />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button type="button" variant="outline" size="sm" className={cn(repeat !== "never" && "border-brand text-brand")}>
+                    <Repeat /> {REPEAT_LABELS[repeat]}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-2" align="start">
+                  <div className="space-y-1">
+                    {(Object.keys(REPEAT_LABELS) as RepeatInterval[]).map((r) => (
+                      <button key={r} type="button" onClick={() => setRepeat(r)} className={cn("hover:bg-surface block w-full rounded-sm px-2 py-1.5 text-left text-sm", r === repeat && "bg-brand-soft text-brand font-medium")}>
+                        {REPEAT_LABELS[r]}
+                      </button>
+                    ))}
+                  </div>
+                  {repeat !== "never" ? (
+                    <label className="mt-2 flex items-center gap-2 border-t px-2 pt-2 text-xs">
+                      <Checkbox checked={emailReminder} onCheckedChange={(v) => setEmailReminder(Boolean(v))} /> Email everyone the day before
+                    </label>
+                  ) : null}
+                </PopoverContent>
+              </Popover>
+              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && void onFile(e.target.files[0])} />
+              <Button type="button" variant="outline" size="sm" disabled={uploading} onClick={() => fileRef.current?.click()}>
+                {uploading ? <Loader2 className="animate-spin" /> : <Camera />} {receipt && receipt !== "remove" ? "Replace receipt" : "Add receipt"}
+              </Button>
+              <Button type="button" variant="ghost" size="sm" onClick={() => setShowMore((v) => !v)}>
+                {showMore ? "Fewer options" : "Notes"}
+              </Button>
+            </div>
+
+            {receipt && receipt !== "remove" ? (
+              <div className="flex items-center gap-3 rounded-md border p-2">
+                <img src={receipt.previewUrl} alt="Receipt" className="size-16 rounded object-cover" />
+                <div className="flex-1 text-sm">
+                  <div className="font-medium">Receipt attached</div>
+                  <div className="text-text-muted text-xs">Scan it to fill in the items and total automatically.</div>
+                </div>
+                <Button type="button" size="sm" variant="secondary" disabled={scanning} onClick={() => void scan()}>
+                  {scanning ? <Loader2 className="animate-spin" /> : null} {scanning ? "Reading…" : "Scan receipt"}
+                </Button>
+                <Button type="button" variant="ghost" size="icon-sm" aria-label="Remove receipt" onClick={() => setReceipt(editing ? "remove" : null)}>
+                  <X />
+                </Button>
+              </div>
+            ) : null}
+
+            {showMore ? <Textarea aria-label="Notes" placeholder="Notes (optional)" rows={3} maxLength={2000} value={notes} onChange={(e) => setNotes(e.target.value)} /> : null}
+
+            {error ? (
+              <p role="alert" className="text-danger text-sm">
+                {error}
+              </p>
+            ) : null}
+          </div>
+
+          <DialogFooter className="border-t px-5 py-3">
+            <Button type="button" variant="ghost" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={busy || loadingEdit || !scope || Boolean(preview && "error" in preview)}>
+              {busy ? "Saving…" : editing ? "Save changes" : "Save"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}

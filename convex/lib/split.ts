@@ -47,9 +47,11 @@ export type SplitSpec =
 export type Share = { userId: string; paidMinor: number; owedMinor: number };
 
 export class SplitError extends Error {
-  constructor(message: string, public field?: string) {
+  field?: string;
+  constructor(message: string, field?: string) {
     super(message);
     this.name = "SplitError";
+    this.field = field;
   }
 }
 

@@ -5,9 +5,16 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -p tsconfig.app.json --noEmit && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "dev:backend": "CONVEX_AGENT_MODE=anonymous convex dev",
+    "dev:all": "CONVEX_AGENT_MODE=anonymous convex dev --start vite",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "auth:keys": "node scripts/gen-auth-keys.mjs",
+    "auth:setup": "./scripts/setup-auth-env.sh",
+    "typecheck": "tsc -p tsconfig.app.json --noEmit && tsc -p convex/tsconfig.json --noEmit"
   },
   "dependencies": {
     "@auth/core": "^0.41.3",
