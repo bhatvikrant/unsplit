@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { errorMessage, fromDateInputValue, toDateInputValue } from "@/lib/format";
 import { useDefaultCurrency, useMe } from "@/lib/hooks";
+import { currencySymbol } from "@convex/lib/currencies";
 import { cn } from "@/lib/utils";
 import { CategoryPicker, CurrencyPicker } from "./pickers";
 import { SplitEditor } from "./SplitEditor";
@@ -274,21 +275,21 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
 
   const editing = Boolean(options.expenseId);
   const loadingEdit = editing && !existing;
+  const myNet = preview && "owed" in preview && me ? (payerList.find((p) => p.userId === me._id)?.paidMinor ?? 0) - (preview.owed?.[me._id] ?? 0) : null;
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-h-[92dvh] overflow-y-auto p-0 sm:max-w-lg">
         <form onSubmit={submit} className="flex flex-col">
-          <DialogHeader className="border-b px-5 py-4">
+          <DialogHeader className="px-5 pt-5">
             <DialogTitle>{editing ? "Edit expense" : "Add an expense"}</DialogTitle>
             <DialogDescription className="sr-only">Record a shared expense.</DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 px-5 py-4">
+          <div className="space-y-5 px-5 pt-3 pb-5">
             {/* Scope */}
             <div className="flex items-center gap-2 text-sm">
-              <Users className="text-text-faint size-4" />
-              <span className="text-text-muted">With</span>
+              <span className="text-text-muted inline-flex items-center gap-1.5"><Users className="text-text-faint size-4" /> With</span>
               <Select
                 value={scope ? `${scope.kind}:${scope.id}` : ""}
                 onValueChange={(v) => {
@@ -297,7 +298,7 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
                 }}
                 disabled={loadingEdit}
               >
-                <SelectTrigger className="h-8 w-auto min-w-40 max-w-[260px]" aria-label="Group or friend">
+                <SelectTrigger className="bg-surface-2 hover:bg-surface-3 h-8 w-auto max-w-[260px] min-w-40 rounded-full font-medium shadow-none" aria-label="Group or friend">
                   <SelectValue placeholder="Choose a group or friend" />
                 </SelectTrigger>
                 <SelectContent>
@@ -316,49 +317,51 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
               </Select>
             </div>
 
-            {/* Description + amount */}
-            <div className="flex items-start gap-3">
-              <CategoryPicker
-                value={category}
-                onChange={(c) => {
-                  setCategory(c);
-                  setCategoryTouched(true);
-                  categoryLocked.current = true;
-                }}
-              />
-              <div className="flex-1 space-y-2">
-                <Input aria-label="Description" placeholder="What was it for?" required maxLength={200} value={description} onChange={(e) => setDescription(e.target.value)} autoFocus={!editing} />
-                <div className="flex gap-2">
-                  <CurrencyPicker
-                    value={currency}
-                    compact
-                    onChange={(c) => {
-                      setCurrency(c);
-                      setCurrencyTouched(true);
-                    }}
-                  />
-                  <Input
-                    aria-label="Amount"
-                    inputMode="decimal"
-                    placeholder="0.00"
-                    required
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    readOnly={split?.method === "itemized"}
-                    className={cn("tnum text-lg font-semibold", split?.method === "itemized" && "bg-surface")}
-                  />
-                </div>
+            {/* Amount hero + description */}
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-text-faint shrink-0 text-xl font-medium">{currencySymbol(currency)}</span>
+                <Input
+                  aria-label="Amount"
+                  inputMode="decimal"
+                  placeholder="0.00"
+                  required
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  readOnly={split?.method === "itemized"}
+                  autoFocus={!editing}
+                  className={cn("tnum h-12 flex-1 bg-transparent px-0 text-[40px] font-semibold tracking-[-0.03em] shadow-none placeholder:text-text-faint/50 focus-visible:shadow-none md:text-[40px]", split?.method === "itemized" && "text-text-muted")}
+                />
+                <CurrencyPicker
+                  value={currency}
+                  compact
+                  onChange={(c) => {
+                    setCurrency(c);
+                    setCurrencyTouched(true);
+                  }}
+                />
+              </div>
+              <div className="mt-3 flex items-center gap-2.5">
+                <CategoryPicker
+                  value={category}
+                  onChange={(c) => {
+                    setCategory(c);
+                    setCategoryTouched(true);
+                    categoryLocked.current = true;
+                  }}
+                />
+                <Input aria-label="Description" placeholder="What was it for?" required maxLength={200} value={description} onChange={(e) => setDescription(e.target.value)} className="h-10" />
               </div>
             </div>
 
             {/* Paid by */}
             {people.length > 0 && split ? (
-              <div className="bg-surface space-y-3 rounded-md p-3">
+              <div className="space-y-3">
                 <div className="flex flex-wrap items-center gap-2 text-sm">
-                  <span className="text-text-muted">Paid by</span>
+                  <span className="text-text-muted text-xs font-semibold">Paid by</span>
                   {payerMode === "single" ? (
                     <Select value={payer ?? ""} onValueChange={setPayer}>
-                      <SelectTrigger className="bg-bg h-8 w-auto min-w-28" aria-label="Who paid">
+                      <SelectTrigger className="h-8 w-auto min-w-28 rounded-full font-medium" aria-label="Who paid">
                         <SelectValue placeholder="Who paid?" />
                       </SelectTrigger>
                       <SelectContent>
@@ -386,7 +389,7 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
                   </button>
                 </div>
                 {payerMode === "multiple" ? (
-                  <ul className="bg-bg divide-y rounded-md border">
+                  <ul className="shadow-ring divide-y overflow-hidden rounded-xl">
                     {people.map((p) => (
                       <li key={p._id} className="flex items-center gap-3 px-3 py-1.5">
                         <UserAvatar user={p} size="xs" />
@@ -415,10 +418,10 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
 
             {/* Date + more */}
             <div className="flex flex-wrap items-center gap-2">
-              <Input type="date" aria-label="Date" className="w-auto" value={toDateInputValue(date)} onChange={(e) => e.target.value && setDate(fromDateInputValue(e.target.value, date))} />
+              <Input type="date" aria-label="Date" className="bg-surface-2 h-8 w-auto rounded-lg text-[13px] font-medium shadow-none" value={toDateInputValue(date)} onChange={(e) => e.target.value && setDate(fromDateInputValue(e.target.value, date))} />
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button type="button" variant="outline" size="sm" className={cn(repeat !== "never" && "border-brand text-brand")}>
+                  <Button type="button" variant="secondary" size="sm" className={cn(repeat !== "never" && "bg-brand-soft text-brand-ink hover:bg-brand-soft")}>
                     <Repeat /> {REPEAT_LABELS[repeat]}
                   </Button>
                 </PopoverTrigger>
@@ -438,16 +441,16 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
                 </PopoverContent>
               </Popover>
               <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && void onFile(e.target.files[0])} />
-              <Button type="button" variant="outline" size="sm" disabled={uploading} onClick={() => fileRef.current?.click()}>
+              <Button type="button" variant="secondary" size="sm" disabled={uploading} onClick={() => fileRef.current?.click()}>
                 {uploading ? <Loader2 className="animate-spin" /> : <Camera />} {receipt && receipt !== "remove" ? "Replace receipt" : "Add receipt"}
               </Button>
-              <Button type="button" variant="ghost" size="sm" onClick={() => setShowMore((v) => !v)}>
+              <Button type="button" variant="secondary" size="sm" onClick={() => setShowMore((v) => !v)}>
                 {showMore ? "Fewer options" : "Notes"}
               </Button>
             </div>
 
             {receipt && receipt !== "remove" ? (
-              <div className="flex items-center gap-3 rounded-md border p-2">
+              <div className="shadow-ring flex items-center gap-3 rounded-xl p-2">
                 <img src={receipt.previewUrl} alt="Receipt" className="size-16 rounded object-cover" />
                 <div className="flex-1 text-sm">
                   <div className="font-medium">Receipt attached</div>
@@ -471,8 +474,13 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
             ) : null}
           </div>
 
-          <DialogFooter className="border-t px-5 py-3">
-            <Button type="button" variant="ghost" onClick={onClose}>
+          <DialogFooter className="bg-bg rounded-b-2xl border-t px-5 py-4">
+            {myNet !== null && myNet !== 0 ? (
+              <span className="text-text-faint self-center text-xs sm:mr-auto">
+                You'll {myNet > 0 ? "lend" : "borrow"} <Money minor={myNet} currency={currency} abs className="text-text font-medium" />
+              </span>
+            ) : null}
+            <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
             <Button type="submit" disabled={busy || loadingEdit || !scope || Boolean(preview && "error" in preview)}>

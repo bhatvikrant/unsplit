@@ -1,15 +1,16 @@
 import type { ReactNode } from "react";
-import { Receipt, type LucideIcon } from "lucide-react";
+import { ArrowLeftRight, Receipt, type LucideIcon } from "lucide-react";
 import { DynamicIcon, type IconName } from "lucide-react/dynamic";
 import { categoryBySlug } from "@convex/lib/categories";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { tint } from "./Avatars";
 
 export function EmptyState({ icon: Icon, title, description, action, className }: { icon?: LucideIcon; title: string; description?: string; action?: ReactNode; className?: string }) {
   return (
-    <div className={cn("flex flex-col items-center justify-center rounded-lg border border-dashed px-6 py-14 text-center", className)}>
+    <div className={cn("card flex flex-col items-center justify-center px-6 py-14 text-center", className)}>
       {Icon ? (
-        <div className="bg-surface text-text-muted mb-4 flex size-12 items-center justify-center rounded-full">
+        <div className="bg-brand-soft text-brand mb-4 flex size-12 items-center justify-center rounded-full">
           <Icon className="size-5" />
         </div>
       ) : null}
@@ -23,10 +24,10 @@ export function EmptyState({ icon: Icon, title, description, action, className }
 export function PageHeader({ title, subtitle, leading, actions, className }: { title: ReactNode; subtitle?: ReactNode; leading?: ReactNode; actions?: ReactNode; className?: string }) {
   return (
     <div className={cn("mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between", className)}>
-      <div className="flex min-w-0 items-center gap-3">
+      <div className="flex min-w-0 items-center gap-3.5">
         {leading}
         <div className="min-w-0">
-          <h1 className="text-text truncate text-xl font-semibold leading-tight">{title}</h1>
+          <h1 className="text-text truncate text-2xl leading-tight font-semibold tracking-[-0.02em]">{title}</h1>
           {subtitle ? <div className="text-text-muted mt-0.5 text-sm">{subtitle}</div> : null}
         </div>
       </div>
@@ -35,23 +36,42 @@ export function PageHeader({ title, subtitle, leading, actions, className }: { t
   );
 }
 
+/** One hue per top-level category so a list of expenses reads as a gentle, varied palette. */
+const CATEGORY_HUES: Record<string, number> = {
+  home: 40,
+  transportation: 230,
+  food: 20,
+  entertainment: 330,
+  utilities: 90,
+  life: 150,
+  general: 270,
+  uncategorized: 60,
+};
+
 export function CategoryIcon({ slug, className, size = "md" }: { slug: string; className?: string; size?: "sm" | "md" | "lg" }) {
+  const sz = { sm: "size-7 rounded-lg [&>svg]:size-3.5", md: "size-10 rounded-xl [&>svg]:size-[18px]", lg: "size-12 rounded-[14px] [&>svg]:size-[22px]" }[size];
+  if (slug === "payment") {
+    return (
+      <div className={cn("flex shrink-0 items-center justify-center", sz, className)} style={tint(160)} title="Payment" aria-label="Payment">
+        <ArrowLeftRight strokeWidth={1.75} />
+      </div>
+    );
+  }
   const cat = categoryBySlug(slug);
   const name = cat.icon.replace(/([a-z0-9])([A-Z])/g, "$1-$2").replace(/([A-Z])([A-Z][a-z])/g, "$1-$2").toLowerCase() as IconName;
-  const sz = { sm: "size-7 [&>svg]:size-3.5", md: "size-9 [&>svg]:size-4", lg: "size-11 [&>svg]:size-5" }[size];
   return (
-    <div className={cn("bg-surface-2 text-text-muted flex shrink-0 items-center justify-center rounded-md", sz, className)} title={cat.name} aria-label={cat.name}>
-      <DynamicIcon name={name} fallback={() => <Receipt />} />
+    <div className={cn("flex shrink-0 items-center justify-center", sz, className)} style={tint(CATEGORY_HUES[cat.parent] ?? 60)} title={cat.name} aria-label={cat.name}>
+      <DynamicIcon name={name} strokeWidth={1.75} fallback={() => <Receipt />} />
     </div>
   );
 }
 
 export function RowSkeleton({ count = 4 }: { count?: number }) {
   return (
-    <div className="divide-y">
+    <div className="card divide-y px-1">
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="flex items-center gap-3 px-2 py-3">
-          <Skeleton className="size-9 rounded-md" />
+        <div key={i} className="flex items-center gap-3 px-3 py-3">
+          <Skeleton className="size-10 rounded-xl" />
           <div className="flex-1 space-y-2">
             <Skeleton className="h-3.5 w-1/3" />
             <Skeleton className="h-3 w-1/5" />
@@ -65,10 +85,10 @@ export function RowSkeleton({ count = 4 }: { count?: number }) {
 
 export function Section({ title, children, actions, className }: { title?: ReactNode; children: ReactNode; actions?: ReactNode; className?: string }) {
   return (
-    <section className={cn("rounded-lg border bg-bg", className)}>
+    <section className={cn("card", className)}>
       {title ? (
-        <div className="flex items-center justify-between border-b px-4 py-2.5">
-          <h2 className="text-text-muted text-xs font-semibold tracking-wide uppercase">{title}</h2>
+        <div className="flex items-center justify-between border-b px-4 py-3">
+          <h2 className="text-text text-[13px] font-semibold">{title}</h2>
           {actions}
         </div>
       ) : null}

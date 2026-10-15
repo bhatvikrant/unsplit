@@ -54,7 +54,7 @@ export function Landing() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.05 }}
-              className="bg-bg rounded-lg border p-5"
+              className="card p-5"
             >
               <div className="bg-brand-soft text-brand mb-3 flex size-9 items-center justify-center rounded-md">
                 <f.icon className="size-4.5" />

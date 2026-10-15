@@ -5,114 +5,126 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
-  Unsplit theme. Shares unmoney's look: shadcn "neutral" monochrome palette,
-  Geist, 0.625rem radius, blue for money coming in and red for money going out.
-  Hex equivalents for the contrast checker live in replica/design/tokens.json.
+  Unsplit theme.
+
+  Warm stone neutrals, one forest-green brand colour, and money semantics that
+  read at a glance: green is money owed to you, terracotta is money you owe.
+  Surfaces are separated with layered semi-transparent shadows rather than
+  solid borders. Motion uses a strong ease-out so the interface feels quick.
 */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --bg: #f6f5f1;
+  --surface: #ffffff;
+  --surface-2: #efede7;
+  --surface-3: #e6e3db;
+  --text: #1b1a17;
+  --text-muted: #5f5b53;
+  --text-faint: #9b968c;
+  --line: rgba(27, 26, 23, 0.07);
+  --line-strong: rgba(27, 26, 23, 0.14);
+
+  --brand: #1f7a55;
+  --brand-hover: #196846;
+  --brand-soft: #e2f2e9;
+  --brand-ink: #14543b;
+  --on-brand: #ffffff;
+
+  --income: #22894f;
+  --income-soft: #e4f3ea;
+  --expense: #d3553a;
+  --expense-soft: #fbeae5;
+  --warning: #b7791f;
+  --warning-soft: #fbf1dc;
+  --danger: #c9452c;
+
+  --ring: rgba(31, 122, 85, 0.35);
+  --shadow-card: 0 0 0 1px rgba(27, 26, 23, 0.05), 0 1px 2px rgba(27, 26, 23, 0.05), 0 6px 18px -6px rgba(27, 26, 23, 0.08);
+  --shadow-pop: 0 0 0 1px rgba(27, 26, 23, 0.06), 0 12px 40px -8px rgba(27, 26, 23, 0.25), 0 2px 6px rgba(27, 26, 23, 0.06);
+  --shadow-btn: 0 1px 2px rgba(27, 26, 23, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  --shadow-hero: 0 0 0 1px rgba(0, 0, 0, 0.04), 0 14px 40px -14px rgba(31, 122, 85, 0.55);
+  --hero-from: #1f7a55;
+  --hero-mid: #2b9a6c;
+  --hero-to: #46b585;
+  --scrim: rgba(20, 19, 16, 0.45);
+
+  --ease: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
 
-  /* Money semantics (same hues as unmoney's income / expense) */
-  --income: oklch(0.55 0.19 255);
-  --income-soft: oklch(0.97 0.02 255);
-  --expense: oklch(0.56 0.2 28);
-  --expense-soft: oklch(0.97 0.02 28);
-  --warning: oklch(0.55 0.14 75);
-
-  /* Unsplit role aliases (older component classes) */
-  --bg: var(--background);
-  --surface: var(--secondary);
-  --surface-2: oklch(0.94 0 0);
-  --border-input: oklch(0.62 0 0);
-  --text: var(--foreground);
-  --text-muted: var(--muted-foreground);
-  --text-faint: oklch(0.66 0 0);
-  --brand: var(--primary);
-  --brand-hover: oklch(0.3 0 0);
-  --brand-soft: var(--secondary);
-  --on-brand: var(--primary-foreground);
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.06);
-  --shadow-pop: 0 10px 30px rgba(0, 0, 0, 0.12);
-  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* shadcn names, mapped onto the roles above */
+  --background: var(--bg);
+  --foreground: var(--text);
+  --card: var(--surface);
+  --card-foreground: var(--text);
+  --popover: var(--surface);
+  --popover-foreground: var(--text);
+  --primary: var(--brand);
+  --primary-foreground: var(--on-brand);
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--text);
+  --muted: var(--surface-2);
+  --muted-foreground: var(--text-muted);
+  --accent: var(--surface-2);
+  --accent-foreground: var(--text);
+  --destructive: var(--danger);
+  --border: var(--line);
+  --input: var(--line-strong);
+  --chart-1: #1f7a55;
+  --chart-2: #46b585;
+  --chart-3: #b7791f;
+  --chart-4: #d3553a;
+  --chart-5: #5f5b53;
+  --sidebar: var(--bg);
+  --sidebar-foreground: var(--text);
+  --sidebar-primary: var(--brand);
+  --sidebar-primary-foreground: var(--on-brand);
+  --sidebar-accent: var(--surface-2);
+  --sidebar-accent-foreground: var(--text);
+  --sidebar-border: var(--line);
+  --sidebar-ring: var(--ring);
+  --border-input: var(--line-strong);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --bg: #131210;
+  --surface: #1b1a17;
+  --surface-2: #23221e;
+  --surface-3: #2c2a25;
+  --text: #f3f1ec;
+  --text-muted: #a8a397;
+  --text-faint: #6f6a61;
+  --line: rgba(255, 255, 255, 0.07);
+  --line-strong: rgba(255, 255, 255, 0.14);
 
-  --income: oklch(0.7 0.17 255);
-  --income-soft: oklch(0.25 0.04 255);
-  --expense: oklch(0.72 0.18 28);
-  --expense-soft: oklch(0.26 0.05 28);
-  --warning: oklch(0.8 0.15 85);
+  --brand: #3fb47a;
+  --brand-hover: #4cc287;
+  --brand-soft: rgba(63, 180, 122, 0.14);
+  --brand-ink: #8fe0b5;
+  --on-brand: #0b1f15;
 
-  --surface: oklch(0.205 0 0);
-  --surface-2: oklch(0.269 0 0);
-  --text-faint: oklch(0.6 0 0);
-  --brand-hover: oklch(0.85 0 0);
-  --brand-soft: oklch(0.269 0 0);
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.5);
-  --shadow-pop: 0 10px 30px rgba(0, 0, 0, 0.6);
+  --income: #4fcb8a;
+  --income-soft: rgba(79, 203, 138, 0.13);
+  --expense: #f0846c;
+  --expense-soft: rgba(240, 132, 108, 0.13);
+  --warning: #e0a84a;
+  --warning-soft: rgba(224, 168, 74, 0.14);
+  --danger: #f07a62;
+
+  --ring: rgba(63, 180, 122, 0.4);
+  --shadow-card: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -8px rgba(0, 0, 0, 0.5);
+  --shadow-pop: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 20px 60px -10px rgba(0, 0, 0, 0.7);
+  --shadow-btn: 0 1px 2px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  --shadow-hero: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 20px 50px -16px rgba(0, 0, 0, 0.7);
+  --hero-from: #1b5b40;
+  --hero-mid: #227a54;
+  --hero-to: #2b9468;
+  --scrim: rgba(0, 0, 0, 0.6);
+
+  --chart-1: #3fb47a;
+  --chart-2: #8fe0b5;
+  --chart-3: #e0a84a;
+  --chart-4: #f0846c;
+  --chart-5: #a8a397;
 }
 
 @theme inline {
@@ -135,7 +147,7 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--primary-foreground);
+  --color-destructive-foreground: #ffffff;
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -159,6 +171,9 @@
   --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
   --color-border-input: var(--border-input);
   --color-text: var(--text);
   --color-text-muted: var(--text-muted);
@@ -166,13 +181,15 @@
   --color-brand: var(--brand);
   --color-brand-hover: var(--brand-hover);
   --color-brand-soft: var(--brand-soft);
+  --color-brand-ink: var(--brand-ink);
   --color-on-brand: var(--on-brand);
   --color-positive: var(--income);
   --color-positive-soft: var(--income-soft);
   --color-negative: var(--expense);
   --color-negative-soft: var(--expense-soft);
-  --color-danger: var(--destructive);
+  --color-danger: var(--danger);
   --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
   --color-focus: var(--ring);
 
   --radius-sm: calc(var(--radius) * 0.6);
@@ -184,6 +201,11 @@
   --radius-4xl: calc(var(--radius) * 2.6);
   --shadow-card: var(--shadow-card);
   --shadow-pop: var(--shadow-pop);
+  --shadow-btn: var(--shadow-btn);
+  --shadow-hero: var(--shadow-hero);
+  --shadow-ring: 0 0 0 1px var(--line-strong);
+  --ease-out-strong: var(--ease);
+  --ease-in-out-strong: var(--ease-in-out);
   --ease-out-soft: var(--ease);
 }
 
@@ -194,6 +216,7 @@
   html {
     @apply font-sans;
     color-scheme: light;
+    font-feature-settings: "cv11", "ss01";
   }
   html.dark {
     color-scheme: dark;
@@ -222,4 +245,37 @@
   .no-scrollbar {
     scrollbar-width: none;
   }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@utility card {
+  background: var(--surface);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+}
+
+/* Soft tinted surface for avatars and category tiles, keyed by hue. */
+@utility tint-* {
+  background: light-dark(oklch(0.92 0.06 --value(integer)), oklch(0.3 0.06 --value(integer)));
+  color: light-dark(oklch(0.4 0.12 --value(integer)), oklch(0.85 0.1 --value(integer)));
+}
+
+@utility pressable {
+  transition-property: transform, background-color, box-shadow, color, opacity;
+  transition-duration: 160ms;
+  transition-timing-function: var(--ease);
+  &:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+}
+
+@utility hero-gradient {
+  background: linear-gradient(135deg, var(--hero-from) 0%, var(--hero-mid) 60%, var(--hero-to) 100%);
 }

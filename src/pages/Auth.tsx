@@ -13,7 +13,7 @@ function Shell({ title, children, footer }: { title: string; children: React.Rea
       <Link to="/" className="mb-8">
         <Logo size={30} />
       </Link>
-      <div className="bg-bg w-full max-w-sm rounded-lg border p-6 shadow-card">
+      <div className="card w-full max-w-sm p-6">
         <h1 className="text-text mb-5 text-lg font-semibold">{title}</h1>
         {children}
       </div>

@@ -61,7 +61,7 @@ export function ActivityPage() {
       ) : items.length === 0 ? (
         <EmptyState icon={Activity} title="No activity yet" description="When you or your friends add expenses, settle up or change a group, it shows up here." />
       ) : (
-        <ul className="divide-y">
+        <ul className="card divide-y px-1">
           {items.map((it) => (
             <li key={it._id} className={cn("flex gap-3 px-2 py-3", !it.read && "bg-brand-soft/40")}>
               {it.actor ? <UserAvatar user={it.actor} size="sm" /> : <div className="size-8" />}

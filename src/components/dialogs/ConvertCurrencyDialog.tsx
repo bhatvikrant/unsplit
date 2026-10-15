@@ -79,7 +79,7 @@ export function ConvertCurrencyDialog({ options, onClose }: { options: ConvertOp
             <p className="text-text-muted text-sm">Everything here is already in {target}. Nothing to convert.</p>
           ) : data ? (
             <div className="space-y-2">
-              <ul className="divide-y rounded-md border text-sm">
+              <ul className="shadow-ring divide-y overflow-hidden rounded-xl text-sm">
                 {data.lines.map((l) => (
                   <li key={l.currency} className="flex items-center justify-between gap-3 px-3 py-2">
                     <span>

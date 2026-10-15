@@ -72,3 +72,32 @@ export function BalanceSummary({
     </span>
   );
 }
+
+/**
+ * Compact signed balance for list rows and the sidebar: "+$42.00" in green,
+ * "−$96.00" in terracotta, "settled" when zero. `plain` drops the pill
+ * background for denser lists.
+ */
+export function BalanceChip({ balances, className, plain }: { balances: Record<string, number>; className?: string; plain?: boolean }) {
+  const entries = Object.entries(balances).filter(([, v]) => v !== 0);
+  if (entries.length === 0) {
+    return <span className={cn("text-text-faint text-[11.5px] font-medium", !plain && "bg-surface-2 rounded-full px-2 py-0.5", className)}>settled</span>;
+  }
+  return (
+    <span className={cn("inline-flex flex-col items-end gap-0.5", className)}>
+      {entries.map(([currency, amount]) => (
+        <span
+          key={currency}
+          className={cn(
+            "tnum text-[12px] leading-4 font-semibold whitespace-nowrap",
+            amount > 0 ? "text-positive" : "text-negative",
+            !plain && "rounded-full px-2 py-0.5",
+            !plain && (amount > 0 ? "bg-positive-soft" : "bg-negative-soft"),
+          )}
+        >
+          <Money minor={amount} currency={currency} signDisplay="always" />
+        </span>
+      ))}
+    </span>
+  );
+}

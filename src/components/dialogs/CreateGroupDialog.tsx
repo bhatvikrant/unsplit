@@ -64,7 +64,7 @@ export function CreateGroupDialog({ onClose }: { onClose: () => void }) {
               <div className="text-sm font-medium">Type</div>
               <RadioGroup value={type} onValueChange={(v) => setType(v as GroupType)} className="grid grid-cols-4 gap-2">
                 {(Object.keys(GROUP_TYPE_LABELS) as GroupType[]).map((t) => (
-                  <label key={t} className="has-data-[state=checked]:border-brand has-data-[state=checked]:bg-brand-soft flex cursor-pointer items-center justify-center gap-2 rounded-md border px-2 py-2 text-sm">
+                  <label key={t} className="pressable shadow-ring hover:bg-surface-2 has-data-[state=checked]:bg-brand-soft has-data-[state=checked]:text-brand-ink has-data-[state=checked]:shadow-[0_0_0_1px_var(--brand)] flex cursor-pointer items-center justify-center gap-2 rounded-[10px] px-2 py-2 text-sm font-medium">
                     <RadioGroupItem value={t} className="sr-only" />
                     {GROUP_TYPE_LABELS[t]}
                   </label>
@@ -74,7 +74,7 @@ export function CreateGroupDialog({ onClose }: { onClose: () => void }) {
             {friends && friends.length > 0 ? (
               <div className="space-y-1.5">
                 <div className="text-sm font-medium">Add friends</div>
-                <div className="max-h-40 space-y-1 overflow-y-auto rounded-md border p-1.5">
+                <div className="shadow-ring max-h-40 space-y-1 overflow-y-auto rounded-xl p-1.5">
                   {friends.map((f) => (
                     <label key={f.user._id} className="hover:bg-surface flex cursor-pointer items-center gap-2.5 rounded-sm px-2 py-1.5 text-sm">
                       <Checkbox checked={Boolean(picked[f.user._id])} onCheckedChange={(v) => setPicked((p) => ({ ...p, [f.user._id]: Boolean(v) }))} />
@@ -101,7 +101,7 @@ export function CreateGroupDialog({ onClose }: { onClose: () => void }) {
               </Button>
               <p className="text-text-faint text-xs">People without an email get a placeholder. When they sign up with that email later, it's theirs.</p>
             </div>
-            <label className="flex items-center justify-between gap-3 rounded-md border p-3 text-sm">
+            <label className="shadow-ring flex items-center justify-between gap-3 rounded-xl p-3 text-sm">
               <span>
                 <span className="font-medium">Simplify debts</span>
                 <span className="text-text-muted block text-xs">Fewer payments to settle everyone up. Can be changed later.</span>

@@ -185,7 +185,7 @@ export function ChartsPage() {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border p-3">
+    <div className="card p-3">
       <div className="text-text-muted text-xs font-medium">{label}</div>
       <div className="tnum mt-0.5 text-lg font-semibold">{value}</div>
     </div>

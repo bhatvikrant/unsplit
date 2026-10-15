@@ -8,7 +8,7 @@ import type { Id } from "@convex/_generated/dataModel";
 import { GroupAvatar, GROUP_TYPE_LABELS, UserAvatar } from "@/components/common/Avatars";
 import { ExpenseList } from "@/components/common/ExpenseList";
 import { EmptyState, Field, PageHeader, RowSkeleton, Section } from "@/components/common/Misc";
-import { BalanceSummary, Money } from "@/components/common/Money";
+import { BalanceChip, BalanceSummary, Money } from "@/components/common/Money";
 import { useDialogs } from "@/components/dialogs/DialogProvider";
 import { SplitEditor } from "@/components/dialogs/SplitEditor";
 import { emptySplit, fromSpec, toSpec, type SplitState } from "@/components/dialogs/splitState";
@@ -47,9 +47,18 @@ export function GroupNav({ groupId, current }: { groupId: Id<"groups">; current:
     { key: "settings", to: `/groups/${groupId}/settings`, label: "Settings", icon: Settings },
   ] as const;
   return (
-    <nav className="mb-4 flex gap-1 overflow-x-auto border-b" aria-label="Group sections">
+    <nav className="no-scrollbar mb-5 flex gap-0.5 overflow-x-auto border-b" aria-label="Group sections">
       {items.map((it) => (
-        <Link key={it.key} to={it.to} className={cn("-mb-px flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm whitespace-nowrap", current === it.key ? "border-text text-text font-medium" : "text-text-muted hover:text-text border-transparent")}>
+        <Link
+          key={it.key}
+          to={it.to}
+          aria-current={current === it.key ? "page" : undefined}
+          className={cn(
+            "relative flex items-center gap-1.5 rounded-t-lg px-3 pt-2 pb-2.5 text-sm font-medium whitespace-nowrap outline-none transition-colors duration-100 focus-visible:ring-[3px] focus-visible:ring-ring",
+            "after:bg-brand after:absolute after:right-2.5 after:bottom-[-1px] after:left-2.5 after:h-0.5 after:rounded-full after:opacity-0 after:transition-opacity after:duration-150",
+            current === it.key ? "text-text after:opacity-100 [&>svg]:text-brand" : "text-text-muted hover:text-text",
+          )}
+        >
           <it.icon className="size-4" /> {it.label}
         </Link>
       ))}
@@ -92,7 +101,7 @@ export function GroupPage() {
         subtitle={
           <span className="flex flex-wrap items-center gap-x-2">
             {GROUP_TYPE_LABELS[group.type]} · {pluralize(group.members.length, "member")}
-            {group.simplifyDebts ? <span className="bg-surface-2 rounded px-1.5 text-xs">simplified debts</span> : null}
+            {group.simplifyDebts ? <span>· simplified debts</span> : null}
           </span>
         }
         actions={
@@ -135,46 +144,63 @@ export function GroupPage() {
         </div>
         <aside className="space-y-4">
           <Section title="Balances">
-            <ul className="divide-y">
-              {group.members.map((m) => (
-                <li key={m._id} className="flex items-center gap-2.5 px-3 py-2">
-                  <UserAvatar user={m} size="xs" />
-                  <span className="min-w-0 flex-1 truncate text-sm">{m._id === me?._id ? "You" : m.name}</span>
-                  <BalanceSummary balances={group.memberNets[m._id] ?? {}} compact className="text-xs" />
-                </li>
-              ))}
+            <ul className="px-2 pt-1.5 pb-2">
+              {group.members.map((m) => {
+                const nets = group.memberNets[m._id] ?? {};
+                const main = Object.entries(nets).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))[0];
+                const max = Math.max(1, ...group.members.flatMap((x) => Object.values(group.memberNets[x._id] ?? {}).map(Math.abs)));
+                return (
+                  <li key={m._id} className="grid grid-cols-[28px_1fr_auto] items-center gap-x-2.5 px-2 py-1.5">
+                    <UserAvatar user={m} size="sm" className="size-7 text-[10px]" />
+                    <span className="min-w-0 truncate text-sm font-medium">{m._id === me?._id ? "You" : m.name}</span>
+                    <BalanceChip balances={nets} plain />
+                    <div className="bg-surface-2 col-start-2 col-end-4 mt-1.5 h-1 overflow-hidden rounded-full">
+                      {main && main[1] !== 0 ? (
+                        <div
+                          className={cn("h-full rounded-full transition-[width] duration-300 ease-out-strong", main[1] > 0 ? "bg-positive" : "bg-negative")}
+                          style={{ width: `${Math.max(6, Math.round((Math.abs(main[1]) / max) * 100))}%` }}
+                        />
+                      ) : null}
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
             {group.debts.length > 0 ? (
-              <ul className="space-y-1.5 border-t px-3 py-2.5 text-xs">
+              <ul className="space-y-0.5 border-t px-2 py-2 text-[13px]">
                 {group.debts.map((d, i) => (
-                  <li key={i} className="flex items-center gap-1.5">
+                  <li key={i} className="hover:bg-surface-2 flex items-center gap-1.5 rounded-lg px-2 py-1.5 transition-colors duration-100">
                     <span className={cn("truncate", d.from === me?._id && "font-medium")}>{name(d.from)}</span>
-                    <ArrowRight className="text-text-faint size-3 shrink-0" />
+                    <ArrowRight className="text-text-faint size-3.5 shrink-0" />
                     <span className={cn("truncate", d.to === me?._id && "font-medium")}>{name(d.to)}</span>
-                    <Money minor={d.amountMinor} currency={d.currency} className="ml-auto font-medium" />
+                    <Money minor={d.amountMinor} currency={d.currency} className="ml-auto font-semibold tracking-[-0.01em]" />
                     {!group.deletedAt ? (
-                      <button type="button" className="text-brand ml-1 hover:underline" onClick={() => dialogs.settleUp({ groupId, payerId: d.from as Id<"users">, payeeId: d.to as Id<"users">, amountMinor: d.amountMinor, currency: d.currency })}>
-                        settle
+                      <button
+                        type="button"
+                        className={cn("ml-1 text-xs font-semibold hover:underline", d.from === me?._id || d.to === me?._id ? "text-brand" : "text-text-faint")}
+                        onClick={() => dialogs.settleUp({ groupId, payerId: d.from as Id<"users">, payeeId: d.to as Id<"users">, amountMinor: d.amountMinor, currency: d.currency })}
+                      >
+                        {d.from === me?._id ? "Settle" : d.to === me?._id ? "Remind" : "Record"}
                       </button>
                     ) : null}
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="text-text-faint border-t px-3 py-2.5 text-xs">Everyone is settled up.</p>
+              <p className="text-text-faint border-t px-4 py-3 text-xs">Everyone is settled up.</p>
             )}
           </Section>
 
           {group.whiteboard ? (
             <Section title="Whiteboard">
-              <p className="px-3 py-2.5 text-sm whitespace-pre-wrap">{group.whiteboard}</p>
+              <p className="px-4 py-3 text-sm whitespace-pre-wrap">{group.whiteboard}</p>
             </Section>
           ) : null}
 
           <Section title="Invite link">
-            <div className="flex items-center gap-2 px-3 py-2.5">
+            <div className="flex items-center gap-2 py-2 pr-2 pl-4">
               <Link2 className="text-text-faint size-4 shrink-0" />
-              <code className="text-text-muted min-w-0 flex-1 truncate text-xs">{inviteLink}</code>
+              <code className="text-text-muted min-w-0 flex-1 truncate text-xs">{inviteLink.replace(/^https?:\/\//, "")}</code>
               <Button
                 size="icon-sm"
                 variant="ghost"
@@ -190,7 +216,7 @@ export function GroupPage() {
             </div>
           </Section>
 
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-0.5 px-1">
             <Button variant="ghost" size="sm" className="justify-start" onClick={() => void exportCsv()}>
               <Download /> Export as spreadsheet
             </Button>
@@ -248,9 +274,9 @@ export function GroupTotals() {
             {Object.keys(totals.totals).length > 1 ? <h2 className="text-text-muted mb-2 text-sm font-medium">{currency}</h2> : null}
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {metrics.map(([k, label]) => (
-                <div key={k} className="rounded-lg border p-4">
+                <div key={k} className="card p-4">
                   <div className="text-text-muted text-xs font-medium">{label}</div>
-                  <div className="mt-1 text-xl font-semibold">
+                  <div className="mt-1 text-xl font-semibold tracking-[-0.02em]">
                     <Money minor={t[k]} currency={currency} tone={k === "change" ? "auto" : "neutral"} signDisplay={k === "change" ? "exceptZero" : "auto"} />
                   </div>
                 </div>
@@ -378,7 +404,7 @@ export function GroupSettings() {
                 className="grid grid-cols-4 gap-2"
               >
                 {(Object.keys(GROUP_TYPE_LABELS) as GroupType[]).map((t) => (
-                  <label key={t} className="has-data-[state=checked]:border-brand has-data-[state=checked]:bg-brand-soft flex cursor-pointer items-center justify-center rounded-md border px-2 py-2 text-sm">
+                  <label key={t} className="pressable shadow-ring hover:bg-surface-2 has-data-[state=checked]:bg-brand-soft has-data-[state=checked]:text-brand-ink has-data-[state=checked]:shadow-[0_0_0_1px_var(--brand)] flex cursor-pointer items-center justify-center rounded-[10px] px-2 py-2 text-sm font-medium">
                     <RadioGroupItem value={t} className="sr-only" />
                     {GROUP_TYPE_LABELS[t]}
                   </label>

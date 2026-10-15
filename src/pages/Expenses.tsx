@@ -82,7 +82,7 @@ export function RecurringExpenses() {
       ) : items.length === 0 ? (
         <EmptyState icon={Repeat} title="Nothing repeats yet" description="When you add an expense, choose a repeat interval to make it recurring." />
       ) : (
-        <ul className="divide-y rounded-lg border">
+        <ul className="card divide-y px-1">
           {items.map((it) => (
             <ExpenseRow
               key={it._id}

@@ -221,7 +221,7 @@ export function ExpenseDetail() {
       {e.receiptUrl ? (
         <Section title="Receipt">
           <a href={e.receiptUrl} target="_blank" rel="noreferrer" className="block p-3">
-            <img src={e.receiptUrl} alt="Receipt" className="max-h-96 rounded-md border object-contain" />
+            <img src={e.receiptUrl} alt="Receipt" className="max-h-96 rounded-xl shadow-card object-contain" />
           </a>
         </Section>
       ) : null}

@@ -22,7 +22,7 @@ export function Join() {
       <Link to="/" className="mb-8">
         <Logo size={30} />
       </Link>
-      <div className="bg-bg w-full max-w-sm rounded-lg border p-6 text-center shadow-card">
+      <div className="card w-full max-w-sm p-6 text-center">
         {info === undefined ? (
           <p className="text-text-muted text-sm">Checking this invite…</p>
         ) : info === null ? (

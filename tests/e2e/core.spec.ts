@@ -173,7 +173,7 @@ test("group settings: simplify debts, whiteboard, remove blocked while unsettled
 
 test("placeholder claim: Bea signs up with the invited email and sees the group", async ({ page }) => {
   await signUp(page, "Bea M", bea.email);
-  await expect(page.getByRole("link", { name: groupName })).toBeVisible();
+  await expect(page.getByRole("link", { name: groupName }).first()).toBeVisible();
   await page.getByRole("link", { name: groupName }).first().click();
   await expect(page.getByRole("link", { name: /Dinner at the fish place/ })).toBeVisible();
   // Bea's view of the dashboard shows she owes Alex

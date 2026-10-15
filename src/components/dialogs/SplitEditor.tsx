@@ -64,7 +64,7 @@ export function SplitEditor({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Split method">
+      <div className="bg-surface-2 flex flex-wrap gap-0.5 rounded-[10px] p-[3px]" role="tablist" aria-label="Split method">
         {SPLIT_METHODS.map((m) => (
           <button
             key={m}
@@ -72,7 +72,7 @@ export function SplitEditor({
             role="tab"
             aria-selected={state.method === m}
             onClick={() => set({ method: m, items: m === "itemized" && state.items.length === 0 ? [newItem(ids)] : state.items })}
-            className={cn("rounded-full border px-3 py-1 text-xs font-medium transition-colors", state.method === m ? "bg-text text-bg border-text" : "text-text-muted hover:bg-surface")}
+            className={cn("pressable rounded-lg px-2.5 py-1 text-xs font-medium", state.method === m ? "bg-surface text-text shadow-[0_1px_2px_rgba(0,0,0,0.08),0_0_0_1px_var(--line)]" : "text-text-muted hover:text-text")}
           >
             {LABELS[m]}
           </button>
@@ -81,7 +81,7 @@ export function SplitEditor({
       <p className="text-text-muted text-xs">{HELP[state.method]}</p>
 
       {state.method !== "itemized" ? (
-        <ul className="divide-y rounded-md border">
+        <ul className="shadow-ring divide-y overflow-hidden rounded-xl">
           {people.map((p) => {
             const checked = state.method === "equal" || state.method === "adjustment" ? state.selected[p._id] !== false : undefined;
             return (
@@ -106,7 +106,7 @@ export function SplitEditor({
       ) : (
         <div className="space-y-2">
           {state.items.map((it, idx) => (
-            <div key={it.id} className="rounded-md border p-2.5">
+            <div key={it.id} className="shadow-ring rounded-xl p-2.5">
               <div className="flex items-center gap-2">
                 <Input aria-label={`Item ${idx + 1} name`} placeholder="Item" value={it.name} onChange={(e) => set({ items: state.items.map((x) => (x.id === it.id ? { ...x, name: e.target.value } : x)) })} />
                 {amountInput(it.amount, (v) => set({ items: state.items.map((x) => (x.id === it.id ? { ...x, amount: v } : x)) }), `Item ${idx + 1} price`)}
@@ -123,7 +123,7 @@ export function SplitEditor({
                       type="button"
                       aria-pressed={on}
                       onClick={() => set({ items: state.items.map((x) => (x.id === it.id ? { ...x, assignees: { ...x.assignees, [p._id]: !on } } : x)) })}
-                      className={cn("flex items-center gap-1.5 rounded-full border py-0.5 pr-2.5 pl-0.5 text-xs transition-colors", on ? "bg-brand-soft border-brand/40 text-brand" : "text-text-faint")}
+                      className={cn("flex items-center gap-1.5 shadow-ring rounded-full py-0.5 pr-2.5 pl-0.5 text-xs transition-colors", on ? "bg-brand-soft text-brand-ink shadow-[0_0_0_1px_var(--brand)]" : "text-text-faint")}
                     >
                       <UserAvatar user={p} size="xs" className="size-5 text-[9px]" />
                       {p.name.split(" ")[0]}
@@ -151,7 +151,7 @@ export function SplitEditor({
             </label>
           </div>
           {owed ? (
-            <ul className="divide-y rounded-md border text-sm">
+            <ul className="shadow-ring divide-y overflow-hidden rounded-xl text-sm">
               {people.filter((p) => owed[p._id] !== undefined).map((p) => (
                 <li key={p._id} className="flex items-center justify-between px-3 py-1.5">
                   <span className="text-text-muted">{p.name}</span>

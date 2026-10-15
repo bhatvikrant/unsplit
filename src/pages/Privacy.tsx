@@ -35,7 +35,7 @@ export function Privacy() {
         <p className="mt-2">Unsplit runs on these services. Each one only receives what it needs for its job.</p>
         <ul className="mt-4 space-y-3">
           {processors.map((p) => (
-            <li key={p.name} className="bg-bg rounded-lg border p-4">
+            <li key={p.name} className="card p-4">
               <a href={p.url} target="_blank" rel="noreferrer" className="text-text font-semibold hover:underline">{p.name}</a>
               <p className="mt-1 text-sm">{p.what}</p>
             </li>
