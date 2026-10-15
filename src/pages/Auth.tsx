@@ -85,7 +85,7 @@ export function Login() {
       title="Welcome back"
       footer={
         <>
-          New here? <Link to="/signup" className="text-brand font-medium">Create an account</Link>
+          New here? <Link to="/signup" className="text-foreground font-medium underline underline-offset-4">Create an account</Link>
         </>
       }
     >
@@ -141,7 +141,7 @@ export function Signup() {
       title="Create your account"
       footer={
         <>
-          Already have one? <Link to="/login" className="text-brand font-medium">Log in</Link>
+          Already have one? <Link to="/login" className="text-foreground font-medium underline underline-offset-4">Log in</Link>
           <span className="text-text-faint mt-2 block text-xs">
             By signing up you agree to how Unsplit handles your data: see the <Link to="/privacy" className="underline">privacy page</Link>.
           </span>
@@ -208,7 +208,7 @@ export function ForgotPassword() {
     <Shell
       title={step === "email" ? "Reset your password" : "Check your email"}
       footer={
-        <Link to="/login" className="text-brand font-medium">
+        <Link to="/login" className="text-foreground font-medium underline underline-offset-4">
           Back to log in
         </Link>
       }
