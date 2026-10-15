@@ -65,7 +65,10 @@ export function Landing() {
           ))}
         </section>
       </main>
-      <footer className="text-text-faint mx-auto max-w-5xl px-5 pb-10 text-xs">Unsplit is open and free. Your data is yours: export it any time.</footer>
+      <footer className="text-text-faint mx-auto flex max-w-5xl flex-wrap items-center gap-x-4 gap-y-1 px-5 pb-10 text-xs">
+        <span>Unsplit is open and free. Your data is yours: export it any time.</span>
+        <Link to="/privacy" className="hover:underline">Privacy</Link>
+      </footer>
     </div>
   );
 }

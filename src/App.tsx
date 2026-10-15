@@ -13,12 +13,14 @@ import { GroupPage, GroupSettings, GroupTotals } from "@/pages/Group";
 import { Join } from "@/pages/Join";
 import { Landing } from "@/pages/Landing";
 import { NotFound } from "@/pages/NotFound";
+import { Privacy } from "@/pages/Privacy";
 
 export const router = createBrowserRouter([
   { path: "/", element: <RedirectIfAuthed><Landing /></RedirectIfAuthed> },
   { path: "/login", element: <RedirectIfAuthed><Login /></RedirectIfAuthed> },
   { path: "/signup", element: <RedirectIfAuthed><Signup /></RedirectIfAuthed> },
   { path: "/forgot", element: <RedirectIfAuthed><ForgotPassword /></RedirectIfAuthed> },
+  { path: "/privacy", element: <Privacy /> },
   { path: "/join/:code", element: <Join /> },
   {
     element: (

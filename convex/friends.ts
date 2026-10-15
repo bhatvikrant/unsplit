@@ -5,6 +5,7 @@ import type { Id } from "./_generated/dataModel";
 import { assertFriends, ensureFriendship, friendIdsOf, friendshipOf, pairKeyOf, requireUser, requireUserId } from "./lib/access";
 import { computeUserBalances, mapToRecord } from "./lib/balances";
 import { escapeHtml, layout, sendEmail, siteUrl } from "./lib/email";
+import { enforceLimit } from "./lib/rateLimit";
 import { formatMoney } from "./lib/money";
 import { findOrCreateUser, isValidEmail, normalizeEmail, publicUser, publicUsers } from "./lib/users";
 import { logActivity } from "./lib/activity";
@@ -76,6 +77,7 @@ export const add = mutation({
     await logActivity(ctx, { type: "friend_added", actorId: me._id, subjectUserId: friendId, recipients: [me._id, friendId] });
     const friend = await ctx.db.get(friendId);
     if (friend?.isPlaceholder && friend.email) {
+      await enforceLimit(ctx, "inviteEmail", me._id, "Invite");
       await ctx.scheduler.runAfter(0, internal.friends.sendInviteEmail, { toUserId: friendId, byUserId: me._id });
     }
     return { friendId, alreadyFriends: false };
@@ -153,6 +155,8 @@ export const remind = action({
     if (owed.length === 0) return { sent: false, reason: "They don't owe you anything right now" };
     if (!c.friendEmail) return { sent: false, reason: "This friend has no email address" };
     if (!process.env.RESEND_API_KEY) return { sent: false, reason: "Email isn't set up on this deployment yet" };
+    await enforceLimit(ctx, "reminderEmail", c.meId, "Reminder");
+    await enforceLimit(ctx, "reminderToFriend", `${c.meId}:${friendId}`, "Reminder");
     const amounts = owed.map(([cur, v]) => formatMoney(v, cur)).join(" and ");
     const link = `${siteUrl()}/friends/${c.meId}`;
     const ok = await sendEmail({

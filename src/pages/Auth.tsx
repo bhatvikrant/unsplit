@@ -142,6 +142,9 @@ export function Signup() {
       footer={
         <>
           Already have one? <Link to="/login" className="text-brand font-medium">Log in</Link>
+          <span className="text-text-faint mt-2 block text-xs">
+            By signing up you agree to how Unsplit handles your data: see the <Link to="/privacy" className="underline">privacy page</Link>.
+          </span>
         </>
       }
     >

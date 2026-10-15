@@ -1,6 +1,6 @@
 # Backend: Unsplit (Convex)
 
-Deployment: Convex. Local dev runs an anonymous local deployment (`npm run dev:backend`); production is a Convex cloud deployment.
+Deployment: Convex. Local dev runs an anonymous local deployment (`npm run dev:backend`); production is the Convex cloud deployment `scintillating-salamander-731` (project `vikrant-bhat/unsplit`, EU West), frontend on Vercel at https://unsplit.vercel.app. See README → Deploy.
 
 ## Auth
 - [x] Email + password sign-up and log-in (Convex Auth Password provider, 8+ character passwords)
@@ -38,12 +38,12 @@ No subscription and no card forms: every feature is free. Settle-up records paym
 - [x] secrets only in Convex env vars; `.env.local` ignored; nothing in the client bundle
 - [x] input validated on the server (Convex validators + the split engine) on every function
 - [x] authorisation on every read and write (e2e: Bea only sees her own groups)
-- [ ] rate limits on sign-up and email sends (Convex Auth rate-limits sign-in attempts; add `@convex-dev/rate-limiter` for invites/reminders before launch)
+- [x] rate limits: Convex Auth rate-limits sign-in attempts; `@convex-dev/rate-limiter` (`convex/lib/rateLimit.ts`) caps invite emails per sender (30/h, burst 10), reminders per sender (10/h, burst 3) and one reminder per friend per 12 h
 - [x] no webhooks
 - [x] uploads: 10 MB, image types only, served from Convex storage URLs
 - [x] no user data in URLs (ids only) or logs
 - [x] `npm audit`: 0 vulnerabilities at install
-- [ ] privacy policy listing Convex, Resend, Anthropic, Frankfurter, the host
+- [x] privacy page at `/privacy` (`src/pages/Privacy.tsx`) listing Convex, Vercel, Resend, Anthropic, Google, Frankfurter
 
 ## Environment variables
 See `.env.example`.

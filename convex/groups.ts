@@ -1,5 +1,5 @@
 import { ConvexError, v } from "convex/values";
-import { internalAction, internalQuery, mutation, query } from "./_generated/server";
+import { internalAction, internalQuery, mutation, query, type MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import {
@@ -10,6 +10,7 @@ import { logActivity } from "./lib/activity";
 import { randomCode } from "./lib/ids";
 import { findOrCreateUser, isValidEmail, normalizeEmail, publicUsers } from "./lib/users";
 import { escapeHtml, layout, sendEmail, siteUrl } from "./lib/email";
+import { enforceLimit } from "./lib/rateLimit";
 import { groupType, splitSpec } from "./schema";
 
 const memberInput = v.object({
@@ -140,9 +141,10 @@ async function resolveMember(ctx: Parameters<typeof findOrCreateUser>[0], me: Id
   return await findOrCreateUser(ctx, { name: m.name, email, invitedBy: me });
 }
 
-async function maybeEmailGroupInvite(ctx: { db: { get: (id: Id<"users">) => Promise<Doc<"users"> | null> }; scheduler: { runAfter: (ms: number, fn: typeof internal.groups.sendGroupInviteEmail, args: { groupId: Id<"groups">; toUserId: Id<"users">; byUserId: Id<"users"> }) => Promise<unknown> } }, groupId: Id<"groups">, toUserId: Id<"users">, byUserId: Id<"users">) {
+async function maybeEmailGroupInvite(ctx: MutationCtx, groupId: Id<"groups">, toUserId: Id<"users">, byUserId: Id<"users">) {
   const u = await ctx.db.get(toUserId);
   if (u?.isPlaceholder && u.email) {
+    await enforceLimit(ctx, "inviteEmail", byUserId, "Invite");
     await ctx.scheduler.runAfter(0, internal.groups.sendGroupInviteEmail, { groupId, toUserId, byUserId });
   }
 }

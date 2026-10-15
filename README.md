@@ -17,20 +17,20 @@ npm run auth:setup        # once: generates JWT keys and sets SITE_URL on the de
 npm run dev:all           # Convex local backend + Vite on http://localhost:5173
 ```
 
-`npm run dev:all` uses an anonymous local Convex deployment: no account needed.
-To use a Convex cloud dev deployment instead, run `npx convex dev` once (it logs
-you in and writes `.env.local`), then `npm run auth:setup` and `npm run dev`.
+`npm run dev:all` uses an anonymous local Convex deployment: no account needed,
+and `.env.local` stays pointed at it. The e2e suite runs against this setup.
 
-Optional services, each set with `npx convex env set NAME value`:
+To develop against the Convex cloud dev deployment instead:
 
-| what | variables | without it |
-| --- | --- | --- |
-| Google sign-in | `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET` | the Google button errors; email + password works |
-| Email (Resend) | `RESEND_API_KEY`, `EMAIL_FROM` | invites are shareable links, reminders and password reset are unavailable |
-| Receipt scanning | `ANTHROPIC_API_KEY` | "Scan receipt" explains it isn't configured; manual itemizing works |
+```bash
+npx convex dev --once --env-file .env.cloud.local   # once: logs you in, picks/creates the project
+npm run auth:setup -- --cloud                       # keys + SITE_URL on that deployment
+npm run dev:cloud                                   # cloud backend + Vite (mode "cloud")
+```
 
-Google OAuth redirect URI: `<your CONVEX_SITE_URL>/api/auth/callback/google`.
-Currency conversion needs no key (Frankfurter / ECB rates).
+`.env.cloud.local` is git-ignored and holds only the deployment name and URLs.
+Keeping it separate matters: if `.env.local` ever names a cloud deployment,
+`npm run dev:all` silently uses that deployment instead of the local one.
 
 ## Test
 
@@ -42,15 +42,64 @@ npm run typecheck
 
 ## Deploy
 
-1. Create a Convex production deployment (`npx convex deploy` from a logged-in
-   CLI) and set the env vars above on it, including `SITE_URL=https://your.domain`.
-   Run `SITE_URL=https://your.domain ./scripts/setup-auth-env.sh --prod` for the auth keys.
-2. Build the frontend against production: `npx convex deploy --cmd 'npm run build'`.
-3. Host `dist/` anywhere static (Vercel, Netlify, Cloudflare Pages). On Vercel set
-   the build command to `npx convex deploy --cmd 'npm run build'` and add
-   `CONVEX_DEPLOY_KEY` from the Convex dashboard.
-4. Add a rewrite so every path serves `index.html` (SPA routing). On Vercel:
-   `vercel.json` with `{"rewrites":[{"source":"/(.*)","destination":"/index.html"}]}`.
+Production runs the Convex backend on a cloud deployment and the static `dist/`
+on Vercel. The live instance is https://unsplit.vercel.app (Convex project
+`vikrant-bhat/unsplit`, EU West).
+
+### First time
+
+1. **Convex project**: `npx convex dev --once --env-file .env.cloud.local`.
+   It logs you in, asks for a region, creates the project and a dev deployment,
+   and writes `.env.cloud.local`.
+2. **Production backend**: `npx convex deploy -y --env-file .env.cloud.local`
+   creates the production deployment and pushes the functions. Note the
+   `https://<name>.convex.cloud` URL it prints: `<name>.convex.site` is the
+   `CONVEX_SITE_URL` used below.
+3. **Vercel project**: `npm i -g vercel`, `vercel login`, `vercel link --yes`
+   (creates the project, Vite preset). `vercel.json` sets the build command to
+   `npx convex deploy -y --cmd 'npm run build'` and the SPA rewrite.
+4. **Deploy**: `npm run deploy`. It builds locally with the Vercel CLI (which
+   runs the Convex deploy and `vite build` against the production URL) and
+   uploads the prebuilt output to production. The first run prints the public
+   URL (`https://<project>.vercel.app`).
+5. **Auth keys and site URL**: `SITE_URL=https://<your public url> ./scripts/setup-auth-env.sh --prod`.
+   Check `https://<CONVEX_SITE_URL>/.well-known/jwks.json` returns 200.
+6. **Google sign-in**: in [Google Cloud Console → APIs & Services → Credentials](https://console.cloud.google.com/apis/credentials)
+   create an OAuth client ID of type *Web application* with the authorised
+   redirect URI `https://<CONVEX_SITE_URL>/api/auth/callback/google` (configure
+   the consent screen first if asked; External, with your email as test user
+   until you publish it). Then:
+   `npm run env:prod -- set AUTH_GOOGLE_ID <client id>` and
+   `npm run env:prod -- set AUTH_GOOGLE_SECRET <client secret>`.
+7. **Email**: in [Resend](https://resend.com) add and verify your sending domain
+   (DNS records it shows you), create an API key, then
+   `npm run env:prod -- set RESEND_API_KEY re_...` and
+   `npm run env:prod -- set EMAIL_FROM "Unsplit <noreply@yourdomain.com>"`.
+8. **Receipt scanning**: create a key in the [Claude Console](https://console.anthropic.com/settings/keys)
+   and `npm run env:prod -- set ANTHROPIC_API_KEY sk-ant-...`.
+9. **Builds on Vercel's side** (optional, only once the repo is connected to
+   GitHub in the Vercel project): create a *Production* deploy key in the Convex
+   dashboard → Settings → Deploy keys, then
+   `vercel env add CONVEX_DEPLOY_KEY production` and paste it. Every push then
+   runs the same build command on Vercel.
+
+Each `npm run env:prod -- set` takes effect immediately; no redeploy needed. The
+helper scripts read the project from `.env.cloud.local`, so `.env.local` can stay
+on the anonymous local deployment.
+Custom domain: add it in Vercel (Project → Domains), then rerun step 5 with the
+new `SITE_URL`.
+
+### Every release
+
+```bash
+npm run typecheck && npm test
+npm run deploy
+```
+
+### Smoke test after deploying
+
+Sign up with email on the public URL, sign in with Google, add a friend by email
+and check the invite arrives, scan a receipt, convert a group to another currency.
 
 ## Layout
 
@@ -61,5 +110,5 @@ src/               Vite app: pages, dialogs, components, hooks
 replica/           recon map, feature matrix, architecture, design tokens, build log, test plan
 tests/unit         vitest
 tests/e2e          Playwright
-scripts/           auth key generation
+scripts/           auth key generation, deploy
 ```

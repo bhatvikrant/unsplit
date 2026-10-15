@@ -142,7 +142,7 @@ export function AccountPage() {
         <div className="flex items-center justify-between gap-3 p-4 text-sm">
           <span>
             <span className="font-medium">Delete account</span>
-            <span className="text-text-muted block text-xs">You need to be settled up with everyone first. Your name is removed from shared expenses, but the expenses stay so other people's balances stay correct.</span>
+            <span className="text-text-muted block text-xs">You need to be settled up with everyone first. Your name is removed from shared expenses, but the expenses stay so other people's balances stay correct. See the <Link to="/privacy" className="underline">privacy page</Link>.</span>
           </span>
           <AlertDialog>
             <AlertDialogTrigger asChild>
