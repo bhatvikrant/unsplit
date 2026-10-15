@@ -19,7 +19,7 @@ export const ResendOTPPasswordReset = Email({
   async sendVerificationRequest({ identifier: email, token }) {
     const ok = await sendEmail({
       to: email,
-      subject: `Your Unsplit reset code: ${token}`,
+      subject: `Your UnSplit reset code: ${token}`,
       text: `Use this code to set a new password: ${token}\n\nIt expires in 15 minutes. If you didn't ask for it, ignore this email.`,
       html: `<p>Use this code to set a new password:</p><p style="font-size:24px;font-weight:600;letter-spacing:2px">${token}</p><p>It expires in 15 minutes. If you didn't ask for it, ignore this email.</p>`,
     });

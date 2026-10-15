@@ -30,7 +30,7 @@ export function Join() {
             <h1 className="text-text text-lg font-semibold">This link doesn't work</h1>
             <p className="text-text-muted mt-2 text-sm">The invite may have been reset or the group deleted. Ask whoever sent it for a new link.</p>
             <Button className="mt-5" asChild>
-              <Link to="/dashboard">Go to Unsplit</Link>
+              <Link to="/dashboard">Go to UnSplit</Link>
             </Button>
           </>
         ) : (

@@ -117,7 +117,7 @@ export const sendForActivity = internalAction({
         body = `${c.actorName} deleted the group <strong>${escapeHtml(c.groupName ?? "")}</strong>. It can be restored from Deleted items.`;
         break;
       case "friend_added":
-        subject = `${c.actorName} added you as a friend on Unsplit`;
+        subject = `${c.actorName} added you as a friend on UnSplit`;
         body = `${c.actorName} added you as a friend. You can now share expenses.`;
         link = `${siteUrl()}/friends/${c.activity.actorId}`;
         break;
@@ -130,7 +130,7 @@ export const sendForActivity = internalAction({
     }
     for (const r of c.recipients) {
       if (!r.prefs[prefKey]) continue;
-      await sendEmail({ to: r.email, subject, text: subject, html: layout(subject, body, link, "Open in Unsplit") });
+      await sendEmail({ to: r.email, subject, text: subject, html: layout(subject, body, link, "Open in UnSplit") });
     }
   },
 });

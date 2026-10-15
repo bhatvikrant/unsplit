@@ -26,7 +26,7 @@ const engine = new SyncEngine(convex, store);
 const updateSW = registerSW({
   immediate: true,
   onNeedRefresh() {
-    toast("A new version of Unsplit is ready", {
+    toast("A new version of UnSplit is ready", {
       id: "sw-update",
       duration: Infinity,
       action: { label: "Update", onClick: () => void updateSW(true) },

@@ -1,4 +1,4 @@
-# Architecture: Unsplit (a rebuild of Splitwise's core features)
+# Architecture: UnSplit (a rebuild of Splitwise's core features)
 
 ## Stack
 

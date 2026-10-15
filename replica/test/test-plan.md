@@ -1,4 +1,4 @@
-# Test plan: Unsplit
+# Test plan: UnSplit
 
 Unit (vitest, `npm test`): the split engine and money helpers. 13 tests: rounding
 sums to the total for 500 random weights, every split method, multiple payers,

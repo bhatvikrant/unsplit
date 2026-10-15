@@ -1,4 +1,4 @@
-# Backend: Unsplit (Convex)
+# Backend: UnSplit (Convex)
 
 Deployment: Convex. Local dev runs an anonymous local deployment (`npm run dev:backend`); production is the Convex cloud deployment `scintillating-salamander-731` (project `vikrant-bhat/unsplit`, EU West), frontend on Vercel at https://unsplit.vercel.app. See README → Deploy.
 

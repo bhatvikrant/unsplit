@@ -143,7 +143,7 @@ export function Signup() {
         <>
           Already have one? <Link to="/login" className="text-foreground font-medium underline underline-offset-4">Log in</Link>
           <span className="text-text-faint mt-2 block text-xs">
-            By signing up you agree to how Unsplit handles your data: see the <Link to="/privacy" className="underline">privacy page</Link>.
+            By signing up you agree to how UnSplit handles your data: see the <Link to="/privacy" className="underline">privacy page</Link>.
           </span>
         </>
       }

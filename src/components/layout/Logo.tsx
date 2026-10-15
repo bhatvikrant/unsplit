@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 
 /**
- * Unsplit mark: a bold "S" stroke on a rounded brand-green tile.
+ * UnSplit mark: a bold "S" stroke on a rounded brand-green tile.
  * public/icon.svg is the fixed-colour version used for the favicon and app icons.
  */
 export function Logo({ className, size = 26, wordmark = true }: { className?: string; size?: number; wordmark?: boolean }) {

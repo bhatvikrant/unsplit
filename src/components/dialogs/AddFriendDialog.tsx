@@ -44,7 +44,7 @@ export function AddFriendDialog({ onClose }: { onClose: () => void }) {
             <Field label="Name" htmlFor="fname">
               <Input id="fname" autoFocus maxLength={80} value={name} onChange={(e) => setName(e.target.value)} />
             </Field>
-            <Field label="Email" htmlFor="femail" hint="Optional. If they already use Unsplit, this links to their account; if not, they get an invite." error={error}>
+            <Field label="Email" htmlFor="femail" hint="Optional. If they already use UnSplit, this links to their account; if not, they get an invite." error={error}>
               <Input id="femail" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
             </Field>
           </div>

@@ -32,7 +32,7 @@ export function Landing() {
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
             <h1 className="text-text max-w-2xl text-4xl font-semibold tracking-tight sm:text-5xl">Shared costs, settled without the spreadsheet.</h1>
             <p className="text-text-muted mt-5 max-w-xl text-lg">
-              Unsplit tracks who paid for what and who owes whom, across every group you're in. Every feature is free. No limits, no ads, nothing locked.
+              UnSplit tracks who paid for what and who owes whom, across every group you're in. Every feature is free. No limits, no ads, nothing locked.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Button size="lg" asChild>
@@ -66,7 +66,7 @@ export function Landing() {
         </section>
       </main>
       <footer className="text-text-faint mx-auto flex max-w-5xl flex-wrap items-center gap-x-4 gap-y-1 px-5 pb-10 text-xs">
-        <span>Unsplit is open and free. Your data is yours: export it any time.</span>
+        <span>UnSplit is open and free. Your data is yours: export it any time.</span>
         <Link to="/privacy" className="hover:underline">Privacy</Link>
       </footer>
     </div>

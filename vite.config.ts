@@ -21,8 +21,8 @@ export default defineConfig({
       includeAssets: ["*.svg", "*.png"],
       manifest: {
         id: "/",
-        name: "Unsplit",
-        short_name: "Unsplit",
+        name: "UnSplit",
+        short_name: "UnSplit",
         description: "Split shared expenses with friends, flatmates and travel groups.",
         theme_color: "#f6f5f1",
         background_color: "#f6f5f1",

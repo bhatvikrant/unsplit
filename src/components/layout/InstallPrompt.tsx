@@ -21,7 +21,7 @@ export function AddToHomeScreenDialog({ open, onOpenChange }: { open: boolean; o
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Add Unsplit to your Home Screen</DialogTitle>
+          <DialogTitle>Add UnSplit to your Home Screen</DialogTitle>
           <DialogDescription>It opens full screen like any other app and keeps working without a connection.</DialogDescription>
         </DialogHeader>
         <ol className="mt-2 space-y-3">
@@ -32,7 +32,7 @@ export function AddToHomeScreenDialog({ open, onOpenChange }: { open: boolean; o
             Scroll down and tap <SquarePlus className="mx-0.5 inline size-4 align-text-bottom" aria-hidden="true" /> <b>Add to Home Screen</b>.
           </Step>
           <Step n={3}>
-            Tap <b>Add</b>. Unsplit now has its own icon.
+            Tap <b>Add</b>. UnSplit now has its own icon.
           </Step>
         </ol>
       </DialogContent>
@@ -65,7 +65,7 @@ export function InstallBanner() {
       <Logo wordmark={false} size={36} />
       <div className="min-w-0 flex-1">
         <div className="text-text text-sm font-medium">Get the app</div>
-        <div className="text-text-muted text-xs">Add Unsplit to your home screen. Full screen, works offline.</div>
+        <div className="text-text-muted text-xs">Add UnSplit to your home screen. Full screen, works offline.</div>
       </div>
       <InstallButton size="sm" />
       <Button variant="ghost" size="icon" aria-label="Not now" onClick={dismiss}>
@@ -87,7 +87,7 @@ export function InstallSection() {
         <div className="min-w-0 flex-1">
           <div className="text-text text-sm font-medium">{installed ? "Installed on this device" : "Install on this device"}</div>
           <div className="text-text-muted text-xs">
-            {installed ? "Unsplit runs from your home screen and keeps working offline." : "Add Unsplit to your home screen for a full-screen app that works offline."}
+            {installed ? "UnSplit runs from your home screen and keeps working offline." : "Add UnSplit to your home screen for a full-screen app that works offline."}
           </div>
         </div>
         {!installed ? <InstallButton variant="outline" size="sm" /> : null}

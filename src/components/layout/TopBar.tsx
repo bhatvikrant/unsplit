@@ -40,7 +40,7 @@ export function TopBar() {
           <UserMenu onNavigate={() => setOpen(false)} />
         </SheetContent>
       </Sheet>
-      <Link to="/dashboard" className="shrink-0 lg:hidden" aria-label="Unsplit home">
+      <Link to="/dashboard" className="shrink-0 lg:hidden" aria-label="UnSplit home">
         <Logo wordmark={false} />
       </Link>
 

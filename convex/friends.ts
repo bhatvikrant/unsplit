@@ -117,13 +117,13 @@ export const sendInviteEmail = internalAction({
     const link = `${siteUrl()}/signup?email=${encodeURIComponent(c.toEmail)}`;
     await sendEmail({
       to: c.toEmail,
-      subject: `${c.byName} wants to share expenses with you on Unsplit`,
-      text: `${c.byName} added you on Unsplit, a free app for splitting shared costs. Sign up with this email address to see what you share: ${link}`,
+      subject: `${c.byName} wants to share expenses with you on UnSplit`,
+      text: `${c.byName} added you on UnSplit, a free app for splitting shared costs. Sign up with this email address to see what you share: ${link}`,
       html: layout(
-        `${escapeHtml(c.byName)} added you on Unsplit`,
-        `<p>${escapeHtml(c.byName)} added you as a friend on Unsplit, a free app for splitting shared costs.</p><p>Sign up with <strong>${escapeHtml(c.toEmail)}</strong> and everything they've shared with you will already be there.</p>`,
+        `${escapeHtml(c.byName)} added you on UnSplit`,
+        `<p>${escapeHtml(c.byName)} added you as a friend on UnSplit, a free app for splitting shared costs.</p><p>Sign up with <strong>${escapeHtml(c.toEmail)}</strong> and everything they've shared with you will already be there.</p>`,
         link,
-        "Join Unsplit",
+        "Join UnSplit",
       ),
     });
   },
@@ -165,8 +165,8 @@ export const remind = action({
     const ok = await sendEmail({
       to: c.friendEmail,
       subject: `Reminder: you owe ${c.meName} ${amounts}`,
-      text: `Hi ${c.friendName}, a friendly reminder that you owe ${c.meName} ${amounts} on Unsplit. ${link}`,
-      html: layout(`A friendly reminder from ${escapeHtml(c.meName)}`, `<p>You currently owe ${escapeHtml(c.meName)} <strong>${escapeHtml(amounts)}</strong>.</p><p>Open Unsplit to see the details and settle up.</p>`, link, "View balance"),
+      text: `Hi ${c.friendName}, a friendly reminder that you owe ${c.meName} ${amounts} on UnSplit. ${link}`,
+      html: layout(`A friendly reminder from ${escapeHtml(c.meName)}`, `<p>You currently owe ${escapeHtml(c.meName)} <strong>${escapeHtml(amounts)}</strong>.</p><p>Open UnSplit to see the details and settle up.</p>`, link, "View balance"),
     });
     await ctx.runMutation(internal.friends.logReminder, { actorId: c.meId, friendId, sent: ok });
     return { sent: ok, reason: ok ? undefined : "Email failed to send" };

@@ -1,4 +1,4 @@
-# Unsplit
+# UnSplit
 
 Split shared expenses with friends, flatmates and travel groups. Every feature
 is free: unlimited expenses, every split method, itemized bills, receipt
@@ -61,7 +61,7 @@ reminders, exports, file uploads, invite links of groups created offline.
 
 ## Install on a phone
 
-Unsplit is a PWA: the manifest and icons come from `vite.config.ts`, the iOS
+UnSplit is a PWA: the manifest and icons come from `vite.config.ts`, the iOS
 meta tags from `index.html`. On Android (Chrome, Edge, Samsung Internet) the
 browser fires `beforeinstallprompt`; `src/lib/install.ts` keeps that event so
 the Install button in the banner and on the Account page can open the
@@ -125,7 +125,7 @@ on Vercel. The live instance is https://unsplit.vercel.app (Convex project
 7. **Email**: in [Resend](https://resend.com) add and verify your sending domain
    (DNS records it shows you), create an API key, then
    `npm run env:prod -- set RESEND_API_KEY re_...` and
-   `npm run env:prod -- set EMAIL_FROM "Unsplit <noreply@yourdomain.com>"`.
+   `npm run env:prod -- set EMAIL_FROM "UnSplit <noreply@yourdomain.com>"`.
 8. **Receipt scanning**: create a key in the [Claude Console](https://console.anthropic.com/settings/keys)
    and `npm run env:prod -- set ANTHROPIC_API_KEY sk-ant-...`.
 9. **Builds on Vercel's side**: the Vercel project is connected to

@@ -1,7 +1,7 @@
 # Recon map: Splitwise (web)
 
 Scope: the full web product. Friends, groups, expenses with every split method, settling up, balances, activity, account. Everything Splitwise gates behind Pro is in scope and free in the clone, except card transaction import (bank linking) and partner payment rails.
-For: Unsplit, a free, no-paywall shared-expense tracker for the user and anyone they share costs with.
+For: UnSplit, a free, no-paywall shared-expense tracker for the user and anyone they share costs with.
 Date: 2026-10-15
 
 ## Sources
