@@ -25,7 +25,6 @@ dist-ssr
 
 # convex
 .env.local
-convex/_generated/
 
 # tests
 test-results/
