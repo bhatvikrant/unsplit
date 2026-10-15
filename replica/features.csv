@@ -1,0 +1,83 @@
+feature,area,priority,original,clone,notes
+Sign up with email and password,account,must,yes,no,
+Sign in with Google,account,must,yes,no,user's own OAuth client
+Log in and log out,account,must,yes,no,
+Password reset by email,account,must,yes,no,
+Edit profile (name email avatar),account,must,yes,no,
+Default currency setting,account,must,yes,no,
+Email notification preferences,account,should,yes,no,
+Delete account,account,should,yes,no,
+Log out of all devices,account,could,yes,no,
+Language and time zone settings,account,could,yes,no,time zone used for dates; UI English only
+Add a friend by name with optional email,friends,must,yes,no,placeholder user until they sign up
+Invite a friend by email,friends,should,yes,no,Resend
+Friend list with balances,friends,must,yes,no,
+Friend page with per-group balance breakdown,friends,must,yes,no,
+Remove a friend when settled,friends,should,yes,no,
+Send a balance reminder to a friend,friends,should,yes,no,email via Resend
+Create a group with name and type,groups,must,yes,no,home trip couple other
+Add members by email or name,groups,must,yes,no,
+Shareable invite link,groups,must,yes,no,
+Join a group from an invite link,groups,must,yes,no,
+Remove a member only if their balance is zero,groups,must,yes,no,
+Leave a group,groups,must,yes,no,
+Delete and restore a group,groups,must,yes,no,
+Edit group name and type,groups,must,yes,no,
+Group cover image,groups,could,yes,no,Convex storage
+Simplify debts toggle per group,groups,must,yes,no,any member can toggle; logged
+Default split per group,groups,must,yes,no,Pro in the original; free here
+Group whiteboard notes,groups,should,yes,no,
+Non-group expenses bucket,groups,must,yes,no,friend-level expenses with no group
+Group balances panel,groups,must,yes,no,
+Group totals screen (month / all time),groups,must,yes,no,six metrics
+Add an expense (description amount date currency category notes),expenses,must,yes,no,
+Pick who paid including multiple payers,expenses,must,yes,no,
+Split equally with participant toggles,expenses,must,yes,no,
+Split by exact amounts,expenses,must,yes,no,
+Split by percentages,expenses,must,yes,no,
+Split by shares,expenses,must,yes,no,
+Split by adjustment,expenses,must,yes,no,
+Reimbursement split,expenses,should,yes,no,web-only in original
+Itemized split with tax tip discount,expenses,must,yes,no,Pro in the original; free here
+Edit an expense,expenses,must,yes,no,
+Delete and restore an expense,expenses,must,yes,no,
+Expense detail with share breakdown,expenses,must,yes,no,
+Comments on an expense,expenses,must,yes,no,
+Change history on an expense,expenses,must,yes,no,
+Receipt image attached to an expense,expenses,must,yes,no,Convex storage
+Receipt scanning to items and total,expenses,should,yes,no,Claude API with user's key
+Recurring expenses weekly fortnightly monthly yearly,expenses,must,yes,no,scheduler
+Edit a recurring expense affecting future instances only,expenses,must,yes,no,
+Cancel future recurrences,expenses,must,yes,no,
+Email reminder before a recurring expense posts,expenses,could,yes,no,
+Recurring expenses list with next dates,expenses,should,yes,no,
+Category with subcategories and icons,expenses,must,yes,no,own icon set
+Categories auto-suggested from description,expenses,could,yes,no,keyword match
+Unlimited expenses per day,expenses,must,no,no,original caps free users at 4/day
+All expenses list grouped by month,expenses,must,yes,no,
+Filter expenses by group or friend,expenses,must,yes,no,
+Search expenses,expenses,must,yes,no,Pro in the original; free here
+Dashboard total balance you owe you are owed,balances,must,yes,no,
+Per-friend balances with multi-currency marker,balances,must,yes,no,
+Hide settled friends after 30 days of inactivity,balances,could,yes,no,
+Balances kept separately per currency,balances,must,yes,no,
+Settle up: record a payment with prefilled amount,balances,must,yes,no,
+Settle up in a group or overall,balances,must,yes,no,
+Undo a payment,balances,must,yes,no,delete the payment expense
+Convert a group or friendship to one currency,balances,should,yes,no,Frankfurter rates; Pro in original
+Recent activity feed,activity,must,yes,no,
+Unread activity badge,activity,should,yes,no,
+Email notifications for key events,activity,should,yes,no,Resend
+Charts: spending by category and over time,insights,should,yes,no,Pro in original
+Export a group or friend as CSV,insights,should,yes,no,
+Export account as JSON backup,insights,should,yes,no,Pro in original
+Responsive mobile layout,platform,must,yes,no,
+Realtime updates across devices,platform,should,yes,no,Convex subscriptions
+Offline entry with later sync,platform,could,yes,no,
+No ads,platform,must,no,no,
+Card transaction import,integrations,could,yes,skip,needs a bank aggregator and agreements
+Venmo PayPal Paytm payment rails,integrations,could,yes,skip,partner integrations; payments are recorded not moved
+Splitwise Pay and Card,integrations,could,yes,skip,regulated product
+Native mobile apps,platform,could,yes,skip,web only
+Public calculators,marketing,could,yes,skip,marketing content
+Seven UI languages,platform,could,yes,skip,English only at launch

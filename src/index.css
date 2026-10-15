@@ -1,0 +1,147 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* Unsplit tokens. Source of truth: replica/design/tokens.json */
+:root {
+  --bg: #ffffff;
+  --surface: #f7f7f8;
+  --surface-2: #efeff2;
+  --border: #e4e4e9;
+  --border-input: #8a8a96;
+  --text: #17171c;
+  --text-muted: #5f5f6b;
+  --text-faint: #8a8a96;
+  --accent: #4f46e5;
+  --accent-hover: #4338ca;
+  --accent-soft: #eef0ff;
+  --on-accent: #ffffff;
+  --positive: #15803d;
+  --positive-soft: #ecfdf3;
+  --negative: #c2410c;
+  --negative-soft: #fff4ec;
+  --danger: #b91c1c;
+  --warning: #a16207;
+  --focus: #4f46e5;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --shadow-card: 0 1px 2px rgba(16, 18, 28, 0.05), 0 1px 3px rgba(16, 18, 28, 0.08);
+  --shadow-pop: 0 10px 30px rgba(16, 18, 28, 0.14);
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* shadcn role mapping */
+  --background: var(--bg);
+  --foreground: var(--text);
+  --card: var(--bg);
+  --card-foreground: var(--text);
+  --popover: var(--bg);
+  --popover-foreground: var(--text);
+  --primary: var(--accent);
+  --primary-foreground: var(--on-accent);
+  --secondary: var(--surface);
+  --secondary-foreground: var(--text);
+  --muted: var(--surface);
+  --muted-foreground: var(--text-muted);
+  --destructive: var(--danger);
+  --input: var(--border);
+  --ring: var(--focus);
+  --radius: var(--radius-md);
+}
+
+.dark {
+  --bg: #0f0f12;
+  --surface: #17171c;
+  --surface-2: #1f1f26;
+  --border: #2a2a33;
+  --border-input: #6f6f7c;
+  --text: #f2f2f5;
+  --text-muted: #a3a3af;
+  --text-faint: #7a7a87;
+  --accent: #8b85f5;
+  --accent-hover: #a09bf8;
+  --accent-soft: #22214a;
+  --on-accent: #0f0f12;
+  --positive: #4ade80;
+  --positive-soft: #0f2a1a;
+  --negative: #fb923c;
+  --negative-soft: #2e1a0e;
+  --danger: #f87171;
+  --warning: #facc15;
+  --focus: #8b85f5;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.5);
+  --shadow-pop: 0 10px 30px rgba(0, 0, 0, 0.6);
+}
+
+@theme inline {
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-border-input: var(--border-input);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-text-faint: var(--text-faint);
+  --color-brand: var(--accent);
+  --color-brand-hover: var(--accent-hover);
+  --color-brand-soft: var(--accent-soft);
+  --color-on-brand: var(--on-accent);
+  --color-positive: var(--positive);
+  --color-positive-soft: var(--positive-soft);
+  --color-negative: var(--negative);
+  --color-negative-soft: var(--negative-soft);
+  --color-danger: var(--danger);
+  --color-warning: var(--warning);
+  --color-focus: var(--focus);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--surface-2);
+  --color-accent-foreground: var(--text);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--on-accent);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: 18px;
+  --shadow-card: var(--shadow-card);
+  --shadow-pop: var(--shadow-pop);
+  --ease-out-soft: var(--ease);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-bg text-text antialiased;
+    font-feature-settings: "cv11", "ss01";
+  }
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+}
