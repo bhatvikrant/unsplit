@@ -65,6 +65,8 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
   const [showMore, setShowMore] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const hydrated = useRef(false);
+  // Mirrors categoryTouched synchronously so the suggestion effect can't run with stale state in the hydration commit.
+  const categoryLocked = useRef(Boolean(options.expenseId));
 
   const people = useMemo(() => {
     if (scope?.kind === "group" && group) return group.members;
@@ -113,6 +115,7 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
     setDate(existing.date);
     setCategory(existing.category);
     setCategoryTouched(true);
+    categoryLocked.current = true;
     setNotes(existing.notes ?? "");
     setRepeat(existing.repeat);
     setEmailReminder(existing.emailReminder);
@@ -133,7 +136,7 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
 
   // Category suggestion from the description.
   useEffect(() => {
-    if (categoryTouched) return;
+    if (categoryTouched || categoryLocked.current) return;
     const s = suggestCategory(description);
     setCategory(s ?? "general");
   }, [description, categoryTouched]);
@@ -320,6 +323,7 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
                 onChange={(c) => {
                   setCategory(c);
                   setCategoryTouched(true);
+                  categoryLocked.current = true;
                 }}
               />
               <div className="flex-1 space-y-2">

@@ -11,6 +11,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { monthLabel } from "@/lib/format";
 import { useFormatMoney } from "@/lib/hooks";
 import { useState } from "react";
+import { GroupNav } from "./Group";
 
 /** Categorical palette, fixed order per parent category. Validated with the dataviz checks (light + dark). */
 const GROUP_COLORS: Record<string, [string, string]> = {
@@ -97,6 +98,7 @@ export function ChartsPage() {
           </>
         }
       />
+      {groupId ? <GroupNav groupId={groupId} current="charts" /> : null}
       {data === undefined ? (
         <RowSkeleton />
       ) : !s ? (

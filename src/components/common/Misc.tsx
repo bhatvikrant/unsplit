@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { icons, type LucideIcon } from "lucide-react";
+import { Receipt, type LucideIcon } from "lucide-react";
+import { DynamicIcon, type IconName } from "lucide-react/dynamic";
 import { categoryBySlug } from "@convex/lib/categories";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -36,11 +37,11 @@ export function PageHeader({ title, subtitle, leading, actions, className }: { t
 
 export function CategoryIcon({ slug, className, size = "md" }: { slug: string; className?: string; size?: "sm" | "md" | "lg" }) {
   const cat = categoryBySlug(slug);
-  const Icon = (icons as Record<string, LucideIcon>)[cat.icon] ?? icons.Receipt;
+  const name = cat.icon.replace(/([a-z0-9])([A-Z])/g, "$1-$2").replace(/([A-Z])([A-Z][a-z])/g, "$1-$2").toLowerCase() as IconName;
   const sz = { sm: "size-7 [&>svg]:size-3.5", md: "size-9 [&>svg]:size-4", lg: "size-11 [&>svg]:size-5" }[size];
   return (
     <div className={cn("bg-surface-2 text-text-muted flex shrink-0 items-center justify-center rounded-md", sz, className)} title={cat.name} aria-label={cat.name}>
-      <Icon />
+      <DynamicIcon name={name} fallback={() => <Receipt />} />
     </div>
   );
 }

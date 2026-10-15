@@ -10,6 +10,12 @@ import "./index.css";
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 
+// Follow the system colour scheme. Tokens for both modes live in index.css.
+const scheme = window.matchMedia("(prefers-color-scheme: dark)");
+const applyScheme = () => document.documentElement.classList.toggle("dark", scheme.matches);
+applyScheme();
+scheme.addEventListener("change", applyScheme);
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ConvexAuthProvider client={convex}>

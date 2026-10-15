@@ -107,7 +107,7 @@ export function ExpenseDetail() {
               ) : null}
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="outline" size="sm" aria-label="Delete">
+                  <Button variant="outline" size="sm" aria-label={e.isPayment ? "Delete payment" : "Delete expense"}>
                     <Trash2 />
                   </Button>
                 </AlertDialogTrigger>
@@ -237,7 +237,7 @@ export function ExpenseDetail() {
                   <span className="font-medium">{c.user?.name ?? "Someone"}</span>
                   <span className="text-text-faint text-xs">{relativeTime(c.createdAt)}</span>
                   {c.user?._id === me?._id ? (
-                    <button type="button" className="text-text-faint hover:text-danger ml-auto text-xs" onClick={() => removeComment({ commentId: c._id })}>
+                    <button type="button" aria-label="Delete comment" className="text-text-faint hover:text-danger ml-auto text-xs" onClick={() => removeComment({ commentId: c._id })}>
                       Delete
                     </button>
                   ) : null}

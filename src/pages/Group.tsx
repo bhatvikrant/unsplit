@@ -39,7 +39,7 @@ function useGroup() {
   return { groupId, group, failed };
 }
 
-function GroupNav({ groupId, current }: { groupId: Id<"groups">; current: "expenses" | "totals" | "charts" | "settings" }) {
+export function GroupNav({ groupId, current }: { groupId: Id<"groups">; current: "expenses" | "totals" | "charts" | "settings" }) {
   const items = [
     { key: "expenses", to: `/groups/${groupId}`, label: "Expenses", icon: Receipt },
     { key: "totals", to: `/groups/${groupId}/totals`, label: "Totals", icon: Sigma },
