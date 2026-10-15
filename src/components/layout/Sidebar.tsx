@@ -1,4 +1,4 @@
-import { useQuery } from "convex/react";
+import { useQuery } from "@/lib/convex";
 import { Activity, LayoutDashboard, Plus, ReceiptText } from "lucide-react";
 import { Link, NavLink } from "react-router";
 import { api } from "@convex/_generated/api";

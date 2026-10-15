@@ -2,11 +2,13 @@ import { ConvexError, v } from "convex/values";
 import { mutation } from "./_generated/server";
 import { assertExpenseAccess, requireUserId } from "./lib/access";
 import { logActivity } from "./lib/activity";
+import { idempotent } from "./lib/idempotency";
 
 export const add = mutation({
-  args: { expenseId: v.id("expenses"), content: v.string() },
-  handler: async (ctx, { expenseId, content }) => {
+  args: { expenseId: v.id("expenses"), content: v.string(), clientKey: v.optional(v.string()) },
+  handler: async (ctx, { expenseId, content, clientKey }) => {
     const me = await requireUserId(ctx);
+    return await idempotent(ctx, me, clientKey, async () => {
     const e = await ctx.db.get(expenseId);
     if (!e) throw new ConvexError("Expense not found");
     await assertExpenseAccess(ctx, e, me);
@@ -20,6 +22,7 @@ export const add = mutation({
       scope: { groupId: e.groupId, pairKey: e.pairKey },
     });
     return id;
+    });
   },
 });
 

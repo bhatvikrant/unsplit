@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery } from "@/lib/convex";
 import { Plus, ReceiptText, Repeat, Search, Trash2, Undo2, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
@@ -118,16 +118,20 @@ export function RecurringExpenses() {
 }
 
 export function TrashPage() {
-  const expenses = useQuery(api.expenses.deleted);
-  const groups = useQuery(api.groups.listDeleted);
+  const deletedExpenses = useQuery(api.expenses.deleted);
+  const deletedGroups = useQuery(api.groups.listDeleted);
   const restoreExpense = useMutation(api.expenses.restore);
   const restoreGroup = useMutation(api.groups.restore);
   const navigate = useNavigate();
-  const empty = expenses?.length === 0 && groups?.length === 0;
+  // Offline, one list may be cached and the other never fetched: show what we have.
+  const loading = deletedExpenses === undefined && deletedGroups === undefined;
+  const expenses = deletedExpenses ?? [];
+  const groups = deletedGroups ?? [];
+  const empty = expenses.length === 0 && groups.length === 0;
   return (
     <div className="max-w-3xl space-y-5">
       <PageHeader title="Deleted items" subtitle="Anything deleted can be restored by anyone involved." />
-      {expenses === undefined || groups === undefined ? (
+      {loading ? (
         <RowSkeleton />
       ) : empty ? (
         <EmptyState icon={Trash2} title="Nothing deleted" description="Deleted expenses and groups will show up here." />
@@ -196,7 +200,7 @@ export function TrashPage() {
           ) : null}
         </>
       )}
-      {!empty && groups?.length === 0 && expenses?.length === 0 ? <Users className="hidden" /> : null}
+      {!empty && groups.length === 0 && expenses.length === 0 ? <Users className="hidden" /> : null}
     </div>
   );
 }

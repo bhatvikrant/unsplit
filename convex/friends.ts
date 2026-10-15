@@ -9,6 +9,7 @@ import { enforceLimit } from "./lib/rateLimit";
 import { formatMoney } from "./lib/money";
 import { findOrCreateUser, isValidEmail, normalizeEmail, publicUser, publicUsers } from "./lib/users";
 import { logActivity } from "./lib/activity";
+import { idempotent } from "./lib/idempotency";
 
 export const list = query({
   args: {},
@@ -61,9 +62,10 @@ export const get = query({
 });
 
 export const add = mutation({
-  args: { name: v.optional(v.string()), email: v.optional(v.string()) },
+  args: { name: v.optional(v.string()), email: v.optional(v.string()), clientKey: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const me = await requireUser(ctx);
+    return await idempotent(ctx, me._id, args.clientKey, async () => {
     const email = normalizeEmail(args.email);
     const name = args.name?.trim();
     if (email && !isValidEmail(email)) throw new ConvexError("That email doesn't look right");
@@ -81,6 +83,7 @@ export const add = mutation({
       await ctx.scheduler.runAfter(0, internal.friends.sendInviteEmail, { toUserId: friendId, byUserId: me._id });
     }
     return { friendId, alreadyFriends: false };
+    });
   },
 });
 

@@ -1,6 +1,6 @@
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery } from "@/lib/convex";
 import { ArrowLeft, Pencil, Repeat, Send, Trash2, Undo2 } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { toast } from "sonner";
 import { api } from "@convex/_generated/api";
@@ -34,9 +34,14 @@ export function ExpenseDetail() {
   const [comment, setComment] = useState("");
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => expense === undefined && setFailed(true), 8000);
+    return () => clearTimeout(t);
+  }, [expense]);
 
   if (expense === undefined) {
-    if (error) return <NotFound />;
+    if (error || failed) return <NotFound />;
     return <RowSkeleton count={3} />;
   }
   const e = expense;

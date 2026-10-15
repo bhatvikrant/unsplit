@@ -11,6 +11,7 @@ import { CURRENCY_CODES } from "./lib/currencies";
 import { nextOccurrence } from "./lib/recurring";
 import { buildShares, pairwiseDebts, SplitError, type Share, type SplitSpec } from "./lib/split";
 import { publicUser, publicUsers, type PublicUser } from "./lib/users";
+import { idempotent } from "./lib/idempotency";
 import { repeatInterval, splitSpec } from "./schema";
 
 type Ctx = QueryCtx | MutationCtx;
@@ -344,9 +345,10 @@ const expenseInput = {
 };
 
 export const create = mutation({
-  args: { groupId: v.optional(v.id("groups")), friendId: v.optional(v.id("users")), ...expenseInput },
+  args: { groupId: v.optional(v.id("groups")), friendId: v.optional(v.id("users")), clientKey: v.optional(v.string()), ...expenseInput },
   handler: async (ctx, args) => {
     const me = await requireUser(ctx);
+    return await idempotent(ctx, me._id, args.clientKey, async () => {
     const scope = await resolveScope(ctx, me._id, args);
     const common = validateCommon(args);
     const shares = sharesOrThrow(args.amountMinor, args.payers, args.split as SplitSpec, scope.allowed);
@@ -380,6 +382,7 @@ export const create = mutation({
       scope: { groupId: scope.groupId, pairKey: scope.pairKey },
     });
     return id;
+    });
   },
 });
 
@@ -534,10 +537,12 @@ export const recordPayment = mutation({
     date: v.number(),
     notes: v.optional(v.string()),
     receiptId: v.optional(v.id("_storage")),
+    clientKey: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const me = await requireUser(ctx);
     if (args.payerId === args.payeeId) throw new ConvexError("Payer and recipient must be different people");
+    return await idempotent(ctx, me._id, args.clientKey, async () => {
     const scope = await resolveScope(ctx, me._id, args.groupId ? { groupId: args.groupId } : { friendId: args.friendId ?? (args.payerId === me._id ? args.payeeId : args.payerId) });
     const allowedSet = new Set<string>(scope.allowed);
     if (!allowedSet.has(args.payerId) || !allowedSet.has(args.payeeId)) throw new ConvexError("Both people need to be in this group");
@@ -576,6 +581,7 @@ export const recordPayment = mutation({
       scope: { groupId: scope.groupId, pairKey: scope.pairKey },
     });
     return id;
+    });
   },
 });
 

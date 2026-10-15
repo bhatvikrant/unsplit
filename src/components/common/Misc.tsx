@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
-import { ArrowLeftRight, Receipt, type LucideIcon } from "lucide-react";
-import { DynamicIcon, type IconName } from "lucide-react/dynamic";
+import {
+  Armchair, ArrowLeftRight, Baby, BedDouble, Bike, Car, CarTaxiFront, CircleDashed, CircleParking, Clapperboard, Coffee, Droplets, FileText, Film, Flame, Fuel,
+  Gamepad2, Gift, GraduationCap, Hammer, Heart, House, KeyRound, Landmark, Music, PawPrint, Plane, Receipt, Shirt, ShieldCheck, ShoppingBasket, Smartphone,
+  Sparkles, SprayCan, Stethoscope, TrainFront, Trash2, Trophy, Tv, UtensilsCrossed, Wifi, Wine, Wrench, Zap, type LucideIcon,
+} from "lucide-react";
 import { categoryBySlug } from "@convex/lib/categories";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -48,6 +51,17 @@ const CATEGORY_HUES: Record<string, number> = {
   uncategorized: 60,
 };
 
+/**
+ * Every icon a category can name (convex/lib/categories.ts), imported
+ * statically: one bundle instead of a lazy chunk per icon, so the app shell
+ * the service worker precaches stays small and no icon is missing offline.
+ */
+const CATEGORY_ICONS: Record<string, LucideIcon> = {
+  Armchair, ArrowLeftRight, Baby, BedDouble, Bike, Car, CarTaxiFront, CircleDashed, CircleParking, Clapperboard, Coffee, Droplets, FileText, Film, Flame, Fuel,
+  Gamepad2, Gift, GraduationCap, Hammer, Heart, House, KeyRound, Landmark, Music, PawPrint, Plane, Receipt, Shirt, ShieldCheck, ShoppingBasket, Smartphone,
+  Sparkles, SprayCan, Stethoscope, TrainFront, Trash2, Trophy, Tv, UtensilsCrossed, Wifi, Wine, Wrench, Zap,
+};
+
 export function CategoryIcon({ slug, className, size = "md" }: { slug: string; className?: string; size?: "sm" | "md" | "lg" }) {
   const sz = { sm: "size-7 rounded-lg [&>svg]:size-3.5", md: "size-10 rounded-xl [&>svg]:size-[18px]", lg: "size-12 rounded-[14px] [&>svg]:size-[22px]" }[size];
   if (slug === "payment") {
@@ -58,10 +72,10 @@ export function CategoryIcon({ slug, className, size = "md" }: { slug: string; c
     );
   }
   const cat = categoryBySlug(slug);
-  const name = cat.icon.replace(/([a-z0-9])([A-Z])/g, "$1-$2").replace(/([A-Z])([A-Z][a-z])/g, "$1-$2").toLowerCase() as IconName;
+  const Icon = CATEGORY_ICONS[cat.icon] ?? Receipt;
   return (
     <div className={cn("flex shrink-0 items-center justify-center", sz, className)} style={tint(CATEGORY_HUES[cat.parent] ?? 60)} title={cat.name} aria-label={cat.name}>
-      <DynamicIcon name={name} strokeWidth={1.75} fallback={() => <Receipt />} />
+      <Icon strokeWidth={1.75} />
     </div>
   );
 }

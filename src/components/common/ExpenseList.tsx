@@ -1,9 +1,10 @@
-import { Paperclip, Repeat } from "lucide-react";
+import { CloudOff, Paperclip, Repeat } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link } from "react-router";
 import type { Id } from "@convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { formatDate, monthKey, monthLabel } from "@/lib/format";
+import { isTempId } from "@/lib/convex";
 import { useMe } from "@/lib/hooks";
 import { cn } from "@/lib/utils";
 import { CategoryIcon, RowSkeleton } from "./Misc";
@@ -55,6 +56,7 @@ export function ExpenseRow({ item, showGroup, trailing }: { item: ExpenseListIte
             <span className={cn("truncate text-sm font-medium", item.deletedAt && "line-through")}>{paymentText ?? item.description}</span>
             {item.repeat !== "never" ? <Repeat className="text-text-faint size-3.5 shrink-0" aria-label="Recurring" /> : null}
             {item.hasReceipt ? <Paperclip className="text-text-faint size-3.5 shrink-0" aria-label="Has receipt" /> : null}
+            {isTempId(item._id) ? <CloudOff className="text-text-faint size-3.5 shrink-0" aria-label="Not synced yet" /> : null}
           </div>
           <div className="text-text-faint truncate text-[12.5px]">
             {item.isPayment ? (

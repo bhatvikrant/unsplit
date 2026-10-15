@@ -246,4 +246,11 @@ export default defineSchema({
   })
     .index("by_token", ["token"])
     .index("by_email", ["email"]),
+
+  /** One row per offline-outbox op that created something; see lib/idempotency.ts. */
+  idempotencyKeys: defineTable({
+    userId: v.id("users"),
+    key: v.string(),
+    result: v.any(),
+  }).index("by_user_key", ["userId", "key"]),
 });

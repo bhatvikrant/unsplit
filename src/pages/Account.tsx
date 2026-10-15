@@ -1,5 +1,5 @@
 import { useAuthActions } from "@convex-dev/auth/react";
-import { useConvex, useMutation } from "convex/react";
+import { useConvex, useMutation, useRequireOnline } from "@/lib/convex";
 import { Download, LogOut } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
@@ -33,6 +33,7 @@ export function AccountPage() {
   const uploadUrl = useMutation(api.files.generateUploadUrl);
   const { signOut } = useAuthActions();
   const convex = useConvex();
+  const requireOnline = useRequireOnline();
   const navigate = useNavigate();
   const fileRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState("");
@@ -119,8 +120,13 @@ export function AccountPage() {
             variant="outline"
             size="sm"
             onClick={async () => {
-              const data = await convex.query(api.exports.json, {});
-              downloadFile(`unsplit-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(data, null, 2), "application/json");
+              try {
+                requireOnline();
+                const data = await convex.query(api.exports.json, {});
+                downloadFile(`unsplit-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(data, null, 2), "application/json");
+              } catch (e) {
+                toast.error(errorMessage(e));
+              }
             }}
           >
             <Download /> Download JSON backup

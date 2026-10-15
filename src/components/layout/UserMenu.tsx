@@ -3,6 +3,7 @@ import { BarChart3, ChevronsUpDown, LogOut, Repeat, Settings, Trash2 } from "luc
 import { useNavigate } from "react-router";
 import { UserAvatar } from "@/components/common/Avatars";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { useOfflineStatus } from "@/lib/convex";
 import { useMe } from "@/lib/hooks";
 import { cn } from "@/lib/utils";
 
@@ -10,6 +11,7 @@ import { cn } from "@/lib/utils";
 export function UserMenu({ className, onNavigate }: { className?: string; onNavigate?: () => void }) {
   const me = useMe();
   const { signOut } = useAuthActions();
+  const { pending } = useOfflineStatus();
   const navigate = useNavigate();
   const go = (to: string) => {
     onNavigate?.();
@@ -53,7 +55,12 @@ export function UserMenu({ className, onNavigate }: { className?: string; onNavi
           <Trash2 /> Deleted items
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => void signOut().then(() => navigate("/"))}>
+        <DropdownMenuItem
+          onClick={() => {
+            if (pending > 0 && !confirm(`${pending} change${pending === 1 ? "" : "s"} haven't synced yet and would be lost. Log out anyway?`)) return;
+            void signOut().then(() => navigate("/"));
+          }}
+        >
           <LogOut /> Log out
         </DropdownMenuItem>
       </DropdownMenuContent>

@@ -3,6 +3,7 @@ import { NavLink, Outlet, useMatch } from "react-router";
 import type { Id } from "@convex/_generated/dataModel";
 import { DialogProvider, useDialogs } from "@/components/dialogs/DialogProvider";
 import { cn } from "@/lib/utils";
+import { OfflineBanner } from "./OfflineBanner";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 
@@ -59,6 +60,7 @@ export function AppShell() {
         <main className="min-w-0 flex-1 px-4 pt-4 pb-24 sm:px-6 lg:px-8 lg:pt-5 lg:pb-12" id="main">
           <div className="mx-auto w-full max-w-[1040px]">
             <TopBar />
+            <OfflineBanner />
             <Outlet />
           </div>
         </main>

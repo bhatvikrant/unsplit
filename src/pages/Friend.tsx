@@ -1,4 +1,4 @@
-import { useAction, useConvex, useMutation, useQuery } from "convex/react";
+import { useAction, useConvex, useMutation, useQuery, useRequireOnline } from "@/lib/convex";
 import { Bell, Download, HandCoins, Plus, Receipt, RefreshCw, UserMinus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
@@ -24,6 +24,7 @@ export function FriendPage() {
   const remind = useAction(api.friends.remind);
   const remove = useMutation(api.friends.remove);
   const convex = useConvex();
+  const requireOnline = useRequireOnline();
   const dialogs = useDialogs();
   const navigate = useNavigate();
   const { items, hasMore, loadMore, loadingMore } = usePagedExpenses({ friendId });
@@ -110,8 +111,13 @@ export function FriendPage() {
               size="sm"
               className="justify-start"
               onClick={async () => {
-                const { headers, rows } = await convex.query(api.exports.csv, { friendId });
-                downloadFile(`${friend.user.name.replace(/[^\w-]+/g, "_")}.csv`, toCsv(headers, rows), "text/csv");
+                try {
+                  requireOnline();
+                  const { headers, rows } = await convex.query(api.exports.csv, { friendId });
+                  downloadFile(`${friend.user.name.replace(/[^\w-]+/g, "_")}.csv`, toCsv(headers, rows), "text/csv");
+                } catch (e) {
+                  toast.error(errorMessage(e));
+                }
               }}
             >
               <Download /> Export as spreadsheet

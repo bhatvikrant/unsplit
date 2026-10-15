@@ -12,6 +12,7 @@ import { findOrCreateUser, isValidEmail, normalizeEmail, publicUsers } from "./l
 import { escapeHtml, layout, sendEmail, siteUrl } from "./lib/email";
 import { enforceLimit } from "./lib/rateLimit";
 import { groupType, splitSpec } from "./schema";
+import { idempotent } from "./lib/idempotency";
 
 const memberInput = v.object({
   userId: v.optional(v.id("users")),
@@ -101,9 +102,11 @@ export const create = mutation({
     type: groupType,
     members: v.array(memberInput),
     simplifyDebts: v.optional(v.boolean()),
+    clientKey: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const me = await requireUser(ctx);
+    return await idempotent(ctx, me._id, args.clientKey, async () => {
     const name = args.name.trim();
     if (!name || name.length > 80) throw new ConvexError("Group name must be 1 to 80 characters");
     const groupId = await ctx.db.insert("groups", {
@@ -127,6 +130,7 @@ export const create = mutation({
     await logActivity(ctx, { type: "group_created", actorId: me._id, groupId, payload: { name }, recipients: [me._id, ...added] });
     for (const id of added) await maybeEmailGroupInvite(ctx, groupId, id, me._id);
     return groupId;
+    });
   },
 });
 
@@ -191,9 +195,10 @@ export const update = mutation({
 });
 
 export const addMember = mutation({
-  args: { groupId: v.id("groups"), member: memberInput },
-  handler: async (ctx, { groupId, member }) => {
+  args: { groupId: v.id("groups"), member: memberInput, clientKey: v.optional(v.string()) },
+  handler: async (ctx, { groupId, member, clientKey }) => {
     const me = await requireUserId(ctx);
+    return await idempotent(ctx, me, clientKey, async () => {
     const g = await assertGroupMember(ctx, groupId, me);
     const userId = await resolveMember(ctx, me, member);
     if (await isGroupMember(ctx, groupId, userId)) throw new ConvexError("They're already in this group");
@@ -204,6 +209,7 @@ export const addMember = mutation({
     await logActivity(ctx, { type: "member_added", actorId: me, groupId, subjectUserId: userId, payload: { name: g.name, memberName: u?.name }, scope: { groupId } });
     await maybeEmailGroupInvite(ctx, groupId, userId, me);
     return userId;
+    });
   },
 });
 

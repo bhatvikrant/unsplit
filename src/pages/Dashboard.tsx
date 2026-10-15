@@ -1,4 +1,4 @@
-import { useQuery } from "convex/react";
+import { useQuery } from "@/lib/convex";
 import { ArrowRight, HandCoins, Plus, UserPlus, Users } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router";

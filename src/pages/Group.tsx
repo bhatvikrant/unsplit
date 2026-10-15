@@ -1,4 +1,4 @@
-import { useConvex, useMutation, useQuery } from "convex/react";
+import { useConvex, useMutation, useQuery, useRequireOnline } from "@/lib/convex";
 import { ArrowLeft, ArrowRight, BarChart3, Check, Copy, Download, HandCoins, Link2, Plus, Receipt, RefreshCw, Settings, Sigma, Undo2, UserMinus, UserPlus, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
@@ -72,6 +72,7 @@ export function GroupPage() {
   const dialogs = useDialogs();
   const restore = useMutation(api.groups.restore);
   const convex = useConvex();
+  const requireOnline = useRequireOnline();
   const { items, hasMore, loadMore, loadingMore } = usePagedExpenses({ groupId });
   const [copied, setCopied] = useState(false);
 
@@ -81,8 +82,13 @@ export function GroupPage() {
   const inviteLink = `${window.location.origin}/join/${group.inviteCode}`;
 
   const exportCsv = async () => {
-    const { headers, rows } = await convex.query(api.exports.csv, { groupId });
-    downloadFile(`${group.name.replace(/[^\w-]+/g, "_")}.csv`, toCsv(headers, rows), "text/csv");
+    try {
+      requireOnline();
+      const { headers, rows } = await convex.query(api.exports.csv, { groupId });
+      downloadFile(`${group.name.replace(/[^\w-]+/g, "_")}.csv`, toCsv(headers, rows), "text/csv");
+    } catch (e) {
+      toast.error(errorMessage(e));
+    }
   };
 
   return (
@@ -198,6 +204,9 @@ export function GroupPage() {
           ) : null}
 
           <Section title="Invite link">
+            {!group.inviteCode ? (
+              <p className="text-text-faint px-4 py-3 text-xs">The invite link appears once this group has synced.</p>
+            ) : (
             <div className="flex items-center gap-2 py-2 pr-2 pl-4">
               <Link2 className="text-text-faint size-4 shrink-0" />
               <code className="text-text-muted min-w-0 flex-1 truncate text-xs">{inviteLink.replace(/^https?:\/\//, "")}</code>
@@ -214,6 +223,7 @@ export function GroupPage() {
                 {copied ? <Check className="text-positive" /> : <Copy />}
               </Button>
             </div>
+            )}
           </Section>
 
           <div className="flex flex-col gap-0.5 px-1">

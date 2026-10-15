@@ -1,4 +1,4 @@
-import { useQuery } from "convex/react";
+import { useQuery } from "@/lib/convex";
 import { BarChart3 } from "lucide-react";
 import { useParams } from "react-router";
 import { api } from "@convex/_generated/api";

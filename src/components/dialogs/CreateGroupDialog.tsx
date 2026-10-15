@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery } from "@/lib/convex";
 import { Plus, X } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router";

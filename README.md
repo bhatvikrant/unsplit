@@ -32,12 +32,47 @@ npm run dev:cloud                                   # cloud backend + Vite (mode
 Keeping it separate matters: if `.env.local` ever names a cloud deployment,
 `npm run dev:all` silently uses that deployment instead of the local one.
 
+## Offline
+
+The app works without a connection, including after a reload, and syncs
+when it is back. Three pieces, all under `src/offline/`:
+
+- **Cache**: the last server result of every query the UI has shown is kept
+  in IndexedDB. `useQuery` (from `@/lib/convex`, a drop-in for the one in
+  `convex/react`) answers from it whenever the live subscription has nothing.
+- **Outbox**: every write goes through `useMutation` (also from
+  `@/lib/convex`) into a durable queue. Online it still waits for the server,
+  so forms show validation errors inline. Offline it returns at once with a
+  temporary id, and `overlay.ts` lays the queued change over the cached
+  results: new expenses appear in lists, detail pages and balances; edits,
+  deletes, restores, payments, groups, members, friends, comments and
+  settings all behave the same way. Rows that haven't synced show a small
+  cloud-off icon.
+- **Sync**: `sync.ts` drains the queue in order as soon as the socket is up,
+  maps temporary ids to real ones (links keep working), and tells the user
+  with a toast if the server rejects something. Create-type mutations carry a
+  `clientKey`, so a replay after a reload mid-sync cannot duplicate anything
+  (`convex/lib/idempotency.ts`).
+
+The service worker (vite-plugin-pwa, production builds only) precaches the
+app shell and caches receipts and avatars as they are seen. Things that need
+the server say so instead of hanging: receipt scanning, currency conversion,
+reminders, exports, file uploads, invite links of groups created offline.
+
 ## Test
 
 ```bash
-npm test              # unit: split engine, money
+npm test              # unit: split engine, money, offline overlay
 npm run test:e2e      # Playwright, with the dev server running
 npm run typecheck
+```
+
+The offline spec also runs against the production build to cover the
+service worker (reload with no network):
+
+```bash
+npm run build && npm run preview     # serves dist/ on :4173
+npm run test:e2e:offline
 ```
 
 ## Deploy
