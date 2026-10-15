@@ -1,9 +1,9 @@
+import BoringAvatar from "boring-avatars";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { initials } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Heart, House, Plane, Users } from "lucide-react";
 
-const sizes = { xs: "size-6 text-[10px]", sm: "size-8 text-xs", md: "size-10 text-sm", lg: "size-12 text-[15px]", xl: "size-20 text-xl" };
+const sizes = { xs: "size-6", sm: "size-8", md: "size-10", lg: "size-12", xl: "size-20" };
 
 export function hue(name: string): number {
   let h = 0;
@@ -19,12 +19,22 @@ export function tint(h: number): React.CSSProperties {
   };
 }
 
-export function UserAvatar({ user, size = "md", className }: { user: { name: string; image?: string | null; isPlaceholder?: boolean }; size?: keyof typeof sizes; className?: string }) {
+/** Warm palette matching the app theme: forest, brand green, cream, apricot, brick. */
+const AVATAR_PALETTE = ["#14543b", "#3fb47a", "#f3ecd6", "#f0a868", "#cf5c4a"];
+
+type AvatarUser = { _id?: string; name: string; image?: string | null; isPlaceholder?: boolean };
+
+/** Deterministic generated avatar (boring-avatars "beam"), seeded by user id so same-named users differ. */
+export function GeneratedAvatar({ user, className }: { user: AvatarUser; className?: string }) {
+  return <BoringAvatar name={user._id ?? user.name} variant="beam" colors={AVATAR_PALETTE} size="100%" className={cn("size-full", className)} />;
+}
+
+export function UserAvatar({ user, size = "md", className }: { user: AvatarUser; size?: keyof typeof sizes; className?: string }) {
   return (
     <Avatar className={cn(sizes[size], "shrink-0", className)} title={user.name}>
       {user.image ? <AvatarImage src={user.image} alt={user.name} /> : null}
-      <AvatarFallback className="font-semibold" style={tint(hue(user.name))}>
-        {initials(user.name)}
+      <AvatarFallback className="bg-transparent" aria-label={user.name}>
+        <GeneratedAvatar user={user} />
       </AvatarFallback>
     </Avatar>
   );
