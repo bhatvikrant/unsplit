@@ -77,11 +77,13 @@ on Vercel. The live instance is https://unsplit.vercel.app (Convex project
    `npm run env:prod -- set EMAIL_FROM "Unsplit <noreply@yourdomain.com>"`.
 8. **Receipt scanning**: create a key in the [Claude Console](https://console.anthropic.com/settings/keys)
    and `npm run env:prod -- set ANTHROPIC_API_KEY sk-ant-...`.
-9. **Builds on Vercel's side** (optional, only once the repo is connected to
-   GitHub in the Vercel project): create a *Production* deploy key in the Convex
-   dashboard → Settings → Deploy keys, then
-   `vercel env add CONVEX_DEPLOY_KEY production` and paste it. Every push then
-   runs the same build command on Vercel.
+9. **Builds on Vercel's side**: the Vercel project is connected to
+   [github.com/bhatvikrant/unsplit](https://github.com/bhatvikrant/unsplit)
+   (`vercel git connect`), with `main` as the production branch. Vercel needs a
+   *Production* deploy key from the Convex dashboard → Settings → Deploy keys:
+   `vercel env add CONVEX_DEPLOY_KEY production` and paste it. Every push to
+   `main` then runs the same build command on Vercel and deploys to production;
+   other branches get preview deployments.
 
 Each `npm run env:prod -- set` takes effect immediately; no redeploy needed. The
 helper scripts read the project from `.env.cloud.local`, so `.env.local` can stay
