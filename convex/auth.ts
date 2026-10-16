@@ -1,28 +1,10 @@
 import Google from "@auth/core/providers/google";
-import { Password } from "@convex-dev/auth/providers/Password";
 import { convexAuth } from "@convex-dev/auth/server";
-import { ConvexError } from "convex/values";
 import type { MutationCtx } from "./_generated/server";
-import { ResendOTPPasswordReset } from "./lib/passwordReset";
 import { DEFAULT_NOTIF_PREFS } from "./lib/users";
 
-const PasswordWithProfile = Password({
-  reset: ResendOTPPasswordReset,
-  profile(params) {
-    const email = String(params.email ?? "").trim().toLowerCase();
-    const name = String(params.name ?? "").trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      throw new ConvexError("Enter a valid email address");
-    }
-    return { email, name: name || email.split("@")[0] };
-  },
-  validatePasswordRequirements(password: string) {
-    if (password.length < 8) throw new ConvexError("Password must be at least 8 characters");
-  },
-});
-
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
-  providers: [PasswordWithProfile, Google],
+  providers: [Google],
   callbacks: {
     /**
      * Claim a placeholder user (a friend added by name + email before they

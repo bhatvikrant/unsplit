@@ -19,11 +19,8 @@ export function Landing() {
       <header className="mx-auto flex max-w-5xl items-center justify-between px-5 py-5">
         <Logo size={28} />
         <nav className="flex items-center gap-2">
-          <Button variant="ghost" asChild>
-            <Link to="/login">Log in</Link>
-          </Button>
           <Button asChild>
-            <Link to="/signup">Sign up</Link>
+            <Link to="/login">Log in</Link>
           </Button>
         </nav>
       </header>
@@ -36,12 +33,9 @@ export function Landing() {
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Button size="lg" asChild>
-                <Link to="/signup">
+                <Link to="/login">
                   Get started <ArrowRight />
                 </Link>
-              </Button>
-              <Button size="lg" variant="outline" asChild>
-                <Link to="/login">I have an account</Link>
               </Button>
             </div>
           </motion.div>

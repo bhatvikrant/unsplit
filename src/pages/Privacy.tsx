@@ -4,9 +4,9 @@ import { Logo } from "@/components/layout/Logo";
 const processors = [
   { name: "Convex", url: "https://www.convex.dev/", what: "Hosts the database, backend functions and file storage. Everything you enter in UnSplit (accounts, groups, expenses, receipts, avatars) lives here." },
   { name: "Vercel", url: "https://vercel.com/", what: "Serves the web app. It sees your IP address and browser details in ordinary access logs." },
-  { name: "Resend", url: "https://resend.com/", what: "Delivers email: invites, reminders, password-reset codes and activity notifications. It receives the recipient's address and the message." },
+  { name: "Resend", url: "https://resend.com/", what: "Delivers email: invites, reminders and activity notifications. It receives the recipient's address and the message." },
   { name: "Anthropic", url: "https://www.anthropic.com/", what: "Reads receipt photos when you use Scan receipt. Only the image you choose to scan is sent, and only when you press the button." },
-  { name: "Google", url: "https://policies.google.com/privacy", what: "Only if you sign in with Google. Google tells us your name, email address and profile picture." },
+  { name: "Google", url: "https://policies.google.com/privacy", what: "Handles sign-in. Google tells us your name, email address and profile picture." },
   { name: "Frankfurter", url: "https://frankfurter.dev/", what: "Supplies exchange rates for currency conversion. It receives the currency codes and the date, nothing about you." },
 ];
 
@@ -23,7 +23,7 @@ export function Privacy() {
 
         <h2 className="text-text mt-10 text-lg font-semibold">What UnSplit stores</h2>
         <p className="mt-2">
-          Your name, email address, password (hashed, never readable), optional avatar, and everything you add while using the app: groups, friends, expenses, payments, comments, receipt images and notification preferences. Friends you add by email before they sign up are stored as placeholder accounts with that email so the invite can reach them.
+          Your name, email address, optional avatar, and everything you add while using the app: groups, friends, expenses, payments, comments, receipt images and notification preferences. Friends you add by email before they sign up are stored as placeholder accounts with that email so the invite can reach them.
         </p>
 
         <h2 className="text-text mt-10 text-lg font-semibold">Why</h2>
@@ -49,7 +49,7 @@ export function Privacy() {
 
         <h2 className="text-text mt-10 text-lg font-semibold">Email</h2>
         <p className="mt-2">
-          You can turn every notification email off in Account → Notifications. Invites and password-reset codes are sent only when you or a friend ask for them. Reminders are rate-limited so nobody can flood you.
+          You can turn every notification email off in Account → Notifications. Invites are sent only when you or a friend ask for them. Reminders are rate-limited so nobody can flood you.
         </p>
 
         <h2 className="text-text mt-10 text-lg font-semibold">Your data is yours</h2>

@@ -1,6 +1,6 @@
 import { Authenticated, Unauthenticated, useMutation, useQuery } from "@/lib/convex";
 import { useState } from "react";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 import { toast } from "sonner";
 import { api } from "@convex/_generated/api";
 import { GroupAvatar, GROUP_TYPE_LABELS } from "@/components/common/Avatars";
@@ -10,12 +10,10 @@ import { errorMessage, pluralize } from "@/lib/format";
 
 export function Join() {
   const { code = "" } = useParams();
-  const [params] = useSearchParams();
   const info = useQuery(api.groups.inviteInfo, { code });
   const join = useMutation(api.groups.joinByCode);
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
-  const email = params.get("email");
 
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center px-4 py-10">
@@ -67,14 +65,11 @@ export function Join() {
               )}
             </Authenticated>
             <Unauthenticated>
-              <p className="text-text-muted mt-4 text-sm">Sign up or log in to join.</p>
+              <p className="text-text-muted mt-4 text-sm">Log in with Google to join.</p>
               <div className="mt-3 flex flex-col gap-2">
                 <Button asChild>
-                  <Link to={`/signup?redirect=${encodeURIComponent(`/join/${code}`)}${email ? `&email=${encodeURIComponent(email)}` : ""}`}>Sign up</Link>
-                </Button>
-                <Button variant="outline" asChild>
                   <Link to="/login" state={{ from: `/join/${code}` }}>
-                    Log in
+                    Continue with Google
                   </Link>
                 </Button>
               </div>

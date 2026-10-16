@@ -114,14 +114,14 @@ export const sendInviteEmail = internalAction({
   handler: async (ctx, args) => {
     const c = await ctx.runQuery(internal.friends.inviteContext, args);
     if (!c) return;
-    const link = `${siteUrl()}/signup?email=${encodeURIComponent(c.toEmail)}`;
+    const link = `${siteUrl()}/login`;
     await sendEmail({
       to: c.toEmail,
       subject: `${c.byName} wants to share expenses with you on UnSplit`,
-      text: `${c.byName} added you on UnSplit, a free app for splitting shared costs. Sign up with this email address to see what you share: ${link}`,
+      text: `${c.byName} added you on UnSplit, a free app for splitting shared costs. Sign in with Google using this email address to see what you share: ${link}`,
       html: layout(
         `${escapeHtml(c.byName)} added you on UnSplit`,
-        `<p>${escapeHtml(c.byName)} added you as a friend on UnSplit, a free app for splitting shared costs.</p><p>Sign up with <strong>${escapeHtml(c.toEmail)}</strong> and everything they've shared with you will already be there.</p>`,
+        `<p>${escapeHtml(c.byName)} added you as a friend on UnSplit, a free app for splitting shared costs.</p><p>Sign in with Google using <strong>${escapeHtml(c.toEmail)}</strong> and everything they've shared with you will already be there.</p>`,
         link,
         "Join UnSplit",
       ),

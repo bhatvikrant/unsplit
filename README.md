@@ -151,7 +151,7 @@ npm run deploy
 
 ### Smoke test after deploying
 
-Sign up with email on the public URL, sign in with Google, add a friend by email
+Sign in with Google on the public URL, add a friend by email
 and check the invite arrives, scan a receipt, convert a group to another currency.
 
 ## Layout
