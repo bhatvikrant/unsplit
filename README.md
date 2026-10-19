@@ -75,6 +75,10 @@ Icons are rendered from `public/icon.svg` with `npm run icons` (Playwright's
 Chromium): rounded ones for browsers, full-bleed maskable ones for Android,
 and a 180px `apple-touch-icon.png` with no transparency for iOS.
 
+## From UnMoney
+
+[UnMoney](https://github.com/bhatvikrant/unmoney) can hand entries over to be split here: it opens `/expenses/new#unmoney=…` with them in the URL fragment, the add-expense form starts from them (several entries become an itemised expense), and once saved the browser goes back to UnMoney with the expense's id so its entries can link to it (`src/lib/handoff.ts`). Set `VITE_UNMONEY_URL` to point the way back at a local UnMoney.
+
 ## Test
 
 ```bash

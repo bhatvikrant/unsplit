@@ -1,8 +1,9 @@
 import { Activity, LayoutDashboard, Plus, ReceiptText, UserRound } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { NavLink, Outlet, useMatch, useSearchParams } from "react-router";
 import type { Id } from "@convex/_generated/dataModel";
 import { DialogProvider, useDialogs } from "@/components/dialogs/DialogProvider";
+import { takeHandoff } from "@/lib/handoff";
 import { cn } from "@/lib/utils";
 import { InstallBanner } from "./InstallPrompt";
 import { OfflineBanner } from "./OfflineBanner";
@@ -54,10 +55,21 @@ function MobileTabBar() {
   );
 }
 
-/** `?add=expense` (the home-screen shortcut) opens the add-expense dialog once, then clears itself. */
+/**
+ * `?add=expense` (the home-screen shortcut) opens the add-expense dialog once, then clears itself.
+ * So does a handoff from UnMoney waiting since /expenses/new (src/lib/handoff.ts).
+ */
 function ShortcutActions() {
   const dialogs = useDialogs();
   const [params, setParams] = useSearchParams();
+  const handedOff = useRef(false);
+  useEffect(() => {
+    if (handedOff.current) return;
+    const h = takeHandoff();
+    if (!h) return;
+    handedOff.current = true;
+    dialogs.addExpense({ handoff: h });
+  }, [dialogs]);
   useEffect(() => {
     if (params.get("add") !== "expense") return;
     dialogs.addExpense();
