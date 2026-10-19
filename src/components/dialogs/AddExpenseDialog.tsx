@@ -1,4 +1,4 @@
-import { useAction, useMutation, useQuery } from "@/lib/convex";
+import { isTempId, useAction, useMutation, useQuery } from "@/lib/convex";
 import { Camera, Loader2, Repeat, Users, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { toast } from "sonner";
@@ -19,13 +19,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { errorMessage, fromDateInputValue, toDateInputValue } from "@/lib/format";
 import { useDefaultCurrency, useMe } from "@/lib/hooks";
-import { currencySymbol } from "@convex/lib/currencies";
+import { CURRENCY_CODES, currencySymbol } from "@convex/lib/currencies";
+import { amountText, returnUrl, type Handoff } from "@/lib/handoff";
 import { cn } from "@/lib/utils";
 import { CategoryPicker, CurrencyPicker } from "./pickers";
 import { SplitEditor } from "./SplitEditor";
 import { emptySplit, fromSpec, itemizedTotal, newItem, toSpec, type SplitState } from "./splitState";
 
-export type AddExpenseOptions = { groupId?: Id<"groups">; friendId?: Id<"users">; expenseId?: Id<"expenses"> };
+/** `handoff`: entries sent over by UnMoney, which the form starts from (src/lib/handoff.ts). */
+export type AddExpenseOptions = { groupId?: Id<"groups">; friendId?: Id<"users">; expenseId?: Id<"expenses">; handoff?: Handoff };
 
 type Scope = { kind: "group"; id: Id<"groups"> } | { kind: "friend"; id: Id<"users"> } | null;
 
@@ -41,17 +43,21 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
   const scanReceipt = useAction(api.receipts.scan);
 
   const [scope, setScope] = useState<Scope>(options.groupId ? { kind: "group", id: options.groupId } : options.friendId ? { kind: "friend", id: options.friendId } : null);
+  // From UnMoney: its amounts, date and words; its currency when it is one we know, and our category guessed from its category's name.
+  const handoff = options.handoff;
+  const handoffCurrency = handoff && CURRENCY_CODES.has(handoff.currency) ? handoff.currency : null;
+  const handoffCategory = handoff ? suggestCategory(handoff.category ?? "") : null;
   const group = useQuery(api.groups.get, scope?.kind === "group" ? { groupId: scope.id } : "skip");
   const friend = useQuery(api.friends.get, scope?.kind === "friend" ? { friendId: scope.id } : "skip");
 
-  const [description, setDescription] = useState("");
-  const [amount, setAmount] = useState("");
-  const [currency, setCurrency] = useState<string>(defaultCurrency);
-  const [currencyTouched, setCurrencyTouched] = useState(false);
-  const [date, setDate] = useState(() => Date.now());
-  const [category, setCategory] = useState("general");
-  const [categoryTouched, setCategoryTouched] = useState(false);
-  const [notes, setNotes] = useState("");
+  const [description, setDescription] = useState(handoff?.description ?? "");
+  const [amount, setAmount] = useState(() => (handoff ? amountText(handoff.amount, handoffCurrency ?? defaultCurrency) : ""));
+  const [currency, setCurrency] = useState<string>(handoffCurrency ?? defaultCurrency);
+  const [currencyTouched, setCurrencyTouched] = useState(Boolean(handoffCurrency));
+  const [date, setDate] = useState(() => (handoff ? fromDateInputValue(handoff.date) : Date.now()));
+  const [category, setCategory] = useState(handoffCategory ?? "general");
+  const [categoryTouched, setCategoryTouched] = useState(Boolean(handoffCategory));
+  const [notes, setNotes] = useState(handoff?.notes ?? "");
   const [payerMode, setPayerMode] = useState<"single" | "multiple">("single");
   const [payer, setPayer] = useState<string | null>(null);
   const [payers, setPayers] = useState<Record<string, string>>({});
@@ -63,11 +69,11 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
   const [scanning, setScanning] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showMore, setShowMore] = useState(false);
+  const [showMore, setShowMore] = useState(Boolean(handoff?.notes));
   const fileRef = useRef<HTMLInputElement>(null);
   const hydrated = useRef(false);
   // Mirrors categoryTouched synchronously so the suggestion effect can't run with stale state in the hydration commit.
-  const categoryLocked = useRef(Boolean(options.expenseId));
+  const categoryLocked = useRef(Boolean(options.expenseId || handoffCategory));
 
   const people = useMemo(() => {
     if (scope?.kind === "group" && group) return group.members;
@@ -83,6 +89,10 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
     if (options.expenseId && !hydrated.current) return;
     setSplit((prev) => {
       if (prev && Object.keys(prev.selected).join(",") === peopleKey && prev.method !== "equal") return prev;
+      // several entries from UnMoney: a line each, everyone on every line until the user says otherwise
+      if (handoff?.items && handoff.items.length > 1 && !options.expenseId) {
+        return { ...emptySplit(peopleIds), method: "itemized", items: handoff.items.map((it) => ({ ...newItem(peopleIds), name: it.name, amount: amountText(it.amount, currency) })) };
+      }
       if (scope?.kind === "group" && group?.defaultSplit && !options.expenseId) {
         try {
           return fromSpec(group.defaultSplit, peopleIds, currency, (m) => minorToDecimalString(m, currency));
@@ -258,13 +268,19 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
         });
         toast.success("Expense updated");
       } else {
-        await create({
+        const id = await create({
           ...common,
           groupId: scope.kind === "group" ? scope.id : undefined,
           friendId: scope.kind === "friend" ? scope.id : undefined,
           receiptId: receipt && receipt !== "remove" ? receipt.storageId : undefined,
         });
-        toast.success("Expense added");
+        if (handoff && !isTempId(id)) {
+          // back to UnMoney, which links its entries to this expense
+          toast.success("Expense added. Back to UnMoney…");
+          window.location.assign(returnUrl(handoff, id as string));
+          return;
+        }
+        toast.success(handoff ? "Expense added offline, so UnMoney could not be told about it" : "Expense added");
       }
       onClose();
     } catch (err) {
@@ -285,6 +301,11 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
             <DialogTitle>{editing ? "Edit expense" : "Add an expense"}</DialogTitle>
             <DialogDescription className="sr-only">Record a shared expense.</DialogDescription>
           </DialogHeader>
+          {handoff ? (
+            <p className="bg-surface-2 text-text-muted mx-5 mt-3 rounded-lg px-3 py-2 text-xs">
+              From UnMoney: {handoff.items && handoff.items.length > 1 ? `${handoff.items.length} entries, a line each.` : "one entry."} Choose who it is with and who paid; saving takes you back to UnMoney.
+            </p>
+          ) : null}
 
           <div className="space-y-5 px-5 pt-3 pb-5">
             {/* Scope */}

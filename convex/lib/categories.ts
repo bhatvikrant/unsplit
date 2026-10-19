@@ -109,6 +109,14 @@ const KEYWORDS: [RegExp, string][] = [
   [/\b(plumber|repair|fix|maintenance|handyman)\b/i, "maintenance"],
   [/\b(gym|yoga|fitness|sports?|tennis|football|basketball)\b/i, "sports"],
   [/\b(trash|garbage|waste)\b/i, "trash"],
+  // category names as other apps use them (UnMoney's handoff sends its category name)
+  [/\b(food|meals?|eating out|snacks?)\b/i, "dining-out"],
+  [/\b(transport|transportation|commute|travel)\b/i, "transport-other"],
+  [/\b(utilities|bills?)\b/i, "utilities-other"],
+  [/\b(shopping|apparel)\b/i, "clothing"],
+  [/\b(entertainment|leisure|fun)\b/i, "entertainment-other"],
+  [/\b(health|healthcare|wellness)\b/i, "medical"],
+  [/\b(household|home supplies)\b/i, "household"],
 ];
 
 export function suggestCategory(description: string): string | null {

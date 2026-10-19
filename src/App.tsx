@@ -10,6 +10,7 @@ import { ExpenseDetail } from "@/pages/ExpenseDetail";
 import { AllExpenses, RecurringExpenses, TrashPage } from "@/pages/Expenses";
 import { FriendPage } from "@/pages/Friend";
 import { GroupPage, GroupSettings, GroupTotals } from "@/pages/Group";
+import { HandoffLanding } from "@/pages/Handoff";
 import { Join } from "@/pages/Join";
 import { Landing } from "@/pages/Landing";
 import { NotFound } from "@/pages/NotFound";
@@ -21,6 +22,8 @@ export const router = createBrowserRouter([
   { path: "/signup", element: <Navigate to="/login" replace /> },
   { path: "/privacy", element: <Privacy /> },
   { path: "/join/:code", element: <Join /> },
+  // entries sent over by UnMoney, to become one expense (src/lib/handoff.ts)
+  { path: "/expenses/new", element: <HandoffLanding /> },
   {
     element: (
       <RequireAuth>
