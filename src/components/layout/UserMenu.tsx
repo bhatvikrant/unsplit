@@ -2,6 +2,7 @@ import { useAuthActions } from "@convex-dev/auth/react";
 import { BarChart3, ChevronsUpDown, LogOut, Repeat, Settings, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router";
 import { UserAvatar } from "@/components/common/Avatars";
+import { useConfirm } from "@/components/common/ConfirmDialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useOfflineStatus } from "@/lib/convex";
 import { useMe } from "@/lib/hooks";
@@ -12,6 +13,7 @@ export function UserMenu({ className, onNavigate }: { className?: string; onNavi
   const me = useMe();
   const { signOut } = useAuthActions();
   const { pending } = useOfflineStatus();
+  const confirm = useConfirm();
   const navigate = useNavigate();
   const go = (to: string) => {
     onNavigate?.();
@@ -56,8 +58,8 @@ export function UserMenu({ className, onNavigate }: { className?: string; onNavi
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          onClick={() => {
-            if (pending > 0 && !confirm(`${pending} change${pending === 1 ? "" : "s"} haven't synced yet and would be lost. Log out anyway?`)) return;
+          onClick={async () => {
+            if (pending > 0 && !(await confirm({ title: "Log out anyway?", description: `${pending} change${pending === 1 ? "" : "s"} haven't synced yet and would be lost.`, action: "Log out" }))) return;
             void signOut().then(() => navigate("/"));
           }}
         >

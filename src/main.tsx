@@ -5,6 +5,7 @@ import { createRoot } from "react-dom/client";
 import { RouterProvider } from "react-router";
 import { toast, Toaster } from "sonner";
 import { registerSW } from "virtual:pwa-register";
+import { ConfirmProvider } from "@/components/common/ConfirmDialog";
 import { FullPageLoader } from "@/components/layout/RequireAuth";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { OfflineProvider } from "@/offline/context";
@@ -49,9 +50,11 @@ createRoot(document.getElementById("root")!).render(
     <ConvexAuthProvider client={convex}>
       <OfflineProvider store={store} engine={engine} fallback={<FullPageLoader />}>
         <TooltipProvider delayDuration={300}>
-          <RouterProvider router={router} />
-          {/* On phones, sit above the tab bar and the home indicator. */}
-          <Toaster position="bottom-center" richColors closeButton mobileOffset={{ bottom: "calc(4.5rem + env(safe-area-inset-bottom))" }} />
+          <ConfirmProvider>
+            <RouterProvider router={router} />
+            {/* On phones, sit above the tab bar and the home indicator. */}
+            <Toaster position="bottom-center" richColors closeButton mobileOffset={{ bottom: "calc(4.5rem + env(safe-area-inset-bottom))" }} />
+          </ConfirmProvider>
         </TooltipProvider>
       </OfflineProvider>
     </ConvexAuthProvider>

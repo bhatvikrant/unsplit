@@ -10,13 +10,13 @@ import { UserAvatar } from "@/components/common/Avatars";
 import { Field, PageHeader, RowSkeleton, Section } from "@/components/common/Misc";
 import { InstallSection } from "@/components/layout/InstallPrompt";
 import { CurrencyPicker } from "@/components/dialogs/pickers";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { downloadFile, errorMessage } from "@/lib/format";
 import { useMe } from "@/lib/hooks";
+import { useConfirm } from "@/components/common/ConfirmDialog";
 
 const TIME_ZONES: string[] = (() => {
   try {
@@ -35,6 +35,7 @@ export function AccountPage() {
   const { signOut } = useAuthActions();
   const convex = useConvex();
   const requireOnline = useRequireOnline();
+  const confirm = useConfirm();
   const navigate = useNavigate();
   const fileRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState("");
@@ -80,7 +81,7 @@ export function AccountPage() {
                 Change photo
               </Button>
               {me.image ? (
-                <Button variant="ghost" size="sm" onClick={() => save({ avatarId: null })}>
+                <Button variant="ghost" size="sm" onClick={async () => (await confirm({ title: "Remove your photo?", description: "A generated avatar takes its place.", action: "Remove" })) && save({ avatarId: null })}>
                   Remove
                 </Button>
               ) : null}
@@ -137,9 +138,14 @@ export function AccountPage() {
             variant="outline"
             size="sm"
             onClick={async () => {
-              await signOutEverywhere();
-              await signOut();
-              navigate("/");
+              if (!(await confirm({ title: "Log out of all devices?", description: "Every device signed in to UnSplit, including this one, has to sign in again.", action: "Log out everywhere", destructive: false }))) return;
+              try {
+                await signOutEverywhere();
+                await signOut();
+                navigate("/");
+              } catch (e) {
+                toast.error(errorMessage(e));
+              }
             }}
           >
             <LogOut /> Log out of all devices
@@ -152,35 +158,22 @@ export function AccountPage() {
             <span className="font-medium">Delete account</span>
             <span className="text-text-muted block text-xs">You need to be settled up with everyone first. Your name is removed from shared expenses, but the expenses stay so other people's balances stay correct. See the <Link to="/privacy" className="underline">privacy page</Link>.</span>
           </span>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" size="sm">
-                Delete account
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete your account?</AlertDialogTitle>
-                <AlertDialogDescription>This can't be undone. You'll be signed out and your login removed.</AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Keep my account</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={async () => {
-                    try {
-                      await deleteAccount();
-                      await signOut();
-                      navigate("/");
-                    } catch (e) {
-                      toast.error(errorMessage(e));
-                    }
-                  }}
-                >
-                  Delete
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={async () => {
+              if (!(await confirm({ title: "Delete your account?", description: "This can't be undone. You'll be signed out and your login removed.", action: "Delete account" }))) return;
+              try {
+                await deleteAccount();
+                await signOut();
+                navigate("/");
+              } catch (e) {
+                toast.error(errorMessage(e));
+              }
+            }}
+          >
+            Delete account
+          </Button>
         </div>
       </Section>
     </div>

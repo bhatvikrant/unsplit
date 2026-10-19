@@ -12,7 +12,6 @@ import { BalanceChip, BalanceSummary, Money } from "@/components/common/Money";
 import { useDialogs } from "@/components/dialogs/DialogProvider";
 import { SplitEditor } from "@/components/dialogs/SplitEditor";
 import { emptySplit, fromSpec, toSpec, type SplitState } from "@/components/dialogs/splitState";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -21,6 +20,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { downloadFile, errorMessage, monthLabel, pluralize, toCsv } from "@/lib/format";
 import { useMe } from "@/lib/hooks";
+import { useConfirm } from "@/components/common/ConfirmDialog";
 import { usePagedExpenses } from "@/lib/usePagedExpenses";
 import { cn } from "@/lib/utils";
 import { NotFound } from "./NotFound";
@@ -308,6 +308,7 @@ export function GroupSettings() {
   const removeMember = useMutation(api.groups.removeMember);
   const remove = useMutation(api.groups.remove);
   const regenerate = useMutation(api.groups.regenerateInvite);
+  const confirm = useConfirm();
   const uploadUrl = useMutation(api.files.generateUploadUrl);
   const friends = useQuery(api.friends.list);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -394,7 +395,7 @@ export function GroupSettings() {
                   Upload cover
                 </Button>
                 {group.coverUrl ? (
-                  <Button type="button" variant="ghost" size="sm" onClick={() => save({ coverId: null })}>
+                  <Button type="button" variant="ghost" size="sm" onClick={async () => (await confirm({ title: "Remove the cover photo?", action: "Remove" })) && save({ coverId: null })}>
                     Remove
                   </Button>
                 ) : null}
@@ -443,6 +444,13 @@ export function GroupSettings() {
                     aria-label={m._id === me?._id ? "Leave group" : `Remove ${m.name}`}
                     title={m._id === me?._id ? "Leave group" : "Remove from group"}
                     onClick={async () => {
+                      const leaving = m._id === me?._id;
+                      const ok = await confirm({
+                        title: leaving ? `Leave "${group.name}"?` : `Remove ${m.name} from the group?`,
+                        description: leaving ? "You can only come back through an invite link." : "They lose access to the group. Past expenses stay as they are.",
+                        action: leaving ? "Leave" : "Remove",
+                      });
+                      if (!ok) return;
                       try {
                         await removeMember({ groupId, userId: m._id });
                         if (m._id === me?._id) {
@@ -558,7 +566,14 @@ export function GroupSettings() {
             <Button size="sm" variant="outline" onClick={() => { void navigator.clipboard.writeText(`${window.location.origin}/join/${group.inviteCode}`); toast.success("Link copied"); }}>
               <Copy /> Copy
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => regenerate({ groupId }).then(() => toast.success("New link created. The old one no longer works."))}>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={async () => {
+                if (!(await confirm({ title: "Reset the invite link?", description: "The old link stops working for anyone who still has it.", action: "Reset link" }))) return;
+                regenerate({ groupId }).then(() => toast.success("New link created. The old one no longer works.")).catch((e) => toast.error(errorMessage(e)));
+              }}
+            >
               <X /> Reset link
             </Button>
           </div>
@@ -570,35 +585,22 @@ export function GroupSettings() {
               <span className="font-medium">Delete this group</span>
               <span className="text-text-muted block text-xs">Its expenses stop counting toward balances. Anyone in it can restore it from Deleted items.</span>
             </span>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="sm">
-                  Delete group
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete "{group.name}"?</AlertDialogTitle>
-                  <AlertDialogDescription>Everyone in the group loses these balances until someone restores it.</AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Keep it</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={async () => {
-                      try {
-                        await remove({ groupId });
-                        toast.success("Group deleted");
-                        navigate("/dashboard");
-                      } catch (e) {
-                        toast.error(errorMessage(e));
-                      }
-                    }}
-                  >
-                    Delete
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={async () => {
+                if (!(await confirm({ title: `Delete "${group.name}"?`, description: "Everyone in the group loses these balances until someone restores it from Deleted items.", action: "Delete group" }))) return;
+                try {
+                  await remove({ groupId });
+                  toast.success("Group deleted");
+                  navigate("/dashboard");
+                } catch (e) {
+                  toast.error(errorMessage(e));
+                }
+              }}
+            >
+              Delete group
+            </Button>
           </div>
         </Section>
       </div>
