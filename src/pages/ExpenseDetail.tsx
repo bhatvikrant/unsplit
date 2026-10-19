@@ -10,6 +10,7 @@ import { REPEAT_LABELS } from "@convex/lib/recurring";
 import { UserAvatar } from "@/components/common/Avatars";
 import { CategoryIcon, RowSkeleton, Section } from "@/components/common/Misc";
 import { Money } from "@/components/common/Money";
+import { SwipeToDelete, useSwipedRow } from "@/components/common/SwipeToDelete";
 import { useDialogs } from "@/components/dialogs/DialogProvider";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -32,6 +33,7 @@ export function ExpenseDetail() {
   const addComment = useMutation(api.comments.add);
   const removeComment = useMutation(api.comments.remove);
   const confirm = useConfirm();
+  const swipe = useSwipedRow();
   const [comment, setComment] = useState("");
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -231,28 +233,40 @@ export function ExpenseDetail() {
         <ul className="divide-y">
           {e.comments.length === 0 ? <li className="text-text-faint px-3 py-3 text-sm">No comments yet.</li> : null}
           {e.comments.map((c) => (
-            <li key={c._id} className="flex gap-3 px-3 py-2.5">
-              {c.user ? <UserAvatar user={c.user} size="xs" /> : null}
-              <div className="min-w-0 flex-1 text-sm">
-                <div className="flex items-baseline gap-2">
-                  <span className="font-medium">{c.user?.name ?? "Someone"}</span>
-                  <span className="text-text-faint text-xs">{relativeTime(c.createdAt)}</span>
-                  {c.user?._id === me?._id ? (
-                    <button
-                      type="button"
-                      aria-label="Delete comment"
-                      className="text-text-faint hover:text-danger ml-auto text-xs"
-                      onClick={async () => {
-                        if (!(await confirm({ title: "Delete this comment?", action: "Delete" }))) return;
-                        removeComment({ commentId: c._id }).catch((err) => toast.error(errorMessage(err)));
-                      }}
-                    >
-                      Delete
-                    </button>
-                  ) : null}
+            <li key={c._id}>
+              <SwipeToDelete
+                {...swipe.row(c._id)}
+                disabled={c.user?._id !== me?._id}
+                onDelete={async () => {
+                  if (await confirm({ title: "Delete this comment?", action: "Delete" })) removeComment({ commentId: c._id }).catch((err) => toast.error(errorMessage(err)));
+                  swipe.close();
+                }}
+                className="rounded-none"
+              >
+                <div className="flex gap-3 px-3 py-2.5">
+                  {c.user ? <UserAvatar user={c.user} size="xs" /> : null}
+                  <div className="min-w-0 flex-1 text-sm">
+                    <div className="flex items-baseline gap-2">
+                      <span className="font-medium">{c.user?.name ?? "Someone"}</span>
+                      <span className="text-text-faint text-xs">{relativeTime(c.createdAt)}</span>
+                      {c.user?._id === me?._id ? (
+                        <button
+                          type="button"
+                          aria-label="Delete comment"
+                          className="text-text-faint hover:text-danger ml-auto text-xs"
+                          onClick={async () => {
+                            if (!(await confirm({ title: "Delete this comment?", action: "Delete" }))) return;
+                            removeComment({ commentId: c._id }).catch((err) => toast.error(errorMessage(err)));
+                          }}
+                        >
+                          Delete
+                        </button>
+                      ) : null}
+                    </div>
+                    <p className="whitespace-pre-wrap">{c.content}</p>
+                  </div>
                 </div>
-                <p className="whitespace-pre-wrap">{c.content}</p>
-              </div>
+              </SwipeToDelete>
             </li>
           ))}
         </ul>
