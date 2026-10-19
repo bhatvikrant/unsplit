@@ -5,7 +5,6 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { api } from "@convex/_generated/api";
-import type { Id } from "@convex/_generated/dataModel";
 import { UserAvatar } from "@/components/common/Avatars";
 import { Field, PageHeader, RowSkeleton, Section } from "@/components/common/Misc";
 import { InstallSection } from "@/components/layout/InstallPrompt";
@@ -15,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { downloadFile, errorMessage } from "@/lib/format";
+import { AVATAR_EDGE, uploadImage } from "@/lib/image";
 import { useMe } from "@/lib/hooks";
 import { useConfirm } from "@/components/common/ConfirmDialog";
 
@@ -68,9 +68,7 @@ export function AccountPage() {
                   const f = e.target.files?.[0];
                   if (!f) return;
                   try {
-                    const url = await uploadUrl();
-                    const res = await fetch(url, { method: "POST", headers: { "Content-Type": f.type }, body: f });
-                    const { storageId } = (await res.json()) as { storageId: Id<"_storage"> };
+                    const { storageId } = await uploadImage(uploadUrl, f, AVATAR_EDGE);
                     await save({ avatarId: storageId });
                   } catch (err) {
                     toast.error(errorMessage(err));
