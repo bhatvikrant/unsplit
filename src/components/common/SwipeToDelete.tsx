@@ -133,7 +133,8 @@ export function SwipeToDelete({
         onClickCapture={onClickCapture}
         className="bg-surface relative"
       >
-        {children}
+        {/* Rows are links: without this a mouse drag starts the browser's own link drag and the swipe never begins. */}
+        <div onDragStart={(e) => e.preventDefault()}>{children}</div>
       </motion.div>
     </div>
   );
