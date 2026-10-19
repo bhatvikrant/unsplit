@@ -112,7 +112,8 @@ on Vercel. The live instance is https://unsplit.vercel.app (Convex project
    `CONVEX_SITE_URL` used below.
 3. **Vercel project**: `npm i -g vercel`, `vercel login`, `vercel link --yes`
    (creates the project, Vite preset). `vercel.json` sets the build command to
-   `npx convex deploy -y --cmd 'npm run build'` and the SPA rewrite.
+   `npx convex deploy -y --cmd 'npm run build' && node scripts/convex-preview-env.mjs`
+   (the second part only does something on previews) and the SPA rewrite.
 4. **Deploy**: `npm run deploy`. It builds locally with the Vercel CLI (which
    runs the Convex deploy and `vite build` against the production URL) and
    uploads the prebuilt output to production. The first run prints the public
@@ -138,13 +139,55 @@ on Vercel. The live instance is https://unsplit.vercel.app (Convex project
    *Production* deploy key from the Convex dashboard → Settings → Deploy keys:
    `vercel env add CONVEX_DEPLOY_KEY production` and paste it. Every push to
    `main` then runs the same build command on Vercel and deploys to production;
-   other branches get preview deployments.
+   other branches get preview deployments (see below).
 
 Each `npm run env:prod -- set` takes effect immediately; no redeploy needed. The
 helper scripts read the project from `.env.cloud.local`, so `.env.local` can stay
 on the anonymous local deployment.
 Custom domain: add it in Vercel (Project → Domains), then rerun step 5 with the
 new `SITE_URL`.
+
+### Preview deployments
+
+Every push to a branch other than `main` gets a Vercel preview build, and that
+build gets its own Convex preview deployment (`preview/<branch>` in the Convex
+dashboard) with its own empty database, so a PR can be tried without touching
+production data. What makes that work:
+
+1. **Preview deploy key**: in the Convex dashboard → project `unsplit` →
+   Settings → Deploy keys, generate a *preview* deploy key (the CLI can only
+   make production and dev keys), then `vercel env add CONVEX_DEPLOY_KEY preview`
+   and paste it. With it, `npx convex deploy` on Vercel creates or updates the
+   branch's preview deployment instead of production. Without it, preview builds
+   fail with "Vercel build environment detected but no Convex deployment
+   configuration found".
+2. **Env vars on the preview backend**: a fresh Convex preview deployment has no
+   env vars, so after the deploy `scripts/convex-preview-env.mjs` sets
+   `SITE_URL` to the branch's Vercel URL, generates `JWT_PRIVATE_KEY` and `JWKS`
+   once per preview (kept across redeploys so sessions survive), and copies
+   `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`, `RESEND_API_KEY`, `EMAIL_FROM`,
+   `ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL` from Vercel's *Preview* env vars
+   when they are set there (`vercel env add <NAME> preview`). Missing ones are
+   listed in the build log and the feature stays off on that preview. Google
+   sign-in on a preview also needs that preview's
+   `https://<preview deployment>.convex.site/api/auth/callback/google` added as
+   an authorised redirect URI in Google Cloud, since every preview deployment
+   has its own `convex.site` host.
+3. **Cleanup**: Convex only garbage-collects preview deployments days later, so
+   `.github/workflows/delete-convex-preview.yml` deletes the merged branch's one
+   as soon as its PR merges. It needs a `CONVEX_ACCESS_TOKEN` repo secret: in the
+   Convex dashboard go to Team settings → Access tokens, create one, then
+   `gh secret set CONVEX_ACCESS_TOKEN`. To clean up by hand (uses your
+   `npx convex login` token):
+
+   ```bash
+   node scripts/delete-convex-preview.mjs feat/some-branch     # add --dry-run to only list
+   git branch -r --merged main | sed 's#.*origin/##' | grep -v '^main$' | xargs node scripts/delete-convex-preview.mjs
+   ```
+
+Production env vars are never read or written by any of this: the production
+deploy key is only in Vercel's *Production* env, and the script exits at once
+unless `VERCEL_ENV` is `preview`.
 
 ### Every release
 

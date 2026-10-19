@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npx convex deploy -y --cmd 'npm run build'",
+  "buildCommand": "npx convex deploy -y --cmd 'npm run build' && node scripts/convex-preview-env.mjs",
   "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
   "headers": [
     {
