@@ -266,7 +266,6 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
           friendId: scope.kind === "friend" ? scope.id : undefined,
           receiptId: receipt === "remove" ? null : receipt ? receipt.storageId : undefined,
         });
-        toast.success("Expense updated");
       } else {
         const id = await create({
           ...common,
@@ -280,7 +279,7 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
           window.location.assign(returnUrl(handoff, id as string));
           return;
         }
-        toast.success(handoff ? "Expense added offline, so UnMoney could not be told about it" : "Expense added");
+        if (handoff) toast("Expense added offline, so UnMoney could not be told about it");
       }
       onClose();
     } catch (err) {

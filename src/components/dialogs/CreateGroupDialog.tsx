@@ -2,7 +2,6 @@ import { useMutation, useQuery } from "@/lib/convex";
 import { Plus, X } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router";
-import { toast } from "sonner";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { UserAvatar, GROUP_TYPE_LABELS } from "@/components/common/Avatars";
@@ -39,7 +38,6 @@ export function CreateGroupDialog({ onClose }: { onClose: () => void }) {
         ...newPeople.filter((p) => p.name.trim() || p.email.trim()).map((p) => ({ name: p.name.trim() || undefined, email: p.email.trim() || undefined })),
       ];
       const id = await create({ name, type, members, simplifyDebts: simplify });
-      toast.success("Group created");
       onClose();
       navigate(`/groups/${id}`);
     } catch (err) {
