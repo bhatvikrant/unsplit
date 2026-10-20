@@ -1,6 +1,7 @@
+import { motion, useReducedMotion } from "framer-motion";
 import { Activity, LayoutDashboard, Plus, ReceiptText, UserRound } from "lucide-react";
 import { useEffect, useRef } from "react";
-import { NavLink, Outlet, useMatch, useSearchParams } from "react-router";
+import { NavLink, Outlet, useLocation, useMatch, useSearchParams } from "react-router";
 import type { Id } from "@convex/_generated/dataModel";
 import { DialogProvider, useDialogs } from "@/components/dialogs/DialogProvider";
 import { takeHandoff } from "@/lib/handoff";
@@ -80,6 +81,18 @@ function ShortcutActions() {
   return null;
 }
 
+/** Each page settles in with a short rise and fade; none under reduced motion. */
+function PageTransition() {
+  const { pathname } = useLocation();
+  const reduce = useReducedMotion();
+  if (reduce) return <Outlet />;
+  return (
+    <motion.div key={pathname} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18, ease: "easeOut" }}>
+      <Outlet />
+    </motion.div>
+  );
+}
+
 export function AppShell() {
   return (
     <DialogProvider>
@@ -91,7 +104,7 @@ export function AppShell() {
             <TopBar />
             <OfflineBanner />
             <InstallBanner />
-            <Outlet />
+            <PageTransition />
           </div>
         </main>
       </div>

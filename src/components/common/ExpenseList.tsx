@@ -1,3 +1,4 @@
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { CloudOff, Paperclip, Repeat } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link } from "react-router";
@@ -58,6 +59,7 @@ export function ExpenseRow({
   trailing,
   swipe,
   onDelete,
+  animate,
 }: {
   item: ExpenseListItem;
   showGroup?: boolean;
@@ -65,8 +67,11 @@ export function ExpenseRow({
   /** With `onDelete`, the row slides left to uncover Delete. Rows not yet synced or already deleted stay put. */
   swipe?: SwipeRowState;
   onDelete?: () => void;
+  /** Inside an AnimatePresence list: arrive with a short slide, leave by collapsing. */
+  animate?: boolean;
 }) {
   const me = useMe();
+  const reduce = useReducedMotion();
   const net = item.mine ? item.mine.paidMinor - item.mine.owedMinor : null;
   const payerText = item.payers.length === 0 ? "" : item.payers.length === 1 ? (item.payers[0].userId === me?._id ? "You" : item.payers[0].name) : `${item.payers.length} people`;
   const paymentText = item.isPayment
@@ -121,16 +126,26 @@ export function ExpenseRow({
     </Link>
   );
 
+  const body = swipe && onDelete ? (
+    <SwipeToDelete {...swipe} onDelete={onDelete} disabled={isTempId(item._id) || !!item.deletedAt}>
+      {link}
+    </SwipeToDelete>
+  ) : (
+    link
+  );
+
+  if (!animate || reduce) return <li>{body}</li>;
   return (
-    <li>
-      {swipe && onDelete ? (
-        <SwipeToDelete {...swipe} onDelete={onDelete} disabled={isTempId(item._id) || !!item.deletedAt}>
-          {link}
-        </SwipeToDelete>
-      ) : (
-        link
-      )}
-    </li>
+    <motion.li
+      layout="position"
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, height: 0 }}
+      transition={{ duration: 0.22, ease: "easeOut" }}
+      style={{ overflow: "hidden" }}
+    >
+      {body}
+    </motion.li>
   );
 }
 
@@ -166,9 +181,12 @@ export function ExpenseList({
         <section key={g.key}>
           <h3 className="text-text-faint px-3 pt-3.5 pb-1.5 text-[11.5px] font-semibold tracking-[0.06em] uppercase">{monthLabel(g.key)}</h3>
           <ul>
-            {g.items.map((it) => (
-              <ExpenseRow key={it._id} item={it} showGroup={showGroup} swipe={swipe.row(it._id)} onDelete={() => del(it).finally(swipe.close)} />
-            ))}
+            {/* initial={false}: rows already there when the page opens don't slide in, only ones that arrive later */}
+            <AnimatePresence initial={false}>
+              {g.items.map((it) => (
+                <ExpenseRow key={it._id} item={it} showGroup={showGroup} swipe={swipe.row(it._id)} onDelete={() => del(it).finally(swipe.close)} animate />
+              ))}
+            </AnimatePresence>
           </ul>
         </section>
       ))}
