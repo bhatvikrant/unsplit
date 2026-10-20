@@ -4,7 +4,8 @@ import { useState } from "react";
 import { Link } from "react-router";
 import { api } from "@convex/_generated/api";
 import { UserAvatar } from "@/components/common/Avatars";
-import { ExpenseRow } from "@/components/common/ExpenseList";
+import { ExpenseRow, useDeleteExpense } from "@/components/common/ExpenseList";
+import { useSwipedRow } from "@/components/common/SwipeToDelete";
 import { EmptyState, PageHeader, RowSkeleton, Section } from "@/components/common/Misc";
 import { Money } from "@/components/common/Money";
 import { useDialogs } from "@/components/dialogs/DialogProvider";
@@ -41,6 +42,8 @@ export function Dashboard() {
   const nothingYet = friends?.length === 0 && groups?.length === 0;
   const [now] = useState(() => new Date());
   const recentItems = recent.items?.slice(0, 5);
+  const swipe = useSwipedRow();
+  const del = useDeleteExpense();
 
   return (
     <div>
@@ -143,7 +146,7 @@ export function Dashboard() {
             >
               <ul className="p-1">
                 {recentItems.map((it) => (
-                  <ExpenseRow key={it._id} item={it} showGroup />
+                  <ExpenseRow key={it._id} item={it} showGroup swipe={swipe.row(it._id)} onDelete={() => del(it).finally(swipe.close)} />
                 ))}
               </ul>
             </Section>
