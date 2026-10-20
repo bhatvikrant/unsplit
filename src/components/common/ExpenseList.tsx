@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
-import { errorMessage, formatDate, monthKey, monthLabel } from "@/lib/format";
+import { errorMessage, monthKey, monthLabel, monthShort } from "@/lib/format";
 import { isTempId, useMutation } from "@/lib/convex";
 import { useMe } from "@/lib/hooks";
 import { cn } from "@/lib/utils";
@@ -77,7 +77,7 @@ export function ExpenseRow({
   const paymentText = item.isPayment
     ? `${item.payers[0]?.userId === me?._id ? "You" : item.payers[0]?.name} paid ${item.payees[0]?.userId === me?._id ? "you" : item.payees[0]?.name}`
     : null;
-  const [mon] = formatDate(item.date, "monthDay").split(" ");
+  const mon = monthShort(item.date);
 
   const link = (
     <Link

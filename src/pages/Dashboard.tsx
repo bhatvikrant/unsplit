@@ -10,6 +10,7 @@ import { EmptyState, PageHeader, RowSkeleton, Section } from "@/components/commo
 import { Money } from "@/components/common/Money";
 import { useDialogs } from "@/components/dialogs/DialogProvider";
 import { Button } from "@/components/ui/button";
+import { formatDate } from "@/lib/format";
 import { useMe } from "@/lib/hooks";
 import { usePagedExpenses } from "@/lib/usePagedExpenses";
 import { cn } from "@/lib/utils";
@@ -49,7 +50,7 @@ export function Dashboard() {
     <div>
       <PageHeader
         title={me ? `${greeting(now)}, ${me.name.split(" ")[0]}` : "Dashboard"}
-        subtitle={now.toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}
+        subtitle={formatDate(now.getTime(), "weekday")}
       />
 
       {friends === undefined ? (

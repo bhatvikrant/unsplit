@@ -1,20 +1,27 @@
 import { format, formatDistanceToNowStrict, isThisYear, isToday, isYesterday } from "date-fns";
 
-export function formatDate(ms: number, style: "short" | "long" | "monthDay" | "time" = "short"): string {
+/** Dates read day-first everywhere: "19 Oct", "19 Oct 2026", "Sunday, 19 October 2026". */
+export function formatDate(ms: number, style: "short" | "long" | "monthDay" | "weekday" | "time" = "short"): string {
   const d = new Date(ms);
   switch (style) {
-    case "long": return format(d, "EEEE, MMMM d, yyyy");
-    case "monthDay": return format(d, "MMM d");
-    case "time": return format(d, "MMM d, yyyy 'at' h:mm a");
-    default: return isThisYear(d) ? format(d, "MMM d") : format(d, "MMM d, yyyy");
+    case "long": return format(d, "EEEE, d MMMM yyyy");
+    case "monthDay": return format(d, "d MMM");
+    case "weekday": return format(d, "EEEE, d MMMM");
+    case "time": return format(d, "d MMM yyyy 'at' h:mm a");
+    default: return isThisYear(d) ? format(d, "d MMM") : format(d, "d MMM yyyy");
   }
+}
+
+/** "Oct", for the little label above a day number in a list. */
+export function monthShort(ms: number): string {
+  return format(new Date(ms), "MMM");
 }
 
 export function relativeTime(ms: number): string {
   const d = new Date(ms);
   if (isToday(d)) return formatDistanceToNowStrict(d, { addSuffix: true });
   if (isYesterday(d)) return `Yesterday at ${format(d, "h:mm a")}`;
-  return isThisYear(d) ? format(d, "MMM d 'at' h:mm a") : format(d, "MMM d, yyyy");
+  return isThisYear(d) ? format(d, "d MMM 'at' h:mm a") : format(d, "d MMM yyyy");
 }
 
 export function monthKey(ms: number): string {
