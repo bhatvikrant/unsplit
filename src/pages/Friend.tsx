@@ -13,6 +13,7 @@ import { useDialogs } from "@/components/dialogs/DialogProvider";
 import { Button } from "@/components/ui/button";
 import { downloadFile, errorMessage, formatDate, toCsv } from "@/lib/format";
 import { useMe } from "@/lib/hooks";
+import { useConfirm } from "@/components/common/ConfirmDialog";
 import { usePagedExpenses } from "@/lib/usePagedExpenses";
 import { NotFound } from "./NotFound";
 
@@ -23,6 +24,7 @@ export function FriendPage() {
   const friend = useQuery(api.friends.get, id ? { friendId } : "skip");
   const remind = useAction(api.friends.remind);
   const remove = useMutation(api.friends.remove);
+  const confirm = useConfirm();
   const convex = useConvex();
   const requireOnline = useRequireOnline();
   const dialogs = useDialogs();
@@ -132,7 +134,7 @@ export function FriendPage() {
               disabled={!settled}
               title={settled ? undefined : "Settle up first"}
               onClick={async () => {
-                if (!confirm(`Remove ${friend.user.name} from your friends? Shared expenses are kept.`)) return;
+                if (!(await confirm({ title: `Remove ${friend.user.name} from your friends?`, description: "Shared expenses are kept.", action: "Remove" }))) return;
                 try {
                   await remove({ friendId });
                   toast.success("Friend removed");

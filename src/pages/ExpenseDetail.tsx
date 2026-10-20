@@ -11,11 +11,11 @@ import { UserAvatar } from "@/components/common/Avatars";
 import { CategoryIcon, RowSkeleton, Section } from "@/components/common/Misc";
 import { Money } from "@/components/common/Money";
 import { useDialogs } from "@/components/dialogs/DialogProvider";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { errorMessage, formatDate, relativeTime } from "@/lib/format";
 import { useMe } from "@/lib/hooks";
+import { useConfirm } from "@/components/common/ConfirmDialog";
 import { NotFound } from "./NotFound";
 
 const SPLIT_LABEL: Record<string, string> = { equal: "equally", exact: "by exact amounts", percent: "by percentages", shares: "by shares", adjustment: "with adjustments", reimbursement: "as a reimbursement", itemized: "item by item" };
@@ -31,6 +31,7 @@ export function ExpenseDetail() {
   const cancelRecurring = useMutation(api.expenses.cancelRecurring);
   const addComment = useMutation(api.comments.add);
   const removeComment = useMutation(api.comments.remove);
+  const confirm = useConfirm();
   const [comment, setComment] = useState("");
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -110,36 +111,24 @@ export function ExpenseDetail() {
                   <Pencil /> Edit
                 </Button>
               ) : null}
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="outline" size="sm" aria-label={e.isPayment ? "Delete payment" : "Delete expense"}>
-                    <Trash2 />
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Delete this {e.isPayment ? "payment" : "expense"}?</AlertDialogTitle>
-                    <AlertDialogDescription>Balances update right away. Anyone involved can restore it later from Deleted items.</AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Keep it</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={async () => {
-                        try {
-                          await remove({ id: e._id });
-                          toast.success("Deleted", { action: { label: "Undo", onClick: () => void restore({ id: e._id }) } });
-                          navigate(back);
-                        } catch (err) {
-                          setError(errorMessage(err));
-                          toast.error(errorMessage(err));
-                        }
-                      }}
-                    >
-                      Delete
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              <Button
+                variant="outline"
+                size="sm"
+                aria-label={e.isPayment ? "Delete payment" : "Delete expense"}
+                onClick={async () => {
+                  if (!(await confirm({ title: `Delete this ${e.isPayment ? "payment" : "expense"}?`, description: "Balances update right away. Anyone involved can restore it later from Deleted items.", action: "Delete" }))) return;
+                  try {
+                    await remove({ id: e._id });
+                    toast.success("Deleted", { action: { label: "Undo", onClick: () => void restore({ id: e._id }) } });
+                    navigate(back);
+                  } catch (err) {
+                    setError(errorMessage(err));
+                    toast.error(errorMessage(err));
+                  }
+                }}
+              >
+                <Trash2 />
+              </Button>
             </div>
           ) : null}
         </div>
@@ -151,7 +140,14 @@ export function ExpenseDetail() {
           <span className="flex-1">
             {REPEAT_LABELS[e.repeat]}. Next on {formatDate(e.nextRepeatAt, "long")}.{e.emailReminder ? " Everyone gets an email the day before." : ""}
           </span>
-          <Button size="sm" variant="ghost" onClick={() => cancelRecurring({ id: e._id }).then(() => toast.success("Future recurrences cancelled")).catch((err) => toast.error(errorMessage(err)))}>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={async () => {
+              if (!(await confirm({ title: "Stop repeating this expense?", description: "Expenses already posted stay. No new ones are added.", action: "Stop repeating" }))) return;
+              cancelRecurring({ id: e._id }).then(() => toast.success("Future recurrences cancelled")).catch((err) => toast.error(errorMessage(err)));
+            }}
+          >
             Cancel future recurrences
           </Button>
         </div>
@@ -242,7 +238,15 @@ export function ExpenseDetail() {
                   <span className="font-medium">{c.user?.name ?? "Someone"}</span>
                   <span className="text-text-faint text-xs">{relativeTime(c.createdAt)}</span>
                   {c.user?._id === me?._id ? (
-                    <button type="button" aria-label="Delete comment" className="text-text-faint hover:text-danger ml-auto text-xs" onClick={() => removeComment({ commentId: c._id })}>
+                    <button
+                      type="button"
+                      aria-label="Delete comment"
+                      className="text-text-faint hover:text-danger ml-auto text-xs"
+                      onClick={async () => {
+                        if (!(await confirm({ title: "Delete this comment?", action: "Delete" }))) return;
+                        removeComment({ commentId: c._id }).catch((err) => toast.error(errorMessage(err)));
+                      }}
+                    >
                       Delete
                     </button>
                   ) : null}

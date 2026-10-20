@@ -8,6 +8,7 @@ import { REPEAT_LABELS } from "@convex/lib/recurring";
 import { GroupAvatar } from "@/components/common/Avatars";
 import { ExpenseList, ExpenseRow } from "@/components/common/ExpenseList";
 import { EmptyState, PageHeader, RowSkeleton, Section } from "@/components/common/Misc";
+import { useConfirm } from "@/components/common/ConfirmDialog";
 import { useDialogs } from "@/components/dialogs/DialogProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -74,6 +75,7 @@ export function AllExpenses() {
 export function RecurringExpenses() {
   const items = useQuery(api.expenses.recurring);
   const cancel = useMutation(api.expenses.cancelRecurring);
+  const confirm = useConfirm();
   return (
     <div className="max-w-3xl">
       <PageHeader title="Recurring expenses" subtitle="Each one posts automatically. The newest copy carries the schedule, so edit that one to change future amounts." />
@@ -97,6 +99,7 @@ export function RecurringExpenses() {
                     size="xs"
                     onClick={async (e) => {
                       e.preventDefault();
+                      if (!(await confirm({ title: `Stop repeating "${it.description}"?`, description: "Expenses already posted stay. No new ones are added.", action: "Stop repeating" }))) return;
                       try {
                         await cancel({ id: it._id });
                         toast.success("Future recurrences cancelled");
