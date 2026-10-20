@@ -8,6 +8,7 @@ import { Money } from "@/components/common/Money";
 import { Field } from "@/components/common/Misc";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { formatRate } from "@/lib/rates";
 import { errorMessage } from "@/lib/format";
 import { useDefaultCurrency } from "@/lib/hooks";
 import { CurrencyPicker } from "./pickers";
@@ -88,7 +89,7 @@ export function ConvertCurrencyDialog({ options, onClose }: { options: ConvertOp
                     {l.rate ? (
                       <span className="text-right">
                         <Money minor={l.amountMinor} currency={l.currency} className="text-text-muted" /> → <Money minor={l.convertedMinor ?? 0} currency={target} className="font-medium" />
-                        <span className="text-text-faint block text-xs">1 {l.currency} = {l.rate.toFixed(4)} {target}</span>
+                        <span className="text-text-faint block text-xs">{formatRate(l.currency, target, l.rate)}</span>
                       </span>
                     ) : (
                       <span className="text-warning text-xs">no rate available</span>
