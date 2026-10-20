@@ -1,7 +1,6 @@
 import { useMutation, useQuery } from "@/lib/convex";
 import { ArrowRight } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { toast } from "sonner";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { minorToDecimalString, parseMoney } from "@convex/lib/money";
@@ -99,7 +98,6 @@ export function SettleUpDialog({ options, onClose }: { options: SettleUpOptions;
         date,
         notes: notes || undefined,
       });
-      toast.success("Payment recorded");
       onClose();
     } catch (err) {
       setError(errorMessage(err));

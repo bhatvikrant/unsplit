@@ -78,7 +78,7 @@ export function ExpenseDetail() {
         {e.deletedAt ? (
           <div className="bg-negative-soft text-negative mb-3 flex items-center justify-between rounded-md px-3 py-2 text-sm">
             <span>This {e.isPayment ? "payment" : "expense"} was deleted {relativeTime(e.deletedAt)}.</span>
-            <Button size="sm" variant="outline" onClick={() => restore({ id: e._id }).then(() => toast.success("Restored")).catch((err) => toast.error(errorMessage(err)))}>
+            <Button size="sm" variant="outline" onClick={() => restore({ id: e._id }).catch((err) => toast.error(errorMessage(err)))}>
               <Undo2 /> Restore
             </Button>
           </div>
@@ -145,7 +145,7 @@ export function ExpenseDetail() {
             variant="ghost"
             onClick={async () => {
               if (!(await confirm({ title: "Stop repeating this expense?", description: "Expenses already posted stay. No new ones are added.", action: "Stop repeating" }))) return;
-              cancelRecurring({ id: e._id }).then(() => toast.success("Future recurrences cancelled")).catch((err) => toast.error(errorMessage(err)));
+              cancelRecurring({ id: e._id }).catch((err) => toast.error(errorMessage(err)));
             }}
           >
             Cancel future recurrences

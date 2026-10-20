@@ -137,7 +137,6 @@ export function FriendPage() {
                 if (!(await confirm({ title: `Remove ${friend.user.name} from your friends?`, description: "Shared expenses are kept.", action: "Remove" }))) return;
                 try {
                   await remove({ friendId });
-                  toast.success("Friend removed");
                   navigate("/dashboard");
                 } catch (e) {
                   toast.error(errorMessage(e));

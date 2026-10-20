@@ -102,7 +102,6 @@ export function RecurringExpenses() {
                       if (!(await confirm({ title: `Stop repeating "${it.description}"?`, description: "Expenses already posted stay. No new ones are added.", action: "Stop repeating" }))) return;
                       try {
                         await cancel({ id: it._id });
-                        toast.success("Future recurrences cancelled");
                       } catch (err) {
                         toast.error(errorMessage(err));
                       }
@@ -156,7 +155,6 @@ export function TrashPage() {
                       onClick={async () => {
                         try {
                           await restoreGroup({ groupId: g._id });
-                          toast.success("Group restored");
                           navigate(`/groups/${g._id}`);
                         } catch (e) {
                           toast.error(errorMessage(e));
@@ -187,7 +185,6 @@ export function TrashPage() {
                           e.preventDefault();
                           try {
                             await restoreExpense({ id: it._id });
-                            toast.success("Expense restored");
                           } catch (err) {
                             toast.error(errorMessage(err));
                           }

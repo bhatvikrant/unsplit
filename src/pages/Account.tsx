@@ -48,7 +48,7 @@ export function AccountPage() {
   }, [me]);
   if (!me) return <RowSkeleton />;
 
-  const save = (patch: Parameters<typeof update>[0]) => update(patch).then(() => toast.success("Saved")).catch((e) => toast.error(errorMessage(e)));
+  const save = (patch: Parameters<typeof update>[0]) => update(patch).catch((e) => toast.error(errorMessage(e)));
   const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
   return (

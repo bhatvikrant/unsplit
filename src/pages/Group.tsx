@@ -96,7 +96,7 @@ export function GroupPage() {
       {group.deletedAt ? (
         <div className="bg-negative-soft text-negative mb-4 flex items-center justify-between rounded-md px-3 py-2 text-sm">
           <span>This group was deleted. Its expenses no longer count toward balances.</span>
-          <Button size="sm" variant="outline" onClick={() => restore({ groupId }).then(() => toast.success("Group restored")).catch((e) => toast.error(errorMessage(e)))}>
+          <Button size="sm" variant="outline" onClick={() => restore({ groupId }).catch((e) => toast.error(errorMessage(e)))}>
             <Undo2 /> Restore
           </Button>
         </div>
@@ -340,7 +340,6 @@ export function GroupSettings() {
     setSaving(true);
     try {
       await update({ groupId, ...patch });
-      toast.success("Saved");
     } catch (e) {
       toast.error(errorMessage(e));
     } finally {
@@ -454,9 +453,8 @@ export function GroupSettings() {
                       try {
                         await removeMember({ groupId, userId: m._id });
                         if (m._id === me?._id) {
-                          toast.success("You left the group");
                           navigate("/dashboard");
-                        } else toast.success(`${m.name} removed`);
+                        }
                       } catch (e) {
                         toast.error(errorMessage(e));
                       }
@@ -490,7 +488,6 @@ export function GroupSettings() {
                     try {
                       await addMember({ groupId, member: { userId: pickFriend as Id<"users"> } });
                       setPickFriend("");
-                      toast.success("Member added");
                     } catch (e) {
                       toast.error(errorMessage(e));
                     }
@@ -508,7 +505,6 @@ export function GroupSettings() {
                   await addMember({ groupId, member: { name: newName || undefined, email: newEmail || undefined } });
                   setNewName("");
                   setNewEmail("");
-                  toast.success("Member added");
                 } catch (err) {
                   toast.error(errorMessage(err));
                 }
@@ -571,7 +567,7 @@ export function GroupSettings() {
               variant="ghost"
               onClick={async () => {
                 if (!(await confirm({ title: "Reset the invite link?", description: "The old link stops working for anyone who still has it.", action: "Reset link" }))) return;
-                regenerate({ groupId }).then(() => toast.success("New link created. The old one no longer works.")).catch((e) => toast.error(errorMessage(e)));
+                regenerate({ groupId }).catch((e) => toast.error(errorMessage(e)));
               }}
             >
               <X /> Reset link
@@ -592,7 +588,6 @@ export function GroupSettings() {
                 if (!(await confirm({ title: `Delete "${group.name}"?`, description: "Everyone in the group loses these balances until someone restores it from Deleted items.", action: "Delete group" }))) return;
                 try {
                   await remove({ groupId });
-                  toast.success("Group deleted");
                   navigate("/dashboard");
                 } catch (e) {
                   toast.error(errorMessage(e));

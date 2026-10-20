@@ -23,7 +23,7 @@ export function AddFriendDialog({ onClose }: { onClose: () => void }) {
     setError(null);
     try {
       const res = await add({ name: name || undefined, email: email || undefined });
-      toast.success(res.alreadyFriends ? "You're already friends" : "Friend added");
+      if (res.alreadyFriends) toast("You're already friends");
       onClose();
       navigate(`/friends/${res.friendId}`);
     } catch (err) {
