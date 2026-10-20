@@ -52,8 +52,13 @@ function SelectTrigger({
 function SelectContent({
   className,
   children,
-  position = "item-aligned",
-  align = "center",
+  // Popper, not Radix's item-aligned default: that mode positions the list over the selected item
+  // and re-measures on every scroll, which flickers on iOS. Anchored under the trigger instead,
+  // capped at the available height, flipping above when there is no room.
+  position = "popper",
+  align = "start",
+  sideOffset = 4,
+  collisionPadding = 8,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Content>) {
   return (
@@ -68,6 +73,8 @@ function SelectContent({
         )}
         position={position}
         align={align}
+        sideOffset={sideOffset}
+        collisionPadding={collisionPadding}
         {...props}
       >
         <SelectScrollUpButton />
