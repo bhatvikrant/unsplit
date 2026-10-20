@@ -7,7 +7,7 @@ import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { UserAvatar } from "@/components/common/Avatars";
 import { ExpenseList } from "@/components/common/ExpenseList";
-import { EmptyState, PageHeader, RowSkeleton, Section } from "@/components/common/Misc";
+import { EmptyState, InfoHint, PageHeader, RowSkeleton, Section } from "@/components/common/Misc";
 import { BalanceSummary } from "@/components/common/Money";
 import { useDialogs } from "@/components/dialogs/DialogProvider";
 import { Button } from "@/components/ui/button";
@@ -87,27 +87,30 @@ export function FriendPage() {
             ) : null}
           </Section>
           <div className="flex flex-col gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="justify-start"
-              disabled={!theyOwe || reminding}
-              title={theyOwe ? undefined : "They don't owe you anything"}
-              onClick={async () => {
-                setReminding(true);
-                try {
-                  const r = await remind({ friendId });
-                  if (r.sent) toast.success("Reminder sent");
-                  else toast.error(r.reason ?? "Couldn't send");
-                } catch (e) {
-                  toast.error(errorMessage(e));
-                } finally {
-                  setReminding(false);
-                }
-              }}
-            >
-              <Bell /> Send a reminder
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="justify-start"
+                disabled={!theyOwe || reminding}
+                title={theyOwe ? undefined : "They don't owe you anything"}
+                onClick={async () => {
+                  setReminding(true);
+                  try {
+                    const r = await remind({ friendId });
+                    if (r.sent) toast.success("Reminder sent");
+                    else toast.error(r.reason ?? "Couldn't send");
+                  } catch (e) {
+                    toast.error(errorMessage(e));
+                  } finally {
+                    setReminding(false);
+                  }
+                }}
+              >
+                <Bell /> Send a reminder
+              </Button>
+              <InfoHint text="Emails them what they owe you across every group and shared expense, with a link to settle up." />
+            </div>
             <Button
               variant="ghost"
               size="sm"

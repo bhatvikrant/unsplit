@@ -453,9 +453,12 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
                     ))}
                   </div>
                   {repeat !== "never" ? (
-                    <label className="mt-2 flex items-center gap-2 border-t px-2 pt-2 text-xs">
-                      <Checkbox checked={emailReminder} onCheckedChange={(v) => setEmailReminder(Boolean(v))} /> Email everyone the day before
-                    </label>
+                    <>
+                      <label className="mt-2 flex items-center gap-2 border-t px-2 pt-2 text-xs">
+                        <Checkbox checked={emailReminder} onCheckedChange={(v) => setEmailReminder(Boolean(v))} /> Email everyone the day before
+                      </label>
+                      <p className="text-text-faint mt-2 px-2 text-xs">A copy is posted on each date with the same split. To change later ones, edit the newest copy.</p>
+                    </>
                   ) : null}
                 </PopoverContent>
               </Popover>

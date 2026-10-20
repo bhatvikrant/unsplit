@@ -7,7 +7,7 @@ import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { GroupAvatar, GROUP_TYPE_LABELS, UserAvatar } from "@/components/common/Avatars";
 import { ExpenseList } from "@/components/common/ExpenseList";
-import { EmptyState, Field, PageHeader, RowSkeleton, Section } from "@/components/common/Misc";
+import { EmptyState, Field, InfoHint, PageHeader, RowSkeleton, Section } from "@/components/common/Misc";
 import { BalanceChip, BalanceSummary, Money } from "@/components/common/Money";
 import { useDialogs } from "@/components/dialogs/DialogProvider";
 import { SplitEditor } from "@/components/dialogs/SplitEditor";
@@ -403,7 +403,9 @@ export function GroupSettings() {
               <Input id="gname" value={name} maxLength={80} onChange={(e) => setName(e.target.value)} onBlur={() => name.trim() && name !== group.name && save({ name })} />
             </Field>
             <div className="space-y-1.5">
-              <div className="text-sm font-medium">Type</div>
+              <div className="flex items-center gap-1 text-sm font-medium">
+                Type <InfoHint text="Only picks the group's icon. Splits, balances and settings work the same for every type." />
+              </div>
               <RadioGroup
                 value={type}
                 onValueChange={(v) => {
