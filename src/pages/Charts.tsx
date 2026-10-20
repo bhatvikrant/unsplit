@@ -1,33 +1,90 @@
 import { useQuery } from "@/lib/convex";
+import { useReducedMotion } from "framer-motion";
 import { BarChart3 } from "lucide-react";
+import { useState } from "react";
 import { useParams } from "react-router";
+import { Bar, BarChart, CartesianGrid, Cell, Label, Pie, PieChart, XAxis, YAxis } from "recharts";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { categoryBySlug, CATEGORY_GROUPS } from "@convex/lib/categories";
+import { currencyDecimals } from "@convex/lib/money";
 import { CategoryIcon, EmptyState, PageHeader, RowSkeleton, Section } from "@/components/common/Misc";
 import { Money } from "@/components/common/Money";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { monthLabel } from "@/lib/format";
 import { useFormatMoney } from "@/lib/hooks";
-import { useState } from "react";
 import { GroupNav } from "./Group";
 
-/** Categorical palette, fixed order per parent category. Validated with the dataviz checks (light + dark). */
-const GROUP_COLORS: Record<string, [string, string]> = {
-  home: ["#4f46e5", "#6366f1"],
-  transportation: ["#0d9488", "#0d9488"],
-  food: ["#d97706", "#d97706"],
-  entertainment: ["#db2777", "#db2777"],
-  utilities: ["#2563eb", "#3b82f6"],
-  life: ["#65a30d", "#65a30d"],
-  general: ["#9333ea", "#9333ea"],
-  uncategorized: ["#b45309", "#b45309"],
-};
+/** The theme's five chart hues (src/index.css, light and dark), cycled when there are more groups. */
+const HUES = 5;
+const hue = (i: number) => `var(--chart-${(i % HUES) + 1})`;
 
-function colorFor(slug: string, dark: boolean) {
-  const parent = categoryBySlug(slug).parent;
-  return (GROUP_COLORS[parent] ?? GROUP_COLORS.uncategorized)[dark ? 1 : 0];
+const monthConfig = { amount: { label: "Spent", color: "var(--chart-1)" } } satisfies ChartConfig;
+const pieConfig = { amount: { label: "Amount" } } satisfies ChartConfig;
+
+/** Tooltip row: colour swatch, name, amount, optional share. */
+function Row({ color, name, value, hint }: { color?: string; name?: string; value: string; hint?: string }) {
+  return (
+    <div className="flex w-full items-center gap-2">
+      <span className="size-2.5 shrink-0 rounded-[3px]" style={{ background: color }} />
+      <span className="text-muted-foreground">{name}</span>
+      {hint ? <span className="text-muted-foreground">· {hint}</span> : null}
+      <span className="tnum text-foreground ml-auto pl-3 font-medium">{value}</span>
+    </div>
+  );
+}
+
+function MonthBars({ data, currency }: { data: { key: string; label: string; value: number }[]; currency: string }) {
+  const fmt = useFormatMoney();
+  const reduce = useReducedMotion();
+  const decimals = currencyDecimals(currency);
+  const locale = typeof navigator !== "undefined" ? navigator.language : "en-US";
+  const compact = new Intl.NumberFormat(locale, { notation: "compact", maximumFractionDigits: 1 });
+  const rows = data.map((d) => ({ ...d, amount: d.value / 10 ** decimals }));
+  return (
+    <ChartContainer config={monthConfig} className="h-52 w-full">
+      <BarChart accessibilityLayer data={rows} margin={{ top: 12, right: 8, left: 0, bottom: 0 }} barCategoryGap="28%">
+        <CartesianGrid vertical={false} />
+        <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} minTickGap={16} />
+        <YAxis tickLine={false} axisLine={false} width={44} tickFormatter={(v: number) => compact.format(v)} />
+        <ChartTooltip cursor={{ fillOpacity: 0.5 }} content={<ChartTooltipContent labelFormatter={(_l, items) => monthLabel(String(items?.[0]?.payload?.key ?? ""))} formatter={(_v, _n, item) => <Row color="var(--color-amount)" name="Spent" value={fmt(item.payload?.value ?? 0, currency)} />} />} />
+        <Bar dataKey="amount" fill="var(--color-amount)" radius={[5, 5, 0, 0]} maxBarSize={36} isAnimationActive={!reduce} />
+      </BarChart>
+    </ChartContainer>
+  );
+}
+
+function GroupDonut({ data, total, currency }: { data: { slug: string; name: string; value: number }[]; total: number; currency: string }) {
+  const fmt = useFormatMoney();
+  const reduce = useReducedMotion();
+  return (
+    <ChartContainer config={pieConfig} className="mx-auto aspect-square h-52 w-full max-w-52">
+      <PieChart>
+        <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel formatter={(_v, _n, item) => <Row color={item.payload?.fill} name={item.payload?.name} value={fmt(item.payload?.value ?? 0, currency)} hint={`${Math.round(((item.payload?.value ?? 0) / total) * 100)}%`} />} />} />
+        {/* 12 o'clock, clockwise: the same order as the legend */}
+        <Pie data={data} dataKey="value" nameKey="name" startAngle={90} endAngle={-270} innerRadius={58} outerRadius={82} paddingAngle={data.length > 1 ? 2 : 0} cornerRadius={3} minAngle={3} strokeWidth={0} isAnimationActive={!reduce}>
+          {data.map((d, i) => (
+            <Cell key={d.slug} fill={hue(i)} />
+          ))}
+          <Label
+            content={({ viewBox }) => {
+              if (!viewBox || !("cx" in viewBox) || !("cy" in viewBox)) return null;
+              const cx = Number(viewBox.cx);
+              const cy = Number(viewBox.cy);
+              return (
+                <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle">
+                  <tspan x={cx} y={cy - 9} className="fill-muted-foreground text-[11px]">Total</tspan>
+                  <tspan x={cx} y={cy + 11} className="fill-foreground text-[15px] font-semibold">{fmt(total, currency)}</tspan>
+                </text>
+              );
+            }}
+          />
+        </Pie>
+      </PieChart>
+    </ChartContainer>
+  );
 }
 
 export function ChartsPage() {
@@ -39,20 +96,20 @@ export function ChartsPage() {
   const data = useQuery(api.insights.charts, { groupId, mode, months });
   const [currency, setCurrency] = useState<string | null>(null);
   const fmt = useFormatMoney();
-  const dark = typeof document !== "undefined" && document.documentElement.classList.contains("dark");
 
   const currencies = data ? Object.keys(data.series).sort((a, b) => data.series[b].count - data.series[a].count) : [];
   const cur = currency && currencies.includes(currency) ? currency : currencies[0];
   const s = cur && data ? data.series[cur] : null;
 
   const byMonth = data && s ? data.monthKeys.map((k) => ({ key: k, label: monthLabel(k).slice(0, 3), value: s.byMonth[k] ?? 0 })) : [];
-  const maxMonth = Math.max(1, ...byMonth.map((m) => m.value));
   const byCategory = s
     ? Object.entries(s.byCategory)
         .map(([slug, v]) => ({ slug, name: categoryBySlug(slug).name, parent: categoryBySlug(slug).parent, value: v }))
         .sort((a, b) => b.value - a.value)
     : [];
   const byParent = CATEGORY_GROUPS.map((g) => ({ slug: g.slug, name: g.name, value: byCategory.filter((c) => c.parent === g.slug).reduce((a, c) => a + c.value, 0) })).filter((g) => g.value > 0).sort((a, b) => b.value - a.value);
+  // a category takes its parent group's hue, so the table matches the donut
+  const parentHue = new Map(byParent.map((g, i) => [g.slug, hue(i)]));
   const total = s?.total ?? 0;
 
   return (
@@ -112,39 +169,22 @@ export function ChartsPage() {
           </div>
 
           <Section title="By month">
-            <figure className="p-4">
-              <div className="flex h-44 items-end gap-1.5" role="img" aria-label={`Spending by month in ${cur}`}>
-                {byMonth.map((m) => (
-                  <div key={m.key} className="group relative flex h-full flex-1 flex-col justify-end">
-                    <div className="bg-brand rounded-t-[4px] transition-[height] duration-300" style={{ height: `${Math.max(m.value > 0 ? 2 : 0, (m.value / maxMonth) * 100)}%` }} title={`${monthLabel(m.key)}: ${fmt(m.value, cur!)}`} />
-                    <div className="bg-text text-bg pointer-events-none absolute bottom-full left-1/2 mb-1 -translate-x-1/2 rounded px-1.5 py-0.5 text-[11px] whitespace-nowrap opacity-0 transition-opacity group-hover:opacity-100">{fmt(m.value, cur!)}</div>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-1.5 flex gap-1.5">
-                {byMonth.map((m) => (
-                  <div key={m.key} className="text-text-faint flex-1 truncate text-center text-[11px]">{m.label}</div>
-                ))}
-              </div>
-              <figcaption className="sr-only">
-                {byMonth.map((m) => `${monthLabel(m.key)}: ${fmt(m.value, cur!)}`).join("; ")}
-              </figcaption>
+            <figure className="p-4 pl-2">
+              <MonthBars data={byMonth} currency={cur!} />
+              <figcaption className="sr-only">{byMonth.map((m) => `${monthLabel(m.key)}: ${fmt(m.value, cur!)}`).join("; ")}</figcaption>
             </figure>
           </Section>
 
           <Section title="By category">
-            <div className="p-4">
-              <div className="flex h-3 w-full overflow-hidden rounded-full" role="img" aria-label="Share of spending by category group">
-                {byParent.map((g, i) => (
-                  <div key={g.slug} style={{ width: `${(g.value / total) * 100}%`, background: colorFor(g.slug, dark), marginLeft: i ? 2 : 0 }} title={`${g.name}: ${fmt(g.value, cur!)}`} />
-                ))}
-              </div>
-              <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+            <div className="grid items-center gap-4 p-4 sm:grid-cols-[auto_1fr]">
+              <GroupDonut data={byParent} total={total} currency={cur!} />
+              <ul className="space-y-1.5 text-sm" aria-label="Share of spending by category group">
                 {byParent.map((g) => (
-                  <li key={g.slug} className="flex items-center gap-1.5">
-                    <span className="inline-block size-2.5 rounded-sm" style={{ background: colorFor(g.slug, dark) }} />
-                    <span className="text-text-muted">{g.name}</span>
-                    <span className="text-text font-medium">{Math.round((g.value / total) * 100)}%</span>
+                  <li key={g.slug} className="flex items-center gap-2.5">
+                    <span className="inline-block size-2.5 shrink-0 rounded-[3px]" style={{ background: parentHue.get(g.slug) }} />
+                    <span className="min-w-0 flex-1 truncate">{g.name}</span>
+                    <Money minor={g.value} currency={cur!} className="text-text-muted" />
+                    <span className="tnum w-10 text-right font-medium">{Math.round((g.value / total) * 100)}%</span>
                   </li>
                 ))}
               </ul>
@@ -169,7 +209,7 @@ export function ChartsPage() {
                     </td>
                     <td className="w-40 px-4 py-2">
                       <div className="bg-surface-2 h-1.5 w-full overflow-hidden rounded-full">
-                        <div className="h-full rounded-full" style={{ width: `${(c.value / total) * 100}%`, background: colorFor(c.slug, dark) }} />
+                        <div className="h-full rounded-full" style={{ width: `${(c.value / total) * 100}%`, background: parentHue.get(c.parent) }} />
                       </div>
                     </td>
                   </tr>
