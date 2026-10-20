@@ -1,12 +1,14 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   Armchair, ArrowLeftRight, Baby, BedDouble, Bike, Car, CarTaxiFront, CircleDashed, CircleParking, Clapperboard, Coffee, Droplets, FileText, Film, Flame, Fuel,
-  Gamepad2, Gift, GraduationCap, Hammer, Heart, House, KeyRound, Landmark, Music, PawPrint, Plane, Receipt, Shirt, ShieldCheck, ShoppingBasket, Smartphone,
+  Gamepad2, Gift, GraduationCap, Hammer, Heart, House, Info, KeyRound, Landmark, Music, PawPrint, Plane, Receipt, Shirt, ShieldCheck, ShoppingBasket, Smartphone,
   Sparkles, SprayCan, Stethoscope, TrainFront, Trash2, Trophy, Tv, UtensilsCrossed, Wifi, Wine, Wrench, Zap, type LucideIcon,
 } from "lucide-react";
 import { categoryBySlug } from "@convex/lib/categories";
 import { cn } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { tint } from "./Avatars";
 
 export function EmptyState({ icon: Icon, title, description, action, className }: { icon?: LucideIcon; title: string; description?: string; action?: ReactNode; className?: string }) {
@@ -111,11 +113,44 @@ export function Section({ title, children, actions, className }: { title?: React
   );
 }
 
-export function Field({ label, htmlFor, hint, error, children, className }: { label: string; htmlFor?: string; hint?: string; error?: string | null; children: ReactNode; className?: string }) {
+/** Small (i) icon that explains a setting: on hover (desktop) and on tap (touch). */
+export function InfoHint({ text, label = "What does this do?", className }: { text: ReactNode; label?: string; className?: string }) {
+  const [open, setOpen] = useState(false);
+  const [tip, setTip] = useState(false);
+  const stop = (e: { stopPropagation: () => void }) => e.stopPropagation();
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <Tooltip open={tip && !open} onOpenChange={setTip}>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              aria-label={label}
+              onClick={stop}
+              onKeyDown={stop}
+              className={cn("text-text-faint hover:text-text focus-visible:ring-ring inline-flex size-5 shrink-0 items-center justify-center rounded-full align-middle outline-none focus-visible:ring-[3px]", className)}
+            >
+              <Info className="size-3.5" />
+            </button>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent side="top" align="start" className="max-w-72 text-left leading-snug">
+          {text}
+        </TooltipContent>
+      </Tooltip>
+      <PopoverContent side="top" align="start" className="w-72 p-3 text-xs leading-snug">
+        {text}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+export function Field({ label, htmlFor, hint, info, error, children, className }: { label: string; htmlFor?: string; hint?: string; info?: ReactNode; error?: string | null; children: ReactNode; className?: string }) {
   return (
     <div className={cn("space-y-1.5", className)}>
-      <label htmlFor={htmlFor} className="text-text block text-sm font-medium">
+      <label htmlFor={htmlFor} className="text-text flex items-center gap-1 text-sm font-medium">
         {label}
+        {info ? <InfoHint text={info} /> : null}
       </label>
       {children}
       {error ? <p className="text-danger text-xs">{error}</p> : hint ? <p className="text-text-faint text-xs">{hint}</p> : null}
