@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { RECEIPT_EDGE, uploadImage } from "@/lib/image";
 import { errorMessage, fromDateInputValue, toDateInputValue } from "@/lib/format";
 import { useDefaultCurrency, useMe } from "@/lib/hooks";
 import { CURRENCY_CODES, currencySymbol } from "@convex/lib/currencies";
@@ -184,13 +185,11 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
 
   const onFile = async (file: File) => {
     if (!/^image\//.test(file.type)) return toast.error("Receipts must be an image");
-    if (file.size > 10 * 1024 * 1024) return toast.error("Image is larger than 10 MB");
     setUploading(true);
     try {
-      const url = await uploadUrl();
-      const res = await fetch(url, { method: "POST", headers: { "Content-Type": file.type }, body: file });
-      const { storageId } = (await res.json()) as { storageId: Id<"_storage"> };
-      setReceipt({ storageId, previewUrl: URL.createObjectURL(file) });
+      // shrunk first (src/lib/image.ts), so a full-size phone shot goes through and takes a fraction of the space
+      const { storageId, file: small } = await uploadImage(uploadUrl, file, RECEIPT_EDGE);
+      setReceipt({ storageId, previewUrl: URL.createObjectURL(small) });
     } catch (e) {
       toast.error(errorMessage(e));
     } finally {

@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { downloadFile, errorMessage, monthLabel, pluralize, toCsv } from "@/lib/format";
+import { COVER_EDGE, uploadImage } from "@/lib/image";
 import { useMe } from "@/lib/hooks";
 import { useConfirm } from "@/components/common/ConfirmDialog";
 import { usePagedExpenses } from "@/lib/usePagedExpenses";
@@ -363,9 +364,7 @@ export function GroupSettings() {
 
   const onCover = async (file: File) => {
     try {
-      const url = await uploadUrl();
-      const res = await fetch(url, { method: "POST", headers: { "Content-Type": file.type }, body: file });
-      const { storageId } = (await res.json()) as { storageId: Id<"_storage"> };
+      const { storageId } = await uploadImage(uploadUrl, file, COVER_EDGE);
       await save({ coverId: storageId });
     } catch (e) {
       toast.error(errorMessage(e));
