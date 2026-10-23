@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { createGroup, openAddExpense, signUp, uniq } from "./helpers";
+import { createGroup, openAddExpense, saveExpense, signUp, uniq } from "./helpers";
 
 /**
  * Offline-first: changes made with no connection show up immediately, survive
@@ -25,7 +25,7 @@ test("adds an expense and a comment offline, then syncs when back online", async
   await dialog.getByLabel("Description", { exact: true }).fill("Offline dinner");
   await dialog.getByLabel("Amount", { exact: true }).fill("50");
   await dialog.getByRole("button", { name: "Save" }).click();
-  await expect(page.getByText("Expense added").last()).toBeVisible();
+  await expect(dialog).toBeHidden();
   const row = page.getByRole("link", { name: /Offline dinner/ });
   await expect(row).toBeVisible();
   await expect(row.getByLabel("Not synced yet")).toBeVisible();
@@ -71,8 +71,7 @@ test("deleting offline moves the expense to deleted items and the server agrees 
   const dialog = await openAddExpense(page);
   await dialog.getByLabel("Description", { exact: true }).fill("Taxi home");
   await dialog.getByLabel("Amount", { exact: true }).fill("20");
-  await dialog.getByRole("button", { name: "Save" }).click();
-  await expect(page.getByText("Expense added").last()).toBeVisible();
+  await saveExpense(page, dialog);
   await page.getByRole("link", { name: /Taxi home/ }).click();
   await expect(page.getByRole("heading", { name: "Taxi home" })).toBeVisible();
 
@@ -96,6 +95,5 @@ test("deleting offline moves the expense to deleted items and the server agrees 
   await page.reload();
   await expect(page.getByRole("link", { name: /Taxi home/ })).toBeVisible();
   await page.getByRole("button", { name: "Restore" }).first().click();
-  await expect(page.getByText("Expense restored").last()).toBeVisible();
   await expect(page.getByText("Nothing deleted")).toBeVisible();
 });

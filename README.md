@@ -83,15 +83,38 @@ and a 180px `apple-touch-icon.png` with no transparency for iOS.
 
 ```bash
 npm test              # unit: split engine, money, offline overlay
-npm run test:e2e      # Playwright, with the dev server running
+npm run test:e2e      # Playwright, with `npm run dev:all` running (see below)
 npm run typecheck
 ```
 
-The offline spec also runs against the production build to cover the
-service worker (reload with no network):
+### Signing in from the e2e suite
+
+The app only has Google sign-in, which a test cannot drive, so the suite signs
+up and logs in with email and password through a test-only path that
+production never has:
+
+- `convex/auth.ts` adds Convex Auth's `Password` provider only when the
+  deployment has `E2E_AUTH=1` **and** is a local one (`npx convex dev` on
+  127.0.0.1). Production and preview deployments never get the variable, and
+  the URL check means it cannot be switched on in the cloud by mistake.
+- `src/pages/Auth.tsx` exposes `window.__e2eSignIn` for the helpers in
+  `tests/e2e/helpers.ts`, only in Vite dev builds and in builds made with
+  `VITE_E2E_AUTH=1`. Production builds compile it out.
+
+Once per local deployment, with `npm run dev:all` running:
 
 ```bash
-npm run build && npm run preview     # serves dist/ on :4173
+npx convex env set E2E_AUTH 1
+```
+
+The accounts the suite creates (`*@unsplit.test`) exist only in that local
+database.
+
+The offline spec also runs against the production build to cover the
+service worker (reload with no network); that build needs the hook:
+
+```bash
+VITE_E2E_AUTH=1 npm run build && npm run preview     # serves dist/ on :4173
 npm run test:e2e:offline
 ```
 

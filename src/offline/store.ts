@@ -178,14 +178,18 @@ export class OfflineStore {
     return this._idMap;
   }
 
-  async mapIds(pairs: [string, string][]) {
-    if (pairs.length === 0) return;
+  /**
+   * The server took an op: map its temp ids to the real ones and drop it in one step, so no
+   * render shows the server's row next to the optimistic one, or a temp id still unmapped.
+   */
+  async complete(id: string, pairs: [string, string][]) {
     const next = { ...this._idMap };
     for (const [tmp, real] of pairs) if (tmp && real && tmp !== real) next[tmp] = real;
     this._idMap = next;
+    this.ops = this.ops.filter((o) => o.id !== id);
     this.opsVersion++;
     this.notify();
-    await idb.put("meta", "idMap", next);
+    await Promise.all([idb.put("meta", "idMap", next), idb.delete("outbox", id)]);
   }
 
   // ---------- lifecycle ----------
