@@ -26,7 +26,7 @@ esac
 OUT=$(node scripts/gen-auth-keys.mjs)
 PK=$(printf '%s' "$OUT" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>process.stdout.write(JSON.parse(s).privateKey))')
 JW=$(printf '%s' "$OUT" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>process.stdout.write(JSON.parse(s).jwks))')
-npx convex env set "${ENV_FLAG[@]}" JWT_PRIVATE_KEY -- "$PK"
-npx convex env set "${ENV_FLAG[@]}" JWKS -- "$JW"
-npx convex env set "${ENV_FLAG[@]}" SITE_URL "$SITE"
+npx convex env set ${ENV_FLAG[@]+"${ENV_FLAG[@]}"} JWT_PRIVATE_KEY -- "$PK"
+npx convex env set ${ENV_FLAG[@]+"${ENV_FLAG[@]}"} JWKS -- "$JW"
+npx convex env set ${ENV_FLAG[@]+"${ENV_FLAG[@]}"} SITE_URL "$SITE"
 echo "Auth env set (${FLAG:-local .env.local deployment}), SITE_URL=$SITE"

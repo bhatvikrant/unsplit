@@ -188,10 +188,7 @@ export class SyncEngine {
           await this.fail(op, errorText(e), e);
           continue;
         }
-        const pairs = spec?.mapResult?.(op, result) ?? [];
-        // Map ids before removing the op so views never see the temp id unmapped.
-        await this.store.mapIds(pairs);
-        await this.store.removeOp(op.id);
+        await this.store.complete(op.id, spec?.mapResult?.(op, result) ?? []);
         const w = this.waiters.get(op.id);
         if (w) {
           this.waiters.delete(op.id);

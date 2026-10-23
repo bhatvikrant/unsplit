@@ -8,6 +8,13 @@ import { Logo } from "@/components/layout/Logo";
 import { errorMessage } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
+declare global {
+  interface Window {
+    /** Test-only sign-in hook, set by Login in dev and VITE_E2E_AUTH builds. */
+    __e2eSignIn?: (params: Record<string, string>) => Promise<void>;
+  }
+}
+
 const points = [
   { icon: Receipt, label: "Split any bill" },
   { icon: HandCoins, label: "Settle up fast" },
@@ -23,6 +30,13 @@ export function Login() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const still = useReducedMotion();
+  // Sign-in for the Playwright suite (tests/e2e/helpers.ts) through the test-only password provider
+  // in convex/auth.ts. Only in dev builds and builds made with VITE_E2E_AUTH=1: production builds
+  // compile it out, and a deployment without E2E_AUTH refuses the call anyway.
+  useEffect(() => {
+    if (!import.meta.env.DEV && !import.meta.env.VITE_E2E_AUTH) return;
+    window.__e2eSignIn = (params) => signIn("password", params).then(() => undefined);
+  }, [signIn]);
   const rise = (delay: number, y = 12) => ({
     initial: still ? false : { opacity: 0, y },
     animate: { opacity: 1, y: 0 },

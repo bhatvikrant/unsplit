@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { createGroup, logIn, logOut, openAddExpense, signUp, uniq } from "./helpers";
+import { createGroup, logIn, logOut, openAddExpense, saveExpense, signUp, synced, uniq } from "./helpers";
 
 test.describe.configure({ mode: "serial" });
 
@@ -16,8 +16,7 @@ test("sign up, create group, equal split, balances", async ({ page }) => {
   await dialog.getByLabel("Description", { exact: true }).fill("Dinner at the fish place");
   await dialog.getByLabel("Amount", { exact: true }).fill("100");
   await expect(dialog.getByText("US$33.34").or(dialog.getByText("$33.34"))).toBeVisible();
-  await dialog.getByRole("button", { name: "Save" }).click();
-  await expect(page.getByText("Expense added").last()).toBeVisible();
+  await saveExpense(page, dialog);
   await expect(page.getByRole("link", { name: /Dinner at the fish place/ })).toBeVisible();
   // Alex paid 100, owes 33.34 -> lent 66.66
   await expect(page.getByText(/66\.66/).first()).toBeVisible();
@@ -38,8 +37,7 @@ test("exact, percent, shares, adjustment and itemized splits validate and save",
   await expect(dialog.getByRole("button", { name: "Save" })).toBeDisabled();
   await dialog.getByLabel("Chris Okafor amount").fill("10");
   await expect(dialog.getByText(/off by/)).toHaveCount(0);
-  await dialog.getByRole("button", { name: "Save" }).click();
-  await expect(page.getByText("Expense added").last()).toBeVisible();
+  await saveExpense(page, dialog);
 
   // Percent
   dialog = await openAddExpense(page);
@@ -49,8 +47,7 @@ test("exact, percent, shares, adjustment and itemized splits validate and save",
   await dialog.getByLabel("Alex Tester percent").fill("50");
   await dialog.getByLabel("Bea Moreno percent").fill("25");
   await dialog.getByLabel("Chris Okafor percent").fill("25");
-  await dialog.getByRole("button", { name: "Save" }).click();
-  await expect(page.getByText("Expense added").last()).toBeVisible();
+  await saveExpense(page, dialog);
 
   // Shares with multiple payers
   dialog = await openAddExpense(page);
@@ -63,8 +60,7 @@ test("exact, percent, shares, adjustment and itemized splits validate and save",
   await dialog.getByLabel("Alex Tester shares").fill("2");
   await dialog.getByLabel("Bea Moreno shares").fill("1");
   await dialog.getByLabel("Chris Okafor shares").fill("1");
-  await dialog.getByRole("button", { name: "Save" }).click();
-  await expect(page.getByText("Expense added").last()).toBeVisible();
+  await saveExpense(page, dialog);
 
   // Adjustment
   dialog = await openAddExpense(page);
@@ -72,8 +68,7 @@ test("exact, percent, shares, adjustment and itemized splits validate and save",
   await dialog.getByLabel("Amount", { exact: true }).fill("40");
   await dialog.getByRole("tab", { name: "Adjustment" }).click();
   await dialog.getByLabel("Alex Tester extra").fill("10");
-  await dialog.getByRole("button", { name: "Save" }).click();
-  await expect(page.getByText("Expense added").last()).toBeVisible();
+  await saveExpense(page, dialog);
 
   // Itemized: total is derived from items
   dialog = await openAddExpense(page);
@@ -86,8 +81,7 @@ test("exact, percent, shares, adjustment and itemized splits validate and save",
   await dialog.getByLabel("Item 2 price").fill("8");
   await dialog.getByLabel("Tax").fill("2");
   await expect(dialog.getByLabel("Amount", { exact: true })).toHaveValue("22.00");
-  await dialog.getByRole("button", { name: "Save" }).click();
-  await expect(page.getByText("Expense added").last()).toBeVisible();
+  await saveExpense(page, dialog);
 
   await expect(page.getByRole("link", { name: /Lunch/ })).toBeVisible();
 });
@@ -118,7 +112,7 @@ test("expense detail: comment, edit, delete, restore", async ({ page }) => {
   await page.goto("/trash");
   await expect(page.getByText("Taxi to the airport")).toBeVisible();
   await page.getByRole("button", { name: "Restore" }).first().click();
-  await expect(page.getByText("Expense restored")).toBeVisible();
+  await expect(page.getByText("Nothing deleted")).toBeVisible();
 });
 
 test("settle up, activity feed, search, totals, export", async ({ page }) => {
@@ -133,7 +127,8 @@ test("settle up, activity feed, search, totals, export", async ({ page }) => {
   await expect(dialog.getByLabel("Amount", { exact: true })).not.toHaveValue("");
   await dialog.getByLabel("Amount", { exact: true }).fill("20");
   await dialog.getByRole("button", { name: "Record payment" }).click();
-  await expect(page.getByText("Payment recorded").last()).toBeVisible();
+  await expect(dialog).toBeHidden();
+  await synced(page);
   await expect(page.getByRole("link", { name: /Bea Moreno paid you/ })).toBeVisible();
 
   await page.getByRole("link", { name: "Recent activity" }).click();
@@ -161,10 +156,13 @@ test("group settings: simplify debts, whiteboard, remove blocked while unsettled
   await page.getByRole("link", { name: groupName }).first().click();
   await page.getByRole("link", { name: "Settings" }).click();
   await page.getByRole("switch").first().click();
-  await expect(page.getByText("Saved").first()).toBeVisible();
+  await expect(page.getByRole("switch").first()).toBeChecked();
   await page.getByPlaceholder(/Notes for everyone/).fill("Wifi: fishplace / 12345");
   await page.getByRole("button", { name: "Save whiteboard" }).click();
+  // disabled again once the saved whiteboard matches the field
+  await expect(page.getByRole("button", { name: "Save whiteboard" })).toBeDisabled();
   await page.getByRole("button", { name: /Remove Chris Okafor/ }).click();
+  await page.getByRole("button", { name: "Remove", exact: true }).click();
   await expect(page.getByText(/settled up in this group before being removed/)).toBeVisible();
   await page.getByRole("link", { name: groupName }).first().click();
   await expect(page.getByText("Wifi: fishplace / 12345")).toBeVisible();
@@ -194,14 +192,14 @@ test("friend page, non-group expense, account settings", async ({ page }) => {
   const ex = await openAddExpense(page);
   await ex.getByLabel("Description", { exact: true }).fill("Concert ticket");
   await ex.getByLabel("Amount", { exact: true }).fill("80");
-  await ex.getByRole("button", { name: "Save" }).click();
-  await expect(page.getByText("Expense added").last()).toBeVisible();
+  await saveExpense(page, ex);
   await expect(page.getByText(/40\.00/).first()).toBeVisible();
 
   await page.goto("/account");
   await page.getByLabel("Name").fill("Alex T.");
   await page.getByLabel("Name").blur();
-  await expect(page.getByText("Saved").last()).toBeVisible();
+  // saved on blur: the account switcher at the foot of the sidebar shows the new name
+  await expect(page.getByRole("button", { name: /Alex T\./ })).toBeVisible();
   await page.goto("/account/notifications");
   await page.getByRole("switch").first().click();
   await page.goto("/expenses/recurring");
