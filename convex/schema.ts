@@ -227,7 +227,8 @@ export default defineSchema({
     read: v.boolean(),
   })
     .index("by_user", ["userId"])
-    .index("by_user_read", ["userId", "read"]),
+    .index("by_user_read", ["userId", "read"])
+    .index("by_activity", ["activityId"]),
 
   exchangeRates: defineTable({
     base: v.string(),

@@ -2,7 +2,7 @@ import { ConvexError, v } from "convex/values";
 import { action, internalAction, internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
-import { assertFriends, ensureFriendship, friendIdsOf, friendshipOf, pairKeyOf, requireUser, requireUserId } from "./lib/access";
+import { assertFriends, ensureFriendship, friendshipOf, friendshipsOf, otherOf, pairKeyOf, requireUser, requireUserId } from "./lib/access";
 import { computeUserBalances, mapToRecord } from "./lib/balances";
 import { escapeHtml, layout, sendEmail, siteUrl } from "./lib/email";
 import { enforceLimit } from "./lib/rateLimit";
@@ -15,20 +15,13 @@ export const list = query({
   args: {},
   handler: async (ctx) => {
     const me = await requireUserId(ctx);
-    const ids = await friendIdsOf(ctx, me);
-    const balances = await computeUserBalances(ctx, me);
-    const users = await publicUsers(ctx, ids, me);
-    const out = [];
-    for (const u of users) {
-      const f = await friendshipOf(ctx, me, u._id);
-      out.push({
-        user: u,
-        balances: mapToRecord(balances.byFriend.get(u._id)),
-        lastActivityAt: f?.lastActivityAt ?? 0,
-      });
-    }
-    out.sort((a, b) => a.user.name.localeCompare(b.user.name));
-    return out;
+    // The friendships are read once; before, each friend cost another lookup for its lastActivityAt.
+    const friendships = await friendshipsOf(ctx, me);
+    const byFriend = new Map(friendships.map((f) => [otherOf(f, me), f]));
+    const [balances, users] = await Promise.all([computeUserBalances(ctx, me), publicUsers(ctx, [...byFriend.keys()], me)]);
+    return users
+      .map((u) => ({ user: u, balances: mapToRecord(balances.byFriend.get(u._id)), lastActivityAt: byFriend.get(u._id)?.lastActivityAt ?? 0 }))
+      .sort((a, b) => a.user.name.localeCompare(b.user.name));
   },
 });
 
@@ -37,9 +30,8 @@ export const get = query({
   handler: async (ctx, { friendId }) => {
     const me = await requireUserId(ctx);
     const friendship = await assertFriends(ctx, me, friendId);
-    const user = await publicUser(ctx, await ctx.db.get(friendId), me);
+    const [user, balances] = await Promise.all([ctx.db.get(friendId).then((u) => publicUser(ctx, u, me)), computeUserBalances(ctx, me)]);
     if (!user) throw new ConvexError("Friend not found");
-    const balances = await computeUserBalances(ctx, me);
     const perGroup = balances.byFriendGroup.get(friendId) ?? new Map();
     const breakdown: { groupId: Id<"groups"> | null; groupName: string; balances: Record<string, number> }[] = [];
     for (const [key, m] of perGroup) {

@@ -1,7 +1,7 @@
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useConvex, useMutation, useRequireOnline } from "@/lib/convex";
 import { Download, LogOut } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { api } from "@convex/_generated/api";
@@ -40,7 +40,7 @@ export function AccountPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState("");
   const loaded = useRef(false);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (me && !loaded.current) {
       loaded.current = true;
       setName(me.name);

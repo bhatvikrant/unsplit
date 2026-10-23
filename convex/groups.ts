@@ -5,7 +5,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import {
   assertGroupMember, ensureFriendship, getMembership, groupMemberIds, isGroupMember, optionalUserId, requireUser, requireUserId,
 } from "./lib/access";
-import { computeUserBalances, groupDebts, isSettled, mapToRecord, netsFromDebts, rowsToDebts, scopeRows, groupScope, userNetInGroup } from "./lib/balances";
+import { computeUserBalances, isSettled, mapToRecord, netsFromDebts, rowsToDebts, scopeRows, groupScope, simplifyByCurrency, userNetInGroup } from "./lib/balances";
 import { logActivity } from "./lib/activity";
 import { randomCode } from "./lib/ids";
 import { findOrCreateUser, isValidEmail, normalizeEmail, publicUsers } from "./lib/users";
@@ -29,22 +29,19 @@ export const list = query({
   handler: async (ctx) => {
     const me = await requireUserId(ctx);
     const memberships = await ctx.db.query("groupMembers").withIndex("by_user", (q) => q.eq("userId", me)).collect();
-    const balances = await computeUserBalances(ctx, me);
-    const out = [];
-    for (const m of memberships) {
-      const g = await ctx.db.get(m.groupId);
-      if (!g || g.deletedAt) continue;
-      out.push({
-        _id: g._id,
-        name: g.name,
-        type: g.type,
-        coverUrl: await coverUrl(ctx, g),
-        myBalance: mapToRecord(balances.byGroup.get(g._id)),
-        createdAt: g._creationTime,
-      });
-    }
-    out.sort((a, b) => b.createdAt - a.createdAt);
-    return out;
+    const [balances, groups] = await Promise.all([
+      computeUserBalances(ctx, me),
+      Promise.all(
+        memberships.map(async (m) => {
+          const g = await ctx.db.get(m.groupId);
+          return !g || g.deletedAt ? null : { g, cover: await coverUrl(ctx, g) };
+        }),
+      ),
+    ]);
+    return groups
+      .filter((x) => x !== null)
+      .map(({ g, cover }) => ({ _id: g._id, name: g.name, type: g.type, coverUrl: cover, myBalance: mapToRecord(balances.byGroup.get(g._id)), createdAt: g._creationTime }))
+      .sort((a, b) => b.createdAt - a.createdAt);
   },
 });
 
@@ -69,17 +66,17 @@ export const get = query({
   handler: async (ctx, { groupId }) => {
     const me = await requireUserId(ctx);
     const g = await assertGroupMember(ctx, groupId, me, { allowDeleted: true });
-    const memberIds = await groupMemberIds(ctx, groupId);
+    const [memberIds, rows, cover] = await Promise.all([groupMemberIds(ctx, groupId), scopeRows(ctx, groupScope(groupId)), coverUrl(ctx, g)]);
     const members = await publicUsers(ctx, memberIds, me);
-    const debts = await groupDebts(ctx, g);
-    const original = g.simplifyDebts ? rowsToDebts(await scopeRows(ctx, groupScope(groupId))) : debts;
+    const original = rowsToDebts(rows);
+    const debts = g.simplifyDebts ? simplifyByCurrency(original) : original;
     const nets = netsFromDebts(debts);
     const memberNets = Object.fromEntries(memberIds.map((id) => [id, mapToRecord(nets.get(id))]));
     return {
       _id: g._id,
       name: g.name,
       type: g.type,
-      coverUrl: await coverUrl(ctx, g),
+      coverUrl: cover,
       simplifyDebts: g.simplifyDebts,
       defaultSplit: g.defaultSplit ?? null,
       whiteboard: g.whiteboard ?? "",

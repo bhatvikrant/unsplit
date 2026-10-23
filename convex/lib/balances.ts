@@ -58,7 +58,11 @@ export async function scopeRows(ctx: Ctx, scope: string): Promise<Doc<"balances"
 /** Debts in a group, per currency, simplified when the group asks for it. */
 export async function groupDebts(ctx: Ctx, group: Doc<"groups">): Promise<CurrencyDebt[]> {
   const raw = rowsToDebts(await scopeRows(ctx, groupScope(group._id)));
-  if (!group.simplifyDebts) return raw;
+  return group.simplifyDebts ? simplifyByCurrency(raw) : raw;
+}
+
+/** Min-cash-flow per currency: fewer arrows, same nets. */
+export function simplifyByCurrency(raw: CurrencyDebt[]): CurrencyDebt[] {
   const byCurrency = new Map<string, Debt[]>();
   for (const d of raw) {
     const list = byCurrency.get(d.currency) ?? [];
@@ -132,21 +136,27 @@ export async function computeUserBalances(ctx: Ctx, userId: Id<"users">): Promis
     }
   };
 
-  // Groups: use the group's view (simplified or not).
+  // Groups: use the group's view (simplified or not). Each group's reads are independent, so they run together.
   const memberships = await ctx.db.query("groupMembers").withIndex("by_user", (q) => q.eq("userId", userId)).collect();
-  for (const m of memberships) {
-    const group = await ctx.db.get(m.groupId);
-    if (!group || group.deletedAt) continue;
-    byGroup.set(group._id, byGroup.get(group._id) ?? new Map());
-    for (const d of await groupDebts(ctx, group)) {
-      if (d.from === userId) add(d.to as Id<"users">, group._id, d.currency, -d.amountMinor, group._id);
-      else if (d.to === userId) add(d.from as Id<"users">, group._id, d.currency, d.amountMinor, group._id);
+  const [groups, asLow, asHigh] = await Promise.all([
+    Promise.all(
+      memberships.map(async (m) => {
+        const group = await ctx.db.get(m.groupId);
+        return !group || group.deletedAt ? null : { group, debts: await groupDebts(ctx, group) };
+      }),
+    ),
+    // Pair scopes (non-group expenses).
+    ctx.db.query("balances").withIndex("by_low", (q) => q.eq("lowUserId", userId)).collect(),
+    ctx.db.query("balances").withIndex("by_high", (q) => q.eq("highUserId", userId)).collect(),
+  ]);
+  for (const g of groups) {
+    if (!g) continue;
+    byGroup.set(g.group._id, byGroup.get(g.group._id) ?? new Map());
+    for (const d of g.debts) {
+      if (d.from === userId) add(d.to as Id<"users">, g.group._id, d.currency, -d.amountMinor, g.group._id);
+      else if (d.to === userId) add(d.from as Id<"users">, g.group._id, d.currency, d.amountMinor, g.group._id);
     }
   }
-
-  // Pair scopes (non-group expenses).
-  const asLow = await ctx.db.query("balances").withIndex("by_low", (q) => q.eq("lowUserId", userId)).collect();
-  const asHigh = await ctx.db.query("balances").withIndex("by_high", (q) => q.eq("highUserId", userId)).collect();
   for (const r of [...asLow, ...asHigh]) {
     if (!r.scope.startsWith("pair:")) continue;
     // amountMinor = high owes low

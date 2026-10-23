@@ -1,10 +1,11 @@
+import { lazy, Suspense } from "react";
 import { createBrowserRouter, Navigate } from "react-router";
+import { RowSkeleton } from "@/components/common/Misc";
 import { AppShell } from "@/components/layout/AppShell";
 import { RedirectIfAuthed, RequireAuth } from "@/components/layout/RequireAuth";
 import { AccountPage, NotificationSettings } from "@/pages/Account";
 import { ActivityPage } from "@/pages/ActivityPage";
 import { Login } from "@/pages/Auth";
-import { ChartsPage } from "@/pages/Charts";
 import { Dashboard } from "@/pages/Dashboard";
 import { ExpenseDetail } from "@/pages/ExpenseDetail";
 import { AllExpenses, RecurringExpenses, TrashPage } from "@/pages/Expenses";
@@ -15,6 +16,15 @@ import { Join } from "@/pages/Join";
 import { Landing } from "@/pages/Landing";
 import { NotFound } from "@/pages/NotFound";
 import { Privacy } from "@/pages/Privacy";
+
+// Charts pull in recharts, a third of the bundle, for a page most visits never open. It loads on
+// first use; the service worker precaches the chunk, so it is still there offline.
+const ChartsPage = lazy(() => import("@/pages/Charts").then((m) => ({ default: m.ChartsPage })));
+const charts = (
+  <Suspense fallback={<RowSkeleton />}>
+    <ChartsPage />
+  </Suspense>
+);
 
 export const router = createBrowserRouter([
   { path: "/", element: <RedirectIfAuthed><Landing /></RedirectIfAuthed> },
@@ -39,9 +49,9 @@ export const router = createBrowserRouter([
       { path: "/groups/:id", element: <GroupPage /> },
       { path: "/groups/:id/settings", element: <GroupSettings /> },
       { path: "/groups/:id/totals", element: <GroupTotals /> },
-      { path: "/groups/:id/charts", element: <ChartsPage /> },
+      { path: "/groups/:id/charts", element: charts },
       { path: "/friends/:id", element: <FriendPage /> },
-      { path: "/charts", element: <ChartsPage /> },
+      { path: "/charts", element: charts },
       { path: "/account", element: <AccountPage /> },
       { path: "/account/notifications", element: <NotificationSettings /> },
       { path: "/trash", element: <TrashPage /> },

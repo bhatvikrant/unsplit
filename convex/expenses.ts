@@ -115,32 +115,31 @@ export type ExpenseRow = {
   createdAt: number;
 };
 
-async function toRow(ctx: Ctx, e: Doc<"expenses">, me: Id<"users">, nameCache: Map<string, string>): Promise<ExpenseRow> {
-  const shares = await loadShares(ctx, e._id);
-  const name = async (id: Id<"users">) => {
-    let n = nameCache.get(id);
-    if (!n) {
-      const u = await ctx.db.get(id);
-      n = u?.deletedAt ? "Deleted user" : (u?.name ?? "Someone");
-      nameCache.set(id, n);
+/** Names looked up while building rows. Holds promises, so rows built concurrently share one read per user or group. */
+type NameCache = Map<string, Promise<string>>;
+
+async function toRow(ctx: Ctx, e: Doc<"expenses">, me: Id<"users">, nameCache: NameCache, preloaded?: Doc<"expenseShares">[]): Promise<ExpenseRow> {
+  const shares = preloaded ?? (await loadShares(ctx, e._id));
+  const cached = (key: string, load: () => Promise<string>) => {
+    let p = nameCache.get(key);
+    if (!p) {
+      p = load();
+      nameCache.set(key, p);
     }
-    return n;
+    return p;
   };
-  const payers = [];
-  for (const s of shares) if (s.paidMinor > 0) payers.push({ userId: s.userId, name: await name(s.userId), paidMinor: s.paidMinor });
-  const payees = [];
-  for (const s of shares) if (s.owedMinor > 0) payees.push({ userId: s.userId, name: await name(s.userId), owedMinor: s.owedMinor });
+  const name = (id: Id<"users">) =>
+    cached(id, async () => {
+      const u = await ctx.db.get(id);
+      return u?.deletedAt ? "Deleted user" : (u?.name ?? "Someone");
+    });
+  const gid = e.groupId;
+  const [payers, payees, groupName] = await Promise.all([
+    Promise.all(shares.filter((s) => s.paidMinor > 0).map(async (s) => ({ userId: s.userId, name: await name(s.userId), paidMinor: s.paidMinor }))),
+    Promise.all(shares.filter((s) => s.owedMinor > 0).map(async (s) => ({ userId: s.userId, name: await name(s.userId), owedMinor: s.owedMinor }))),
+    gid ? cached(`g:${gid}`, async () => (await ctx.db.get(gid))?.name ?? "Group") : null,
+  ]);
   const mine = shares.find((s) => s.userId === me);
-  let groupName: string | null = null;
-  if (e.groupId) {
-    const key = `g:${e.groupId}`;
-    groupName = nameCache.get(key) ?? null;
-    if (!groupName) {
-      const g = await ctx.db.get(e.groupId);
-      groupName = g?.name ?? "Group";
-      nameCache.set(key, groupName);
-    }
-  }
   return {
     _id: e._id,
     description: e.description,
@@ -185,53 +184,49 @@ export const list = query({
     const before = args.before ?? Number.MAX_SAFE_INTEGER;
     const search = args.search?.trim();
     const scanCap = search ? 3000 : limit * 3 + 50;
-    const nameCache = new Map<string, string>();
-    const candidates: Doc<"expenses">[] = [];
+    const nameCache: NameCache = new Map();
+    const sharesCache = new Map<Id<"expenses">, Doc<"expenseShares">[]>();
+    let candidates: Doc<"expenses">[];
+    let scanned: number;
 
+    // Independent reads go out together (Promise.all) rather than one round trip per row.
     if (args.groupId) {
       await assertGroupMember(ctx, args.groupId, me, { allowDeleted: true });
-      const rows = await ctx.db
+      candidates = await ctx.db
         .query("expenses")
         .withIndex("by_group_date", (q) => q.eq("groupId", args.groupId).lt("date", before))
         .order("desc")
         .take(scanCap);
-      candidates.push(...rows);
+      scanned = candidates.length;
     } else {
       const shares = await ctx.db
         .query("expenseShares")
         .withIndex("by_user_date", (q) => q.eq("userId", me).eq("deleted", Boolean(args.includeDeleted)).lt("date", before))
         .order("desc")
         .take(scanCap);
-      const seen = new Set<string>();
-      for (const s of shares) {
-        if (seen.has(s.expenseId)) continue;
-        seen.add(s.expenseId);
-        const e = await ctx.db.get(s.expenseId);
-        if (!e) continue;
-        if (args.friendId) {
-          const pk = pairKeyOf(me, args.friendId);
-          if (e.pairKey !== pk) {
-            if (!e.groupId) continue;
-            const theirs = (await loadShares(ctx, e._id)).some((x) => x.userId === args.friendId);
-            if (!theirs) continue;
-          }
-        }
-        candidates.push(e);
+      scanned = shares.length;
+      const ids = [...new Set(shares.map((s) => s.expenseId))];
+      candidates = (await Promise.all(ids.map((id) => ctx.db.get(id)))).filter((e): e is Doc<"expenses"> => e !== null);
+      if (args.friendId) {
+        const pk = pairKeyOf(me, args.friendId);
+        const shared = await Promise.all(
+          candidates.map(async (e) => {
+            if (e.pairKey === pk) return true;
+            if (!e.groupId) return false;
+            const rows = await loadShares(ctx, e._id);
+            sharesCache.set(e._id, rows);
+            return rows.some((x) => x.userId === args.friendId);
+          }),
+        );
+        candidates = candidates.filter((_, i) => shared[i]);
       }
     }
 
-    const items: ExpenseRow[] = [];
-    let last: number | undefined;
-    for (const e of candidates) {
-      const isDeleted = Boolean(e.deletedAt);
-      if (isDeleted !== Boolean(args.includeDeleted)) continue;
-      if (search && !matches(e, search)) continue;
-      items.push(await toRow(ctx, e, me, nameCache));
-      last = e.date;
-      if (items.length >= limit) break;
-    }
-    const exhausted = candidates.length < scanCap && items.length < limit;
-    return { items, nextBefore: exhausted ? null : (last ?? null) };
+    const kept = candidates.filter((e) => Boolean(e.deletedAt) === Boolean(args.includeDeleted) && (!search || matches(e, search)));
+    const page = kept.slice(0, limit);
+    const items = await Promise.all(page.map((e) => toRow(ctx, e, me, nameCache, sharesCache.get(e._id))));
+    const exhausted = scanned < scanCap && kept.length <= limit;
+    return { items, nextBefore: exhausted ? null : (page[page.length - 1]?.date ?? null) };
   },
 });
 
@@ -290,16 +285,10 @@ export const recurring = query({
       .withIndex("by_user_date", (q) => q.eq("userId", me).eq("deleted", false))
       .order("desc")
       .take(2000);
-    const seen = new Set<string>();
-    const nameCache = new Map<string, string>();
-    const out = [];
-    for (const s of shares) {
-      if (seen.has(s.expenseId)) continue;
-      seen.add(s.expenseId);
-      const e = await ctx.db.get(s.expenseId);
-      if (!e || e.deletedAt || e.repeat === "never" || !e.nextRepeatAt) continue;
-      out.push({ ...(await toRow(ctx, e, me, nameCache)), nextRepeatAt: e.nextRepeatAt, emailReminder: e.emailReminder });
-    }
+    const nameCache: NameCache = new Map();
+    const docs = await Promise.all([...new Set(shares.map((s) => s.expenseId))].map((id) => ctx.db.get(id)));
+    const live = docs.filter((e): e is Doc<"expenses"> & { nextRepeatAt: number } => Boolean(e && !e.deletedAt && e.repeat !== "never" && e.nextRepeatAt));
+    const out = await Promise.all(live.map(async (e) => ({ ...(await toRow(ctx, e, me, nameCache)), nextRepeatAt: e.nextRepeatAt, emailReminder: e.emailReminder })));
     return out.sort((a, b) => a.nextRepeatAt - b.nextRepeatAt);
   },
 });
@@ -313,17 +302,15 @@ export const deleted = query({
       .withIndex("by_user_date", (q) => q.eq("userId", me).eq("deleted", true))
       .order("desc")
       .take(500);
-    const seen = new Set<string>();
-    const nameCache = new Map<string, string>();
-    const out = [];
-    for (const s of shares) {
-      if (seen.has(s.expenseId)) continue;
-      seen.add(s.expenseId);
-      const e = await ctx.db.get(s.expenseId);
-      if (!e || !e.deletedAt) continue;
-      const by = e.deletedBy ? await ctx.db.get(e.deletedBy) : null;
-      out.push({ ...(await toRow(ctx, e, me, nameCache)), deletedByName: by?.name ?? "Someone" });
-    }
+    const nameCache: NameCache = new Map();
+    const docs = await Promise.all([...new Set(shares.map((s) => s.expenseId))].map((id) => ctx.db.get(id)));
+    const gone = docs.filter((e): e is Doc<"expenses"> => Boolean(e?.deletedAt));
+    const out = await Promise.all(
+      gone.map(async (e) => {
+        const [row, by] = await Promise.all([toRow(ctx, e, me, nameCache), e.deletedBy ? ctx.db.get(e.deletedBy) : null]);
+        return { ...row, deletedByName: by?.name ?? "Someone" };
+      }),
+    );
     return out.sort((a, b) => (b.deletedAt ?? 0) - (a.deletedAt ?? 0));
   },
 });

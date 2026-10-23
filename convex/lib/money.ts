@@ -43,6 +43,24 @@ export function minorToDecimalString(minor: number, currency: string): string {
   return `${sign}${whole}.${frac}`;
 }
 
+// Building an Intl.NumberFormat costs far more than using one; a list of 50 expenses formats
+// a few hundred amounts per render, so the formatters are kept per locale, currency and sign mode.
+const formatters = new Map<string, Intl.NumberFormat | null>();
+
+function formatterFor(locale: string, currency: string, signDisplay: string, decimals: number): Intl.NumberFormat | null {
+  const key = `${locale}|${currency}|${signDisplay}`;
+  let f = formatters.get(key);
+  if (f === undefined) {
+    try {
+      f = new Intl.NumberFormat(locale, { style: "currency", currency, minimumFractionDigits: decimals, maximumFractionDigits: decimals, signDisplay: signDisplay as Intl.NumberFormatOptions["signDisplay"] });
+    } catch {
+      f = null; // unknown currency code
+    }
+    formatters.set(key, f);
+  }
+  return f;
+}
+
 /** 1234 -> "$12.34" using Intl. Falls back to code when the symbol is unknown. */
 export function formatMoney(
   minor: number,
@@ -50,18 +68,9 @@ export function formatMoney(
   opts: { locale?: string; signDisplay?: "auto" | "never" | "always" | "exceptZero" } = {},
 ): string {
   const decimals = currencyDecimals(currency);
-  const value = minor / 10 ** decimals;
-  try {
-    return new Intl.NumberFormat(opts.locale ?? "en-US", {
-      style: "currency",
-      currency,
-      minimumFractionDigits: decimals,
-      maximumFractionDigits: decimals,
-      signDisplay: opts.signDisplay ?? "auto",
-    }).format(value);
-  } catch {
-    return `${currency} ${minorToDecimalString(minor, currency)}`;
-  }
+  const f = formatterFor(opts.locale ?? "en-US", currency, opts.signDisplay ?? "auto", decimals);
+  if (!f) return `${currency} ${minorToDecimalString(minor, currency)}`;
+  return f.format(minor / 10 ** decimals);
 }
 
 /**

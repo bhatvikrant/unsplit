@@ -1,6 +1,6 @@
 import { isTempId, useAction, useMutation, useQuery } from "@/lib/convex";
 import { Camera, Loader2, Repeat, Users, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useLayoutEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
@@ -84,8 +84,10 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
   const peopleIds = useMemo(() => people.map((p) => p._id), [people]);
   const peopleKey = peopleIds.join(",");
 
+  // Form state derived from loaded data runs in layout effects: the dialog paints once, filled in,
+  // instead of flashing "$", empty fields or "Loading people…" for a frame.
   // Reset split state when the participant set changes (and apply the group's default split).
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (peopleIds.length === 0) return;
     if (options.expenseId && !hydrated.current) return;
     setSplit((prev) => {
@@ -108,14 +110,14 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
   }, [peopleKey]);
 
   // Currency defaults to the group's last currency.
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (currencyTouched || options.expenseId) return;
     if (scope?.kind === "group" && group?.lastCurrency) setCurrency(group.lastCurrency);
     else setCurrency(defaultCurrency);
   }, [scope, group?.lastCurrency, defaultCurrency, currencyTouched, options.expenseId]);
 
   // Hydrate for editing.
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!existing || hydrated.current || !me) return;
     hydrated.current = true;
     if (existing.groupId) setScope({ kind: "group", id: existing.groupId });
@@ -147,7 +149,7 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
   }, [existing, me]);
 
   // Category suggestion from the description.
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (categoryTouched || categoryLocked.current) return;
     const s = suggestCategory(description);
     setCategory(s ?? "general");
@@ -155,7 +157,7 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
 
   // Itemized drives the total.
   const itemTotal = split?.method === "itemized" ? itemizedTotal(split, currency) : null;
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (itemTotal !== null && itemTotal >= 0) setAmount(minorToDecimalString(itemTotal, currency));
   }, [itemTotal, currency]);
 

@@ -33,20 +33,16 @@ export const activityContext = internalQuery({
   handler: async (ctx, { activityId }) => {
     const activity = await ctx.db.get(activityId);
     if (!activity) return null;
-    const actor = await ctx.db.get(activity.actorId);
-    const group = activity.groupId ? await ctx.db.get(activity.groupId) : null;
-    const expense = activity.expenseId ? await ctx.db.get(activity.expenseId) : null;
-    const feed = await ctx.db.query("activityFeed").withIndex("by_user", (q) => q.eq("userId", activity.actorId)).take(0);
-    void feed;
+    const [actor, group, expense, rows] = await Promise.all([
+      ctx.db.get(activity.actorId),
+      activity.groupId ? ctx.db.get(activity.groupId) : null,
+      activity.expenseId ? ctx.db.get(activity.expenseId) : null,
+      // Everyone this activity fanned out to. Indexed: the feed table is the largest one and this runs on every activity.
+      ctx.db.query("activityFeed").withIndex("by_activity", (q) => q.eq("activityId", activityId)).collect(),
+    ]);
+    const users = await Promise.all(rows.filter((r) => r.userId !== activity.actorId).map((r) => ctx.db.get(r.userId)));
     const recipients: { email: string; name: string; prefs: typeof DEFAULT_NOTIF_PREFS }[] = [];
-    // Find everyone this activity fanned out to.
-    const rows = await ctx.db
-      .query("activityFeed")
-      .filter((q) => q.eq(q.field("activityId"), activityId))
-      .collect();
-    for (const r of rows) {
-      if (r.userId === activity.actorId) continue;
-      const u = await ctx.db.get(r.userId);
+    for (const u of users) {
       if (!u || !u.email || u.deletedAt || u.isPlaceholder) continue;
       recipients.push({ email: u.email, name: u.name ?? "there", prefs: u.notifPrefs ?? DEFAULT_NOTIF_PREFS });
     }

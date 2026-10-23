@@ -28,7 +28,6 @@ import type * as lib_email from "../lib/email.js";
 import type * as lib_idempotency from "../lib/idempotency.js";
 import type * as lib_ids from "../lib/ids.js";
 import type * as lib_money from "../lib/money.js";
-import type * as lib_passwordReset from "../lib/passwordReset.js";
 import type * as lib_rateLimit from "../lib/rateLimit.js";
 import type * as lib_recurring from "../lib/recurring.js";
 import type * as lib_split from "../lib/split.js";
@@ -67,7 +66,6 @@ declare const fullApi: ApiFromModules<{
   "lib/idempotency": typeof lib_idempotency;
   "lib/ids": typeof lib_ids;
   "lib/money": typeof lib_money;
-  "lib/passwordReset": typeof lib_passwordReset;
   "lib/rateLimit": typeof lib_rateLimit;
   "lib/recurring": typeof lib_recurring;
   "lib/split": typeof lib_split;
