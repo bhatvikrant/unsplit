@@ -86,10 +86,21 @@ export async function ensureFriendship(ctx: MutationCtx, a: Id<"users">, b: Id<"
   return (await ctx.db.get(id))!;
 }
 
+export async function friendshipsOf(ctx: Ctx, userId: Id<"users">): Promise<Doc<"friendships">[]> {
+  const [asA, asB] = await Promise.all([
+    ctx.db.query("friendships").withIndex("by_userA", (q) => q.eq("userA", userId)).collect(),
+    ctx.db.query("friendships").withIndex("by_userB", (q) => q.eq("userB", userId)).collect(),
+  ]);
+  return [...asA, ...asB];
+}
+
+/** The other person in a friendship. */
+export function otherOf(f: Doc<"friendships">, userId: Id<"users">): Id<"users"> {
+  return f.userA === userId ? f.userB : f.userA;
+}
+
 export async function friendIdsOf(ctx: Ctx, userId: Id<"users">): Promise<Id<"users">[]> {
-  const asA = await ctx.db.query("friendships").withIndex("by_userA", (q) => q.eq("userA", userId)).collect();
-  const asB = await ctx.db.query("friendships").withIndex("by_userB", (q) => q.eq("userB", userId)).collect();
-  return [...asA.map((f) => f.userB), ...asB.map((f) => f.userA)];
+  return (await friendshipsOf(ctx, userId)).map((f) => otherOf(f, userId));
 }
 
 /** Can this user see / edit this expense? Group member, or one of the pair. */

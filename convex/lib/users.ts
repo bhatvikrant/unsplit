@@ -34,12 +34,8 @@ export async function publicUser(ctx: QueryCtx | MutationCtx, user: Doc<"users">
 }
 
 export async function publicUsers(ctx: QueryCtx | MutationCtx, ids: Id<"users">[], selfId?: Id<"users">): Promise<PublicUser[]> {
-  const out: PublicUser[] = [];
-  for (const id of [...new Set(ids)]) {
-    const u = await publicUser(ctx, await ctx.db.get(id), selfId);
-    if (u) out.push(u);
-  }
-  return out;
+  const users = await Promise.all([...new Set(ids)].map(async (id) => publicUser(ctx, await ctx.db.get(id), selfId)));
+  return users.filter((u): u is PublicUser => u !== null);
 }
 
 export function normalizeEmail(email: string | undefined): string | undefined {

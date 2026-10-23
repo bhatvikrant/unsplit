@@ -14,7 +14,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { monthLabel } from "@/lib/format";
-import { useFormatMoney } from "@/lib/hooks";
+import { useFormatMoney, useLastDefined } from "@/lib/hooks";
 import { GroupNav } from "./Group";
 
 /** The theme's five chart hues (src/index.css, light and dark), cycled when there are more groups. */
@@ -93,7 +93,8 @@ export function ChartsPage() {
   const [mode, setMode] = useState<"mine" | "group">(groupId ? "group" : "mine");
   const [months, setMonths] = useState(6);
   const group = useQuery(api.groups.get, groupId ? { groupId } : "skip");
-  const data = useQuery(api.insights.charts, { groupId, mode, months });
+  // Changing the period or mode keeps the current charts up until the new numbers arrive.
+  const data = useLastDefined(useQuery(api.insights.charts, { groupId, mode, months }));
   const [currency, setCurrency] = useState<string | null>(null);
   const fmt = useFormatMoney();
 

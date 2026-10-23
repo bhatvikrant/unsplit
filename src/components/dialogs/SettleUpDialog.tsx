@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@/lib/convex";
 import { ArrowRight } from "lucide-react";
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useLayoutEffect, useMemo, useState, type FormEvent } from "react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { minorToDecimalString, parseMoney } from "@convex/lib/money";
@@ -45,8 +45,9 @@ export function SettleUpDialog({ options, onClose }: { options: SettleUpOptions;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Defaults fill in before paint, so the selects never show their placeholders for a frame.
   // Default payer/payee: me and the first person I owe (or who owes me).
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!me || people.length === 0) return;
     if (!payerId && !payeeId) {
       setPayerId(me._id);
@@ -71,7 +72,7 @@ export function SettleUpDialog({ options, onClose }: { options: SettleUpOptions;
     return out;
   }, [kind, group, friend, me, payerId, payeeId]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (amountTouched) return;
     const currencies = Object.keys(owedByPayer);
     if (currencies.length === 0) return;

@@ -186,7 +186,8 @@ function FriendLine({ user, balances, action, onAction }: { user: { _id: string;
           <Money key={c} minor={v} currency={c} abs tone={v > 0 ? "positive" : "negative"} className="text-sm font-semibold tracking-[-0.01em]" />
         ))}
       </div>
-      <Button variant="outline" size="xs" className="opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100" onClick={onAction}>
+      {/* Hidden until hover only where there is a hover; on touch screens it is always there to tap. */}
+      <Button variant="outline" size="xs" className="pointer-fine:opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100" onClick={onAction}>
         {action}
       </Button>
     </li>

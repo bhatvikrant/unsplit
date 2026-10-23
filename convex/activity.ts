@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import type { Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import { requireUserId } from "./lib/access";
 import { publicUser } from "./lib/users";
@@ -13,38 +14,42 @@ export const feed = query({
       .withIndex("by_user", (q) => q.eq("userId", me).lt("_creationTime", args.before ?? Number.MAX_SAFE_INTEGER))
       .order("desc")
       .take(limit + 1);
-    const items = [];
-    for (const r of rows.slice(0, limit)) {
-      const a = await ctx.db.get(r.activityId);
-      if (!a) continue;
-      const actor = await publicUser(ctx, await ctx.db.get(a.actorId), me);
-      const group = a.groupId ? await ctx.db.get(a.groupId) : null;
-      const subject = a.subjectUserId ? await publicUser(ctx, await ctx.db.get(a.subjectUserId), me) : null;
-      let expense: { _id: string; description: string; deleted: boolean; myNet: number | null; currency: string } | null = null;
-      if (a.expenseId) {
-        const e = await ctx.db.get(a.expenseId);
-        if (e) {
-          const share = await ctx.db
-            .query("expenseShares")
-            .withIndex("by_expense", (q) => q.eq("expenseId", e._id))
-            .filter((q) => q.eq(q.field("userId"), me))
-            .unique();
-          expense = { _id: e._id, description: e.description, deleted: Boolean(e.deletedAt), myNet: share ? share.paidMinor - share.owedMinor : null, currency: e.currency };
-        }
-      }
-      items.push({
-        _id: r._id,
-        type: a.type,
-        payload: a.payload as Record<string, unknown>,
-        createdAt: r._creationTime,
-        read: r.read,
-        actor,
-        subject,
-        group: group ? { _id: group._id, name: group.name, deleted: Boolean(group.deletedAt) } : null,
-        expense,
-        isMe: a.actorId === me,
-      });
-    }
+    const expenseOf = async (id: Id<"expenses">) => {
+      const e = await ctx.db.get(id);
+      if (!e) return null;
+      const share = await ctx.db
+        .query("expenseShares")
+        .withIndex("by_expense", (q) => q.eq("expenseId", e._id))
+        .filter((q) => q.eq(q.field("userId"), me))
+        .unique();
+      return { _id: e._id, description: e.description, deleted: Boolean(e.deletedAt), myNet: share ? share.paidMinor - share.owedMinor : null, currency: e.currency };
+    };
+    // Rows don't depend on each other, so the page is built concurrently instead of ~6 reads × 40 rows in sequence.
+    const built = await Promise.all(
+      rows.slice(0, limit).map(async (r) => {
+        const a = await ctx.db.get(r.activityId);
+        if (!a) return null;
+        const [actor, group, subject, expense] = await Promise.all([
+          ctx.db.get(a.actorId).then((u) => publicUser(ctx, u, me)),
+          a.groupId ? ctx.db.get(a.groupId) : null,
+          a.subjectUserId ? ctx.db.get(a.subjectUserId).then((u) => publicUser(ctx, u, me)) : null,
+          a.expenseId ? expenseOf(a.expenseId) : null,
+        ]);
+        return {
+          _id: r._id,
+          type: a.type,
+          payload: a.payload as Record<string, unknown>,
+          createdAt: r._creationTime,
+          read: r.read,
+          actor,
+          subject,
+          group: group ? { _id: group._id, name: group.name, deleted: Boolean(group.deletedAt) } : null,
+          expense,
+          isMe: a.actorId === me,
+        };
+      }),
+    );
+    const items = built.filter((x) => x !== null);
     return { items, nextBefore: rows.length > limit ? rows[limit - 1]._creationTime : null };
   },
 });

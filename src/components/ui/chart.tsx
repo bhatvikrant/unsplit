@@ -6,7 +6,9 @@ import type { TooltipValueType } from "recharts"
 // Format: { THEME_NAME: CSS_SELECTOR }
 const THEMES = { light: "", dark: ".dark" } as const
 
-const INITIAL_DIMENSION = { width: 320, height: 200 } as const
+// Recharts' own default: nothing is drawn until the container has been measured. shadcn's 320x200
+// placeholder exists for server rendering; here it would paint one frame at the wrong width and jump.
+const INITIAL_DIMENSION = { width: -1, height: -1 } as const
 type TooltipNameType = number | string
 
 export type ChartConfig = Record<

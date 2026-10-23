@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@/lib/convex";
 import { Plus, ReceiptText, Repeat, Search, Trash2, Undo2, Users } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { api } from "@convex/_generated/api";
@@ -19,7 +19,18 @@ export function AllExpenses() {
   const [params, setParams] = useSearchParams();
   const q = params.get("q") ?? "";
   const [text, setText] = useState(q);
-  useEffect(() => setText(q), [q]);
+  // Follow the URL (a search from the top bar), but never rewrite what is being typed: "museum " must keep its space.
+  useLayoutEffect(() => setText((t) => (t.trim() === q ? t : q)), [q]);
+  // Results follow the typing after a short pause; Enter searches at once. The URL carries the
+  // term, so the page can be shared or reloaded.
+  // ponytail: every settled term is cached in IndexedDB like any other query; prune search entries if the cache ever grows large.
+  const search = (value: string) => setParams(value.trim() ? { q: value.trim() } : {}, { replace: true });
+  useEffect(() => {
+    if (text.trim() === q) return;
+    const t = setTimeout(() => search(text), 350);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [text, q]);
   const { items, hasMore, loadMore, loadingMore } = usePagedExpenses({ search: q || undefined });
   const dialogs = useDialogs();
 
@@ -38,16 +49,13 @@ export function AllExpenses() {
         className="mb-4 flex gap-2"
         onSubmit={(e) => {
           e.preventDefault();
-          setParams(text.trim() ? { q: text.trim() } : {});
+          search(text);
         }}
       >
         <div className="relative flex-1">
           <Search className="text-text-faint pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
           <Input aria-label="Search expenses" placeholder="Search by description or notes" className="pl-9" value={text} onChange={(e) => setText(e.target.value)} />
         </div>
-        <Button type="submit" variant="secondary">
-          Search
-        </Button>
         {q ? (
           <Button type="button" variant="ghost" onClick={() => setParams({})}>
             Clear

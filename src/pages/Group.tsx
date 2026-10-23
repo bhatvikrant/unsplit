@@ -1,6 +1,6 @@
 import { useConvex, useMutation, useQuery, useRequireOnline } from "@/lib/convex";
 import { ArrowLeft, ArrowRight, BarChart3, Check, Copy, Download, HandCoins, Link2, Plus, Receipt, RefreshCw, Settings, Sigma, Undo2, UserMinus, UserPlus, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { toast } from "sonner";
 import { api } from "@convex/_generated/api";
@@ -20,7 +20,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { downloadFile, errorMessage, monthLabel, pluralize, toCsv } from "@/lib/format";
 import { COVER_EDGE, uploadImage } from "@/lib/image";
-import { useMe } from "@/lib/hooks";
+import { useLastDefined, useMe } from "@/lib/hooks";
 import { useConfirm } from "@/components/common/ConfirmDialog";
 import { usePagedExpenses } from "@/lib/usePagedExpenses";
 import { cn } from "@/lib/utils";
@@ -81,6 +81,7 @@ export function GroupPage() {
   const byId = new Map(group.members.map((m) => [m._id, m]));
   const name = (id: string) => (id === me?._id ? "You" : byId.get(id as Id<"users">)?.name ?? "Someone");
   const inviteLink = `${window.location.origin}/join/${group.inviteCode}`;
+  const maxNet = Math.max(1, ...group.members.flatMap((x) => Object.values(group.memberNets[x._id] ?? {}).map(Math.abs)));
 
   const exportCsv = async () => {
     try {
@@ -107,8 +108,12 @@ export function GroupPage() {
         title={group.name}
         subtitle={
           <span className="flex flex-wrap items-center gap-x-2">
-            {GROUP_TYPE_LABELS[group.type]} · {pluralize(group.members.length, "member")}
-            {group.simplifyDebts ? <span>· simplified debts</span> : null}
+            <span>
+              {GROUP_TYPE_LABELS[group.type]} · {pluralize(group.members.length, "member")}
+              {group.simplifyDebts ? " · simplified debts" : ""}
+            </span>
+            <span>·</span>
+            <BalanceSummary balances={group.myNet} className="items-start" />
           </span>
         }
         actions={
@@ -155,7 +160,6 @@ export function GroupPage() {
               {group.members.map((m) => {
                 const nets = group.memberNets[m._id] ?? {};
                 const main = Object.entries(nets).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))[0];
-                const max = Math.max(1, ...group.members.flatMap((x) => Object.values(group.memberNets[x._id] ?? {}).map(Math.abs)));
                 return (
                   <li key={m._id} className="grid grid-cols-[28px_1fr_auto] items-center gap-x-2.5 px-2 py-1.5">
                     <UserAvatar user={m} size="sm" className="size-7 text-[10px]" />
@@ -165,7 +169,7 @@ export function GroupPage() {
                       {main && main[1] !== 0 ? (
                         <div
                           className={cn("h-full rounded-full transition-[width] duration-300 ease-out-strong", main[1] > 0 ? "bg-positive" : "bg-negative")}
-                          style={{ width: `${Math.max(6, Math.round((Math.abs(main[1]) / max) * 100))}%` }}
+                          style={{ width: `${Math.max(6, Math.round((Math.abs(main[1]) / maxNet) * 100))}%` }}
                         />
                       ) : null}
                     </div>
@@ -246,7 +250,7 @@ export function GroupPage() {
 export function GroupTotals() {
   const { groupId, group, failed } = useGroup();
   const [month, setMonth] = useState<string>("all");
-  const totals = useQuery(api.groups.totals, { groupId, month: month === "all" ? undefined : month });
+  const totals = useLastDefined(useQuery(api.groups.totals, { groupId, month: month === "all" ? undefined : month }));
   if (group === undefined) return failed ? <NotFound /> : <RowSkeleton />;
   const metrics = [
     ["groupSpending", "Total group spending"],
@@ -325,7 +329,7 @@ export function GroupSettings() {
   const loaded = useRef(false);
 
   const memberIds = useMemo(() => group?.members.map((m) => m._id) ?? [], [group]);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!group || loaded.current) return;
     loaded.current = true;
     setName(group.name);

@@ -1,6 +1,6 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { CloudOff, Paperclip, Repeat } from "lucide-react";
-import type { ReactNode } from "react";
+import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
 import { api } from "@convex/_generated/api";
@@ -135,11 +135,12 @@ export function ExpenseRow({
   );
 
   if (!animate || reduce) return <li>{body}</li>;
+  // The row grows and collapses in normal flow, so its neighbours move with it; no `layout` prop,
+  // which would re-measure every row in the list on each change.
   return (
     <motion.li
-      layout="position"
-      initial={{ opacity: 0, y: -10 }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: "auto" }}
       exit={{ opacity: 0, height: 0 }}
       transition={{ duration: 0.22, ease: "easeOut" }}
       style={{ overflow: "hidden" }}
@@ -190,13 +191,32 @@ export function ExpenseList({
           </ul>
         </section>
       ))}
-      {hasMore ? (
-        <div className="flex justify-center py-3">
-          <Button variant="outline" size="sm" onClick={onLoadMore} disabled={loadingMore}>
-            {loadingMore ? "Loading…" : "Show more"}
-          </Button>
-        </div>
-      ) : null}
+      {hasMore ? <LoadMore onLoadMore={onLoadMore} loading={loadingMore} /> : null}
+    </div>
+  );
+}
+
+/** Fetches the next page as it scrolls into view; the button stays for keyboards and screen readers. */
+function LoadMore({ onLoadMore, loading }: { onLoadMore?: () => void; loading?: boolean }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+  const load = useEffectEvent(() => onLoadMore?.());
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting), { rootMargin: "200px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  // Re-checked when a page lands: on a tall screen the sentinel may still be in view.
+  useEffect(() => {
+    if (visible && !loading) load();
+  }, [visible, loading]);
+  return (
+    <div ref={ref} className="flex justify-center py-3">
+      <Button variant="outline" size="sm" onClick={onLoadMore} disabled={loading}>
+        {loading ? "Loading…" : "Show more"}
+      </Button>
     </div>
   );
 }

@@ -81,13 +81,18 @@ function ShortcutActions() {
   return null;
 }
 
-/** Each page settles in with a short rise and fade; none under reduced motion. */
+/**
+ * Each page settles in with a short rise and fade; none under reduced motion. Keyed by section
+ * (/groups/:id), not the full path, so the tabs of one group swap in place instead of fading the
+ * shared header out and back in on every click.
+ */
 function PageTransition() {
   const { pathname } = useLocation();
   const reduce = useReducedMotion();
   if (reduce) return <Outlet />;
+  const section = pathname.split("/").slice(0, 3).join("/");
   return (
-    <motion.div key={pathname} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18, ease: "easeOut" }}>
+    <motion.div key={section} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18, ease: "easeOut" }}>
       <Outlet />
     </motion.div>
   );

@@ -47,7 +47,12 @@ export function FriendPage() {
       <PageHeader
         leading={<UserAvatar user={friend.user} size="lg" />}
         title={friend.user.name}
-        subtitle={friend.user.isPlaceholder ? "Hasn't joined UnSplit yet" : friend.user.email ?? `Friends since ${formatDate(friend.since)}`}
+        subtitle={
+          <span className="flex flex-wrap items-center gap-x-2">
+            <BalanceSummary balances={friend.total} subjectName={friend.user.name.split(" ")[0]} className="items-start" />
+            <span>· {friend.user.isPlaceholder ? "Hasn't joined UnSplit yet" : friend.user.email ?? `Friends since ${formatDate(friend.since)}`}</span>
+          </span>
+        }
         actions={
           <>
             <Button onClick={() => dialogs.addExpense({ friendId })}>
