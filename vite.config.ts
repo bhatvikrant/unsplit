@@ -30,6 +30,11 @@ export default defineConfig({
         display_override: ["standalone", "minimal-ui"],
         start_url: "/dashboard",
         scope: "/",
+        // A link into our scope from elsewhere (UnMoney's "Split on UnSplit", a group invite)
+        // lands in the app window that is already open, not a second one, where the browser
+        // captures links into installed apps (desktop Chrome 139+; not iOS, which opens every
+        // out-of-scope link in its in-app browser).
+        launch_handler: { client_mode: "navigate-existing" },
         lang: "en",
         categories: ["finance", "productivity"],
         icons: [
