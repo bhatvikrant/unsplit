@@ -1,29 +1,51 @@
-import { Menu, Search } from "lucide-react";
-import { useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router";
+import { HandCoins, Menu, Plus, Search } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { IS_MAC } from "@/lib/platform";
+import { CommandPalette } from "./CommandPalette";
 import { Logo } from "./Logo";
+import { useQuickActions } from "./quickActions";
 import { SidebarContent } from "./Sidebar";
 import { UserMenu } from "./UserMenu";
 
+function isTypingTarget(el: EventTarget | null) {
+  if (!(el instanceof HTMLElement)) return false;
+  return el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName);
+}
+
 /**
- * Top row of the main column. On desktop it is just the search field; on
- * phones it also carries the menu button that opens the navigation sheet.
+ * Top row of the main column.
+ *
+ * Phones: menu button (opens the navigation sheet), the brand, and a search button.
+ * Desktop: a search box that opens the command palette, plus the two actions
+ * people reach for most, Settle up and Add expense, always one click away.
+ * ⌘K / Ctrl+K opens the palette from anywhere; "/" does too outside a text field.
  */
 export function TopBar() {
-  const navigate = useNavigate();
-  const [q, setQ] = useState("");
-  const [open, setOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const quick = useQuickActions();
 
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
-    navigate(q.trim() ? `/expenses?q=${encodeURIComponent(q.trim())}` : "/expenses");
-  };
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const k = e.key.toLowerCase();
+      if ((e.metaKey || e.ctrlKey) && k === "k") {
+        e.preventDefault();
+        setPaletteOpen((o) => !o);
+      } else if (k === "/" && !e.metaKey && !e.ctrlKey && !e.altKey && !isTypingTarget(e.target)) {
+        e.preventDefault();
+        setPaletteOpen(true);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   return (
-    <header className="mb-5 flex items-center gap-3">
-      <Sheet open={open} onOpenChange={setOpen}>
+    <header className="mb-5 flex h-9 items-center gap-2.5">
+      <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
         <SheetTrigger asChild>
           <Button variant="outline" size="icon" className="lg:hidden" aria-label="Open menu">
             <Menu />
@@ -35,31 +57,45 @@ export function TopBar() {
             <Logo />
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto">
-            <SidebarContent onNavigate={() => setOpen(false)} />
+            <SidebarContent onNavigate={() => setMenuOpen(false)} />
           </div>
-          <UserMenu onNavigate={() => setOpen(false)} />
+          <UserMenu onNavigate={() => setMenuOpen(false)} />
         </SheetContent>
       </Sheet>
-      <Link to="/dashboard" className="shrink-0 lg:hidden" aria-label="UnSplit home">
-        <Logo wordmark={false} />
+
+      <Link
+        to="/dashboard"
+        className="flex h-9 shrink-0 items-center rounded-lg pr-1.5 pl-1 outline-none focus-visible:ring-[3px] focus-visible:ring-ring lg:hidden"
+        aria-label="UnSplit home"
+      >
+        <Logo size={28} className="gap-2" />
       </Link>
 
-      <form onSubmit={submit} className="hidden w-full max-w-sm sm:block" role="search">
-        <label className="relative block">
-          <span className="sr-only">Search expenses</span>
-          <Search className="text-text-faint pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search expenses"
-            className="bg-surface shadow-card text-text placeholder:text-text-faint focus-visible:ring-ring h-9 w-full rounded-[10px] pr-3 pl-9 text-sm outline-none focus-visible:ring-[3px]"
-          />
-        </label>
-      </form>
+      <button
+        type="button"
+        onClick={() => setPaletteOpen(true)}
+        aria-label="Search"
+        aria-keyshortcuts={IS_MAC ? "Meta+K" : "Control+K"}
+        className="pressable bg-surface shadow-card text-text-faint hover:text-text-muted focus-visible:ring-ring hidden h-9 w-full max-w-xs items-center gap-2.5 rounded-[10px] pr-2 pl-3 text-left text-sm outline-none focus-visible:ring-[3px] sm:flex lg:max-w-sm"
+      >
+        <Search className="size-4 shrink-0" />
+        <span className="flex-1 truncate">Search expenses, groups, friends…</span>
+        <kbd className="bg-surface-2 text-text-faint rounded-md px-1.5 py-0.5 font-sans text-[11px] font-medium">{IS_MAC ? "⌘" : "Ctrl"} K</kbd>
+      </button>
 
-      <Button variant="outline" size="icon" className="ml-auto sm:hidden" aria-label="Search" onClick={() => navigate("/expenses")}>
-        <Search />
-      </Button>
+      <div className="ml-auto flex shrink-0 items-center gap-2">
+        <Button variant="outline" size="icon" className="sm:hidden" aria-label="Search" onClick={() => setPaletteOpen(true)}>
+          <Search />
+        </Button>
+        <Button variant="outline" className="hidden lg:inline-flex" onClick={quick.settleUp}>
+          <HandCoins /> Settle up
+        </Button>
+        <Button className="hidden lg:inline-flex" onClick={quick.addExpense}>
+          <Plus /> Add expense
+        </Button>
+      </div>
+
+      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
     </header>
   );
 }
