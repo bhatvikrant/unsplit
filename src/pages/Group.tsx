@@ -1,5 +1,5 @@
 import { useConvex, useMutation, useQuery, useRequireOnline } from "@/lib/convex";
-import { ArrowLeft, ArrowRight, BarChart3, Check, Copy, Download, HandCoins, Link2, Plus, Receipt, RefreshCw, Settings, Sigma, Undo2, UserMinus, UserPlus, X } from "lucide-react";
+import { ArrowRight, BarChart3, Check, Copy, Download, HandCoins, Link2, Plus, Receipt, RefreshCw, Settings, Sigma, Undo2, UserMinus, UserPlus, X } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
@@ -117,6 +117,7 @@ export function GroupPage() {
         </div>
       ) : null}
       <PageHeader
+        back={{ to: "/dashboard", label: "Home" }}
         leading={<GroupAvatar group={group} size="lg" />}
         title={group.name}
         subtitle={
@@ -278,7 +279,7 @@ export function GroupTotals() {
   ] as const;
   return (
     <div>
-      <PageHeader leading={<GroupAvatar group={group} size="lg" />} title={group.name} subtitle="Totals" />
+      <PageHeader back={{ to: "/dashboard", label: "Home" }} leading={<GroupAvatar group={group} size="lg" />} title={group.name} subtitle="Totals" />
       <GroupNav groupId={groupId} current="totals" />
       <div className="mb-4 flex items-center gap-2">
         <Picker value={month} onValueChange={setMonth} aria-label="Period" className="w-48">
@@ -390,12 +391,7 @@ export function GroupSettings() {
 
   return (
     <div className="max-w-2xl">
-      <Button variant="ghost" size="sm" asChild className="-ml-2 mb-3">
-        <Link to={`/groups/${groupId}`}>
-          <ArrowLeft /> {group.name}
-        </Link>
-      </Button>
-      <PageHeader title="Group settings" />
+      <PageHeader back={{ to: "/dashboard", label: "Home" }} leading={<GroupAvatar group={group} size="lg" />} title={group.name} subtitle="Settings" />
       <GroupNav groupId={groupId} current="settings" />
       <div className="space-y-5">
         <Section title="About">

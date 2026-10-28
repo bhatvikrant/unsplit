@@ -12,12 +12,14 @@
     <script>if (matchMedia("(prefers-color-scheme: dark)").matches) document.documentElement.classList.add("dark");</script>
     <!-- Open the connection to the Convex deployment while the bundle is still downloading. -->
     <link rel="preconnect" href="%VITE_CONVEX_URL%" />
-    <!-- Installed on a phone: full screen, our own title, page colour behind the status bar. -->
+    <!-- Installed on a phone: full screen, our own title. The status bar is a solid strip in the
+         theme colour above the page ("default"): with "black-translucent" the page ran under it and
+         iOS 26 frosts that strip with a blur over whatever scrolls beneath, which looked broken. -->
     <meta name="application-name" content="UnSplit" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="UnSplit" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="description" content="UnSplit: split shared expenses with friends, flatmates and travel groups. Free, no limits." />
     <title>UnSplit</title>
   </head>

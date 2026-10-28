@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@/lib/convex";
-import { ArrowLeft, Pencil, Repeat, Send, Trash2, Undo2 } from "lucide-react";
+import { Pencil, Repeat, Send, Trash2, Undo2 } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { toast } from "sonner";
@@ -8,7 +8,7 @@ import type { Id } from "@convex/_generated/dataModel";
 import { categoryBySlug } from "@convex/lib/categories";
 import { REPEAT_LABELS } from "@convex/lib/recurring";
 import { UserAvatar } from "@/components/common/Avatars";
-import { CategoryIcon, RowSkeleton, Section } from "@/components/common/Misc";
+import { CategoryIcon, PageNav, RowSkeleton, Section } from "@/components/common/Misc";
 import { Money } from "@/components/common/Money";
 import { SwipeToDelete, useSwipedRow } from "@/components/common/SwipeToDelete";
 import { useDialogs } from "@/components/dialogs/DialogProvider";
@@ -72,11 +72,7 @@ export function ExpenseDetail() {
   return (
     <div className="max-w-2xl space-y-5">
       <div>
-        <Button variant="ghost" size="sm" asChild className="-ml-2 mb-3">
-          <Link to={back}>
-            <ArrowLeft /> {e.group ? e.group.name : e.friend ? e.friend.name : "All expenses"}
-          </Link>
-        </Button>
+        <PageNav back={{ to: back, label: e.group ? e.group.name : e.friend ? e.friend.name : "All expenses" }} />
         {e.deletedAt ? (
           <div className="bg-negative-soft text-negative mb-3 flex items-center justify-between rounded-md px-3 py-2 text-sm">
             <span>This {e.isPayment ? "payment" : "expense"} was deleted {relativeTime(e.deletedAt)}.</span>

@@ -86,7 +86,7 @@ export function RecurringExpenses() {
   const confirm = useConfirm();
   return (
     <div className="max-w-3xl">
-      <PageHeader title="Recurring expenses" subtitle="Each one posts automatically. The newest copy carries the schedule, so edit that one to change future amounts." />
+      <PageHeader back={{ to: "/account", label: "Account" }} title="Recurring expenses" subtitle="Each one posts automatically. The newest copy carries the schedule, so edit that one to change future amounts." />
       {items === undefined ? (
         <RowSkeleton />
       ) : items.length === 0 ? (
@@ -140,7 +140,7 @@ export function TrashPage() {
   const empty = expenses.length === 0 && groups.length === 0;
   return (
     <div className="max-w-3xl space-y-5">
-      <PageHeader title="Deleted items" subtitle="Anything deleted can be restored by anyone involved." />
+      <PageHeader back={{ to: "/account", label: "Account" }} title="Deleted items" subtitle="Anything deleted can be restored by anyone involved." />
       {loading ? (
         <RowSkeleton />
       ) : empty ? (

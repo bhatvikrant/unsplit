@@ -1,6 +1,6 @@
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useConvex, useMutation, useRequireOnline } from "@/lib/convex";
-import { Download, LogOut } from "lucide-react";
+import { BarChart3, ChevronRight, Download, LogOut, Mail, Repeat, Trash2, type LucideIcon } from "lucide-react";
 import { useLayoutEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -8,6 +8,7 @@ import { api } from "@convex/_generated/api";
 import { UserAvatar } from "@/components/common/Avatars";
 import { Field, PageHeader, RowSkeleton, Section } from "@/components/common/Misc";
 import { InstallSection } from "@/components/layout/InstallPrompt";
+import { useLogOut } from "@/components/layout/UserMenu";
 import { CurrencyPicker } from "@/components/dialogs/pickers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,7 +54,7 @@ export function AccountPage() {
 
   return (
     <div className="max-w-2xl space-y-5">
-      <PageHeader title="Account" actions={<Button variant="outline" asChild><Link to="/account/notifications">Email notifications</Link></Button>} />
+      <PageHeader title="Account" actions={<Button variant="outline" asChild className="max-lg:hidden"><Link to="/account/notifications">Email notifications</Link></Button>} />
       <Section title="Profile">
         <div className="space-y-4 p-4">
           <div className="flex items-center gap-4">
@@ -145,6 +146,7 @@ export function AccountPage() {
           </Button>
         </div>
       </Section>
+      <MoreSection />
       <Section title="Danger zone">
         <div className="flex items-center justify-between gap-3 p-4 text-sm">
           <span>
@@ -173,6 +175,39 @@ export function AccountPage() {
   );
 }
 
+const MORE: { to: string; label: string; icon: LucideIcon }[] = [
+  { to: "/account/notifications", label: "Email notifications", icon: Mail },
+  { to: "/charts", label: "Spending charts", icon: BarChart3 },
+  { to: "/expenses/recurring", label: "Recurring expenses", icon: Repeat },
+  { to: "/trash", label: "Deleted items", icon: Trash2 },
+];
+
+/** Phones and tablets have no sidebar or user menu, so the account-level pages and Log out live here. */
+function MoreSection() {
+  const logOut = useLogOut();
+  return (
+    <Section className="lg:hidden">
+      <ul className="divide-y">
+        {MORE.map((m) => (
+          <li key={m.to}>
+            <Link to={m.to} className="hover:bg-surface-2 active:bg-surface-2 flex min-h-11 items-center gap-3 px-4 py-2.5 text-sm font-medium outline-none transition-colors duration-100 focus-visible:ring-[3px] focus-visible:ring-ring">
+              <m.icon className="text-text-muted size-4" />
+              <span className="flex-1">{m.label}</span>
+              <ChevronRight className="text-text-faint size-4" />
+            </Link>
+          </li>
+        ))}
+        <li>
+          <button type="button" onClick={() => void logOut()} className="hover:bg-surface-2 active:bg-surface-2 text-negative flex min-h-11 w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium outline-none transition-colors duration-100 focus-visible:ring-[3px] focus-visible:ring-ring">
+            <LogOut className="size-4" />
+            <span className="flex-1">Log out</span>
+          </button>
+        </li>
+      </ul>
+    </Section>
+  );
+}
+
 const PREFS: { key: keyof NonNullable<ReturnType<typeof useMe>>["notifPrefs"]; label: string; hint: string }[] = [
   { key: "expenseAdded", label: "An expense is added", hint: "Someone adds an expense you're part of." },
   { key: "expenseUpdated", label: "An expense is edited or deleted", hint: "Something you're part of changes." },
@@ -191,7 +226,7 @@ export function NotificationSettings() {
   const prefs = me.notifPrefs;
   return (
     <div className="max-w-2xl">
-      <PageHeader title="Email notifications" subtitle="Emails only go out when the deployment has an email provider configured." />
+      <PageHeader back={{ to: "/account", label: "Account" }} title="Email notifications" subtitle="Emails only go out when the deployment has an email provider configured." />
       <Section>
         <ul className="divide-y">
           {PREFS.map((p) => (
