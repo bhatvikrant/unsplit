@@ -233,6 +233,10 @@
     /* Installed on a phone the page runs under the status bar (viewport-fit=cover). */
     padding-top: env(safe-area-inset-top);
   }
+  /* The phone tab bar: 3.5rem of tabs + its top border + the home-indicator area of an installed iPhone app. */
+  :root {
+    --tabbar-h: calc(3.5rem + 1px + env(safe-area-inset-bottom));
+  }
   /* No double-tap-to-zoom delay on controls. */
   a,
   button,
@@ -271,6 +275,11 @@
       transition-duration: 0.01ms !important;
     }
   }
+}
+
+/* Pads the home-indicator area of an installed iPhone app; use on anything fixed to the bottom edge. */
+@utility safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 @utility card {

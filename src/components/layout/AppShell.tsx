@@ -26,32 +26,31 @@ function MobileTabBar() {
     else dialogs.addExpense();
   };
   return (
-    <nav
-      aria-label="Primary"
-      className="bg-surface/85 fixed inset-x-0 bottom-0 z-30 grid h-16 grid-cols-5 items-center border-t pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden"
-    >
-      <NavLink to="/dashboard" className={tabClass}>
-        <LayoutDashboard className="size-5" /> Home
-      </NavLink>
-      <NavLink to="/activity" className={tabClass}>
-        <Activity className="size-5" /> Activity
-      </NavLink>
-      <div className="flex justify-center">
-        <button
-          type="button"
-          aria-label="Add expense"
-          onClick={addExpense}
-          className="pressable bg-brand shadow-btn -mt-6 flex size-12 items-center justify-center rounded-full outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
-        >
-          <Plus className="text-on-brand size-6" strokeWidth={2.25} />
-        </button>
+    <nav aria-label="Primary" className="bg-surface/85 safe-bottom fixed inset-x-0 bottom-0 z-30 border-t backdrop-blur-xl lg:hidden">
+      <div className="grid h-14 grid-cols-5 items-center">
+        <NavLink to="/dashboard" className={tabClass}>
+          <LayoutDashboard className="size-5" /> Home
+        </NavLink>
+        <NavLink to="/activity" className={tabClass}>
+          <Activity className="size-5" /> Activity
+        </NavLink>
+        <div className="flex justify-center">
+          <button
+            type="button"
+            aria-label="Add expense"
+            onClick={addExpense}
+            className="pressable bg-brand shadow-btn -mt-6 flex size-12 items-center justify-center rounded-full outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
+          >
+            <Plus className="text-on-brand size-6" strokeWidth={2.25} />
+          </button>
+        </div>
+        <NavLink to="/expenses" end className={tabClass}>
+          <ReceiptText className="size-5" /> Expenses
+        </NavLink>
+        <NavLink to="/account" className={tabClass}>
+          <UserRound className="size-5" /> Account
+        </NavLink>
       </div>
-      <NavLink to="/expenses" end className={tabClass}>
-        <ReceiptText className="size-5" /> Expenses
-      </NavLink>
-      <NavLink to="/account" className={tabClass}>
-        <UserRound className="size-5" /> Account
-      </NavLink>
     </nav>
   );
 }
@@ -104,7 +103,7 @@ export function AppShell() {
       <ShortcutActions />
       <div className="flex min-h-dvh">
         <Sidebar />
-        <main className="min-w-0 flex-1 px-4 pt-4 pb-24 sm:px-6 lg:px-8 lg:pt-5 lg:pb-12" id="main">
+        <main className="min-w-0 flex-1 px-4 pt-4 pb-[calc(var(--tabbar-h)+1.5rem)] sm:px-6 lg:px-8 lg:pt-5 lg:pb-12" id="main">
           <div className="mx-auto w-full max-w-[1040px]">
             <TopBar />
             <OfflineBanner />
