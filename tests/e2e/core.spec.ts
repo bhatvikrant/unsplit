@@ -134,8 +134,9 @@ test("settle up, activity feed, search, totals, export", async ({ page }) => {
   await page.getByRole("link", { name: "Recent activity" }).click();
   await expect(page.getByText(/recorded a payment of/)).toBeVisible();
 
-  await page.getByRole("textbox", { name: "Search expenses" }).fill("museum");
-  await page.getByRole("textbox", { name: "Search expenses" }).press("Enter");
+  await page.getByRole("button", { name: "Search" }).click();
+  await page.getByRole("combobox", { name: "Search expenses" }).fill("museum");
+  await page.getByRole("combobox", { name: "Search expenses" }).press("Enter");
   await expect(page.getByRole("link", { name: /Museum tickets/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /Groceries/ })).toHaveCount(0);
 
