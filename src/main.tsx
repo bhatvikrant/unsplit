@@ -53,7 +53,7 @@ createRoot(document.getElementById("root")!).render(
           <ConfirmProvider>
             <RouterProvider router={router} />
             {/* On phones, sit above the tab bar and the home indicator. */}
-            <Toaster position="bottom-center" richColors closeButton mobileOffset={{ bottom: "calc(4.5rem + env(safe-area-inset-bottom))" }} />
+            <Toaster position="bottom-center" richColors closeButton mobileOffset={{ bottom: "calc(var(--tabbar-h) + 1rem)" }} />
           </ConfirmProvider>
         </TooltipProvider>
       </OfflineProvider>
