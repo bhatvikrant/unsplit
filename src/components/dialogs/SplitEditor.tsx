@@ -72,7 +72,7 @@ export function SplitEditor({
             role="tab"
             aria-selected={state.method === m}
             onClick={() => set({ method: m, items: m === "itemized" && state.items.length === 0 ? [newItem(ids)] : state.items })}
-            className={cn("pressable rounded-lg px-2.5 py-1 text-xs font-medium", state.method === m ? "bg-surface text-text shadow-[0_1px_2px_rgba(0,0,0,0.08),0_0_0_1px_var(--line)]" : "text-text-muted hover:text-text")}
+            className={cn("pressable rounded-lg px-2.5 py-1 text-xs font-medium coarse:min-h-10", state.method === m ? "bg-surface text-text shadow-[0_1px_2px_rgba(0,0,0,0.08),0_0_0_1px_var(--line)]" : "text-text-muted hover:text-text")}
           >
             {LABELS[m]}
           </button>

@@ -3,6 +3,8 @@
 @import "@fontsource-variable/geist";
 
 @custom-variant dark (&:is(.dark *));
+/* Touch screens: larger hit areas without changing the mouse sizes. */
+@custom-variant coarse (@media (pointer: coarse));
 
 /*
   UnSplit theme.
@@ -246,12 +248,22 @@
   [role="button"] {
     touch-action: manipulation;
   }
-  /* From the home screen: no link preview sheet on a long press. */
-  @media (display-mode: standalone) {
-    a,
-    button {
-      -webkit-touch-callout: none;
-    }
+  /* A long press on a control shows neither a text selection nor the link preview sheet;
+     content (paragraphs, amounts, inputs) stays selectable. */
+  a,
+  button,
+  [role="button"],
+  [role="tab"],
+  nav,
+  label,
+  [data-slot="select-trigger"] {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+  label :is(input, textarea) {
+    user-select: text;
+    -webkit-user-select: text;
   }
   button:not(:disabled),
   [role="button"]:not(:disabled) {
