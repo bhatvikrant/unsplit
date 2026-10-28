@@ -16,6 +16,14 @@ import { OfflineError, type Op, type SyncStatus } from "./types";
 
 type Waiter = { resolve: (v: unknown) => void; reject: (e: unknown) => void; optimistic: unknown };
 
+/**
+ * How long the socket may be down before the UI calls it offline. The socket
+ * closes and reopens on every launch (the auth token is applied after the
+ * first connect) and on quick reconnects; neither should flash the banner.
+ * No network (`navigator.onLine` false) still shows at once.
+ */
+const OFFLINE_GRACE_MS = 4000;
+
 function errorText(e: unknown): string {
   if (e instanceof ConvexError) return typeof e.data === "string" ? e.data : "Something went wrong";
   if (e instanceof Error) {
@@ -31,8 +39,9 @@ export class SyncEngine {
   private waiters = new Map<string, Waiter>();
   private draining = false;
   private socketUp = false;
-  private everUp = false;
-  private retries = 0;
+  /** The socket has been down for longer than the grace period. */
+  private stale = false;
+  private staleTimer: ReturnType<typeof setTimeout> | null = null;
   private client: ConvexReactClient;
   private store: OfflineStore;
   status: SyncStatus;
@@ -41,15 +50,12 @@ export class SyncEngine {
     this.client = client;
     this.store = store;
     this.status = { online: typeof navigator === "undefined" ? true : navigator.onLine, connected: false, offline: false, syncing: false, pending: 0, lastError: null };
-    const cs = client.connectionState();
-    this.socketUp = cs.isWebSocketConnected;
-    this.everUp = cs.hasEverConnected;
-    this.retries = cs.connectionRetries;
+    this.socketUp = client.connectionState().isWebSocketConnected;
+    this.watchStale();
     client.subscribeToConnectionState((s) => {
       const was = this.socketUp;
       this.socketUp = s.isWebSocketConnected;
-      this.everUp = s.hasEverConnected;
-      this.retries = s.connectionRetries;
+      if (was !== this.socketUp) this.watchStale();
       this.recompute();
       if (!was && this.socketUp) void this.drain();
       if (was && !this.socketUp) this.releaseWaiters();
@@ -79,13 +85,26 @@ export class SyncEngine {
     return () => this.listeners.delete(fn);
   };
 
+  /** Socket down: count it as offline only once it has stayed down for the grace period. Socket up: never. */
+  private watchStale() {
+    if (this.staleTimer) clearTimeout(this.staleTimer);
+    this.staleTimer = null;
+    this.stale = false;
+    if (this.socketUp) return;
+    this.staleTimer = setTimeout(() => {
+      this.staleTimer = null;
+      this.stale = true;
+      this.recompute();
+    }, OFFLINE_GRACE_MS);
+  }
+
   private recompute() {
     const online = typeof navigator === "undefined" ? true : navigator.onLine;
     const connected = this.socketUp;
     const next: SyncStatus = {
       online,
       connected,
-      offline: !online || (!connected && (this.everUp || this.retries > 0)),
+      offline: !online || (!connected && this.stale),
       syncing: this.draining && connected && this.store.outbox.length > 0,
       pending: this.store.outbox.length,
       lastError: this.status.lastError,
