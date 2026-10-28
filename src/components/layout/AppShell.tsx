@@ -1,13 +1,13 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { Activity, LayoutDashboard, Plus, ReceiptText, UserRound } from "lucide-react";
 import { useEffect, useRef } from "react";
-import { NavLink, Outlet, useLocation, useMatch, useSearchParams } from "react-router";
-import type { Id } from "@convex/_generated/dataModel";
+import { NavLink, Outlet, useLocation, useSearchParams } from "react-router";
 import { DialogProvider, useDialogs } from "@/components/dialogs/DialogProvider";
 import { takeHandoff } from "@/lib/handoff";
 import { cn } from "@/lib/utils";
 import { InstallBanner } from "./InstallPrompt";
 import { OfflineBanner } from "./OfflineBanner";
+import { useQuickActions } from "./quickActions";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 
@@ -16,15 +16,8 @@ const tabClass = ({ isActive }: { isActive: boolean }) =>
 
 /** Phone-only bottom navigation with the add-expense button in the middle. */
 function MobileTabBar() {
-  const dialogs = useDialogs();
   // On a group or friend page, the + button starts an expense in that context.
-  const group = useMatch("/groups/:id/*");
-  const friend = useMatch("/friends/:id");
-  const addExpense = () => {
-    if (group?.params.id) dialogs.addExpense({ groupId: group.params.id as Id<"groups"> });
-    else if (friend?.params.id) dialogs.addExpense({ friendId: friend.params.id as Id<"users"> });
-    else dialogs.addExpense();
-  };
+  const { addExpense } = useQuickActions();
   return (
     <nav aria-label="Primary" className="bg-surface/85 safe-bottom fixed inset-x-0 bottom-0 z-30 border-t backdrop-blur-xl lg:hidden">
       <div className="grid h-14 grid-cols-5 items-center">
