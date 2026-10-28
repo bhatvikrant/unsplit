@@ -24,20 +24,47 @@ const engine = new SyncEngine(convex, store);
 
 // App shell served by the service worker when there is no network. A new
 // build is offered, not forced: the queue in IndexedDB survives the reload.
+const offerUpdate = () =>
+  toast("A new version of UnSplit is ready", {
+    id: "sw-update",
+    duration: Infinity,
+    action: { label: "Update", onClick: () => void updateSW(true) },
+  });
+
+let swRegistration: ServiceWorkerRegistration | undefined;
+let lastUpdateCheck = 0;
+
+// The browser only looks for a new sw.js on a full page load, which an
+// installed app never does: it is suspended in the background and resumed
+// in place. So check ourselves whenever the app comes back to the front
+// (and hourly while it stays there), throttled so a quick app switch does
+// not refetch sw.js every time.
+const checkForUpdate = () => {
+  if (!swRegistration || !navigator.onLine) return;
+  const now = Date.now();
+  if (now - lastUpdateCheck < 60 * 1000) return;
+  lastUpdateCheck = now;
+  // A build found earlier but dismissed is still waiting; offer it again.
+  if (swRegistration.waiting) offerUpdate();
+  void swRegistration.update().catch(() => {});
+};
+
 const updateSW = registerSW({
   immediate: true,
-  onNeedRefresh() {
-    toast("A new version of UnSplit is ready", {
-      id: "sw-update",
-      duration: Infinity,
-      action: { label: "Update", onClick: () => void updateSW(true) },
-    });
-  },
+  onNeedRefresh: offerUpdate,
   onRegisteredSW(_url, registration) {
+    swRegistration = registration;
+    if (!registration) return;
     // An installed app can stay open for days; look for a new build hourly.
-    if (registration) setInterval(() => void registration.update(), 60 * 60 * 1000);
+    setInterval(checkForUpdate, 60 * 60 * 1000);
   },
 });
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") checkForUpdate();
+});
+window.addEventListener("focus", checkForUpdate);
+window.addEventListener("online", checkForUpdate);
 
 // Follow the system colour scheme. Tokens for both modes live in index.css.
 const scheme = window.matchMedia("(prefers-color-scheme: dark)");
