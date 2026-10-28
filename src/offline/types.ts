@@ -24,7 +24,7 @@ export type SyncStatus = {
   online: boolean;
   /** The Convex WebSocket is open. */
   connected: boolean;
-  /** What the UI should call "offline": no network, or the socket is down after having been up (or having failed to come up). */
+  /** What the UI should call "offline": no network, or the socket has been down for longer than a brief grace period. */
   offline: boolean;
   syncing: boolean;
   pending: number;
