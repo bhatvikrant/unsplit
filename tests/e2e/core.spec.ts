@@ -132,7 +132,11 @@ test("settle up, activity feed, search, totals, export", async ({ page }) => {
   await expect(page.getByRole("link", { name: /Bea Moreno paid you/ })).toBeVisible();
 
   await page.getByRole("link", { name: "Recent activity" }).click();
-  await expect(page.getByText(/recorded a payment of/)).toBeVisible();
+  await expect(page.getByText(/Bea Moreno paid you/)).toBeVisible();
+  await page.getByRole("button", { name: "Payments" }).click();
+  await expect(page.getByText(/Bea Moreno paid you/)).toBeVisible();
+  await expect(page.getByText(/Dinner at the fish place/)).toHaveCount(0);
+  await page.getByRole("button", { name: "Clear" }).click();
 
   await page.getByRole("button", { name: "Search" }).click();
   await page.getByRole("combobox", { name: "Search expenses" }).fill("museum");
