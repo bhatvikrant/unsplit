@@ -3,10 +3,14 @@ import { createGroup, openAddExpense, saveExpense, signUp, uniq } from "./helper
 
 test("mobile: menu sheet, add expense, no horizontal overflow", async ({ page }) => {
   await signUp(page, "Mo Bile", `${uniq("mo")}@unsplit.test`);
-  // No hamburger on phones: the tab bar holds the sections and the page header holds search.
-  await expect(page.getByRole("button", { name: "Open menu" })).toHaveCount(0);
-  await expect(page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Expenses" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Search" })).toBeVisible();
+  await page.getByRole("button", { name: "Open menu" }).click();
+  await expect(page.getByRole("link", { name: "All expenses" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  // The top bar stays pinned while the page scrolls.
+  await page.evaluate(() => window.scrollTo(0, 600));
+  const top = await page.getByRole("button", { name: "Open menu" }).evaluate((el) => el.getBoundingClientRect().top);
+  expect(top).toBeGreaterThanOrEqual(0);
+  expect(top).toBeLessThan(60);
   await page.getByRole("button", { name: "Start a group" }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByPlaceholder(/Lisbon trip/).fill("Flat");
