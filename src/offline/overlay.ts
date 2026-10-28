@@ -621,7 +621,7 @@ export function applyOp(op: Op, q: Query, base: unknown, dir: Directory): unknow
         case "groups:list": {
           const v = (base as GroupList | undefined) ?? [];
           if (v.some((g) => g._id === gid)) return base;
-          return [{ _id: gid as GroupList[number]["_id"], name: info.name, type: info.type, coverUrl: null, myBalance: {}, createdAt: op.createdAt }, ...v];
+          return [{ _id: gid as GroupList[number]["_id"], name: info.name, type: info.type, coverUrl: null, memberCount: (info.memberIds ?? [me._id]).length, myBalance: {}, createdAt: op.createdAt }, ...v];
         }
         case "groups:get": {
           if (q.args.groupId !== gid) return base;
@@ -699,6 +699,10 @@ export function applyOp(op: Op, q: Query, base: unknown, dir: Directory): unknow
         if (!v || uid === me._id || v.some((f) => f.user._id === uid)) return base;
         return [...v, { user: userOf(dir, me, uid), balances: {}, lastActivityAt: op.createdAt }].sort((a, b) => a.user.name.localeCompare(b.user.name));
       }
+      if (q.name === "groups:list") {
+        const v = base as GroupList | undefined;
+        return v ? v.map((g) => (g._id === gid ? { ...g, memberCount: g.memberCount + 1 } : g)) : base;
+      }
       return base;
     }
     case "groups:removeMember": {
@@ -709,9 +713,10 @@ export function applyOp(op: Op, q: Query, base: unknown, dir: Directory): unknow
         if (!v || q.args.groupId !== gid) return base;
         return { ...v, members: v.members.filter((m) => m._id !== uid) };
       }
-      if (q.name === "groups:list" && uid === me._id) {
+      if (q.name === "groups:list") {
         const v = base as GroupList | undefined;
-        return v ? v.filter((g) => g._id !== gid) : base;
+        if (!v) return base;
+        return uid === me._id ? v.filter((g) => g._id !== gid) : v.map((g) => (g._id === gid ? { ...g, memberCount: Math.max(1, g.memberCount - 1) } : g));
       }
       return base;
     }
@@ -730,7 +735,7 @@ export function applyOp(op: Op, q: Query, base: unknown, dir: Directory): unknow
         if (!v) return base;
         if (deleting) return v.filter((g) => g._id !== gid);
         if (v.some((g) => g._id === gid) || !info) return base;
-        return [{ _id: gid as GroupList[number]["_id"], name: info.name, type: info.type, coverUrl: null, myBalance: {}, createdAt: op.createdAt }, ...v];
+        return [{ _id: gid as GroupList[number]["_id"], name: info.name, type: info.type, coverUrl: null, memberCount: (info.memberIds ?? [me._id]).length, myBalance: {}, createdAt: op.createdAt }, ...v];
       }
       if (q.name === "groups:listDeleted") {
         const v = (base as GroupDeleted | undefined) ?? [];
