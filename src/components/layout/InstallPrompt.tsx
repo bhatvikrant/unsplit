@@ -2,7 +2,7 @@ import { Share, Smartphone, SquarePlus, X, type LucideIcon } from "lucide-react"
 import { useState, type ComponentProps, type ReactNode } from "react";
 import { Section } from "@/components/common/Misc";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/responsive-dialog";
 import { useInstall, useInstallNudge } from "@/lib/install";
 import { Logo } from "./Logo";
 
@@ -21,7 +21,7 @@ function Step({ icon: Icon, children }: { icon: LucideIcon; children: ReactNode 
 export function AddToHomeScreenDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="sm:max-w-sm" size="fit" cancelLabel="Close">
         <DialogHeader>
           <DialogTitle>Install UnSplit</DialogTitle>
           <DialogDescription>It then opens from your home screen like any other app, and works without a connection.</DialogDescription>

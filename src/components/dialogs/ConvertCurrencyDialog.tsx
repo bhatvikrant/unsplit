@@ -7,7 +7,7 @@ import type { Id } from "@convex/_generated/dataModel";
 import { Money } from "@/components/common/Money";
 import { Field } from "@/components/common/Misc";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/responsive-dialog";
 import { formatRate } from "@/lib/rates";
 import { errorMessage } from "@/lib/format";
 import { useDefaultCurrency } from "@/lib/hooks";
@@ -61,7 +61,11 @@ export function ConvertCurrencyDialog({ options, onClose }: { options: ConvertOp
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent
+        className="sm:max-w-md"
+        size="full"
+        action={{ label: busy ? "Converting…" : "Convert", onClick: () => void run(), disabled: busy || loading || convertible.length === 0 }}
+      >
         <DialogHeader>
           <DialogTitle>Convert to one currency</DialogTitle>
           <DialogDescription>Every expense here, including settled ones, is rewritten at today's rate. Everyone sees the converted amounts. The original amounts stay on each expense.</DialogDescription>

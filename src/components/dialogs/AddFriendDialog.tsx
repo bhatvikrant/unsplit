@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/responsive-dialog";
 import { FriendFormFields, useFriendForm } from "./FriendForm";
 
 export function AddFriendDialog({ onClose }: { onClose: () => void }) {
@@ -14,7 +14,7 @@ export function AddFriendDialog({ onClose }: { onClose: () => void }) {
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="sm:max-w-sm" size="full" action={{ label: form.busy ? "Adding…" : "Add", onClick: () => void form.submit(), disabled: !form.canSubmit }}>
         <DialogHeader>
           <DialogTitle>Add a friend</DialogTitle>
           <DialogDescription>Share expenses with someone outside a group.</DialogDescription>
