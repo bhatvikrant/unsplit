@@ -1,12 +1,11 @@
 import { useState, type ReactNode } from "react";
 import {
   Armchair, ArrowLeftRight, Baby, BedDouble, Bike, Car, CarTaxiFront, ChevronLeft, CircleDashed, CircleParking, Clapperboard, Coffee, Droplets, FileText, Film, Flame, Fuel,
-  Gamepad2, Gift, GraduationCap, Hammer, Heart, House, Info, KeyRound, Landmark, Music, PawPrint, Plane, Receipt, Search, Shirt, ShieldCheck, ShoppingBasket, Smartphone,
+  Gamepad2, Gift, GraduationCap, Hammer, Heart, House, Info, KeyRound, Landmark, Music, PawPrint, Plane, Receipt, Shirt, ShieldCheck, ShoppingBasket, Smartphone,
   Sparkles, SprayCan, Stethoscope, TrainFront, Trash2, Trophy, Tv, UtensilsCrossed, Wifi, Wine, Wrench, Zap, type LucideIcon,
 } from "lucide-react";
 import { Link } from "react-router";
 import { categoryBySlug } from "@convex/lib/categories";
-import { useCommandPalette } from "@/lib/commandPalette";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -32,21 +31,7 @@ export function EmptyState({ icon: Icon, title, description, action, className }
 /** Where a pushed page's back button goes, and what it is called (the page it returns to). */
 export type BackLink = { to: string; label: string };
 
-/** Search button for the phone navigation bar; the desktop top bar has its own search box. */
-function SearchButton() {
-  const palette = useCommandPalette();
-  return (
-    <Button variant="ghost" size="icon" className="text-text-muted -mr-2" aria-label="Search" onClick={palette.open}>
-      <Search className="size-5" />
-    </Button>
-  );
-}
-
-/**
- * The row above a pushed page's title: the back button on the left and, below the desktop
- * breakpoint, where the top bar is not shown, the search button on the right. `trailing` adds
- * page actions next to search (icon buttons).
- */
+/** The row above a pushed page's title: the back button, and any page actions in `trailing`. */
 export function PageNav({ back, trailing, className }: { back: BackLink; trailing?: ReactNode; className?: string }) {
   return (
     <div className={cn("mb-2 flex items-center", className)}>
@@ -55,19 +40,14 @@ export function PageNav({ back, trailing, className }: { back: BackLink; trailin
           <ChevronLeft className="size-5" /> {back.label}
         </Link>
       </Button>
-      <div className="ml-auto flex items-center gap-1 lg:hidden">
-        {trailing}
-        <SearchButton />
-      </div>
+      {trailing ? <div className="ml-auto flex items-center gap-1">{trailing}</div> : null}
     </div>
   );
 }
 
 /**
- * Every page's title block. On phones and tablets it doubles as the navigation bar: a root page
- * (a tab) has its large title with the search button at the end; a pushed page (`back` given)
- * has a back row above the title. From `lg` up the top bar carries search, so only the back
- * link remains.
+ * Every page's title block: a large title on phones, with a back row above it on a pushed page
+ * (`back` given). Search lives in the sticky top bar (src/components/layout/TopBar.tsx).
  */
 export function PageHeader({ title, subtitle, leading, actions, back, className }: { title: ReactNode; subtitle?: ReactNode; leading?: ReactNode; actions?: ReactNode; back?: BackLink; className?: string }) {
   return (
@@ -80,11 +60,6 @@ export function PageHeader({ title, subtitle, leading, actions, back, className 
             <h1 className="text-text truncate text-[28px] leading-tight font-semibold tracking-[-0.02em] sm:text-2xl">{title}</h1>
             {subtitle ? <div className="text-text-muted mt-0.5 text-sm">{subtitle}</div> : null}
           </div>
-          {!back ? (
-            <div className="flex shrink-0 items-center self-start lg:hidden">
-              <SearchButton />
-            </div>
-          ) : null}
         </div>
         {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
       </div>

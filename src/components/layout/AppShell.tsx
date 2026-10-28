@@ -152,14 +152,19 @@ export function AppShell() {
         <ShortcutActions />
         <div className="flex min-h-dvh">
           <Sidebar />
-          <main className="min-w-0 flex-1 px-4 pt-3 pb-[calc(var(--tabbar-h)+1.5rem)] sm:px-6 lg:px-8 lg:pt-5 lg:pb-12" id="main">
-            <div className="mx-auto w-full max-w-[1040px]">
+          <div className="min-w-0 flex-1">
+            {/* Pinned to the top of every page: a solid strip in the page colour, no blur. */}
+            <header className="bg-background sticky top-0 z-20 border-b">
               <TopBar />
-              <OfflineBanner />
-              <InstallBanner />
-              <PageTransition />
-            </div>
-          </main>
+            </header>
+            <main className="px-4 pt-4 pb-[calc(var(--tabbar-h)+1.5rem)] sm:px-6 lg:px-8 lg:pt-5 lg:pb-12" id="main">
+              <div className="mx-auto w-full max-w-[1040px]">
+                <OfflineBanner />
+                <InstallBanner />
+                <PageTransition />
+              </div>
+            </main>
+          </div>
         </div>
         <MobileTabBar />
       </CommandPaletteProvider>
