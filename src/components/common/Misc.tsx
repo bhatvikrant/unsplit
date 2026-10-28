@@ -1,11 +1,14 @@
 import { useState, type ReactNode } from "react";
 import {
-  Armchair, ArrowLeftRight, Baby, BedDouble, Bike, Car, CarTaxiFront, CircleDashed, CircleParking, Clapperboard, Coffee, Droplets, FileText, Film, Flame, Fuel,
-  Gamepad2, Gift, GraduationCap, Hammer, Heart, House, Info, KeyRound, Landmark, Music, PawPrint, Plane, Receipt, Shirt, ShieldCheck, ShoppingBasket, Smartphone,
+  Armchair, ArrowLeftRight, Baby, BedDouble, Bike, Car, CarTaxiFront, ChevronLeft, CircleDashed, CircleParking, Clapperboard, Coffee, Droplets, FileText, Film, Flame, Fuel,
+  Gamepad2, Gift, GraduationCap, Hammer, Heart, House, Info, KeyRound, Landmark, Music, PawPrint, Plane, Receipt, Search, Shirt, ShieldCheck, ShoppingBasket, Smartphone,
   Sparkles, SprayCan, Stethoscope, TrainFront, Trash2, Trophy, Tv, UtensilsCrossed, Wifi, Wine, Wrench, Zap, type LucideIcon,
 } from "lucide-react";
+import { Link } from "react-router";
 import { categoryBySlug } from "@convex/lib/categories";
+import { useCommandPalette } from "@/lib/commandPalette";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -26,17 +29,65 @@ export function EmptyState({ icon: Icon, title, description, action, className }
   );
 }
 
-export function PageHeader({ title, subtitle, leading, actions, className }: { title: ReactNode; subtitle?: ReactNode; leading?: ReactNode; actions?: ReactNode; className?: string }) {
+/** Where a pushed page's back button goes, and what it is called (the page it returns to). */
+export type BackLink = { to: string; label: string };
+
+/** Search button for the phone navigation bar; the desktop top bar has its own search box. */
+function SearchButton() {
+  const palette = useCommandPalette();
   return (
-    <div className={cn("mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between", className)}>
-      <div className="flex min-w-0 items-center gap-3.5">
-        {leading}
-        <div className="min-w-0">
-          <h1 className="text-text truncate text-2xl leading-tight font-semibold tracking-[-0.02em]">{title}</h1>
-          {subtitle ? <div className="text-text-muted mt-0.5 text-sm">{subtitle}</div> : null}
-        </div>
+    <Button variant="ghost" size="icon" className="text-text-muted -mr-2" aria-label="Search" onClick={palette.open}>
+      <Search className="size-5" />
+    </Button>
+  );
+}
+
+/**
+ * The row above a pushed page's title: the back button on the left and, below the desktop
+ * breakpoint, where the top bar is not shown, the search button on the right. `trailing` adds
+ * page actions next to search (icon buttons).
+ */
+export function PageNav({ back, trailing, className }: { back: BackLink; trailing?: ReactNode; className?: string }) {
+  return (
+    <div className={cn("mb-2 flex items-center", className)}>
+      <Button variant="ghost" size="sm" asChild className="text-text-muted -ml-2.5 coarse:pl-1.5">
+        <Link to={back.to}>
+          <ChevronLeft className="size-5" /> {back.label}
+        </Link>
+      </Button>
+      <div className="ml-auto flex items-center gap-1 lg:hidden">
+        {trailing}
+        <SearchButton />
       </div>
-      {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
+    </div>
+  );
+}
+
+/**
+ * Every page's title block. On phones and tablets it doubles as the navigation bar: a root page
+ * (a tab) has its large title with the search button at the end; a pushed page (`back` given)
+ * has a back row above the title. From `lg` up the top bar carries search, so only the back
+ * link remains.
+ */
+export function PageHeader({ title, subtitle, leading, actions, back, className }: { title: ReactNode; subtitle?: ReactNode; leading?: ReactNode; actions?: ReactNode; back?: BackLink; className?: string }) {
+  return (
+    <div className={cn("mb-5", className)}>
+      {back ? <PageNav back={back} /> : null}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 flex-1 items-center gap-3.5">
+          {leading}
+          <div className="min-w-0 flex-1">
+            <h1 className="text-text truncate text-[28px] leading-tight font-semibold tracking-[-0.02em] sm:text-2xl">{title}</h1>
+            {subtitle ? <div className="text-text-muted mt-0.5 text-sm">{subtitle}</div> : null}
+          </div>
+          {!back ? (
+            <div className="flex shrink-0 items-center self-start lg:hidden">
+              <SearchButton />
+            </div>
+          ) : null}
+        </div>
+        {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
+      </div>
     </div>
   );
 }

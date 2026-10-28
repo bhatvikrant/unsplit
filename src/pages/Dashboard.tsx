@@ -1,13 +1,13 @@
 import { useQuery } from "@/lib/convex";
-import { ArrowRight, HandCoins, Plus, UserPlus, Users } from "lucide-react";
+import { ArrowRight, ChevronRight, HandCoins, Plus, UserPlus, Users } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router";
 import { api } from "@convex/_generated/api";
-import { UserAvatar } from "@/components/common/Avatars";
+import { GroupAvatar, UserAvatar } from "@/components/common/Avatars";
 import { ExpenseRow, useDeleteExpense } from "@/components/common/ExpenseList";
 import { useSwipedRow } from "@/components/common/SwipeToDelete";
 import { EmptyState, PageHeader, RowSkeleton, Section } from "@/components/common/Misc";
-import { Money } from "@/components/common/Money";
+import { BalanceChip, Money } from "@/components/common/Money";
 import { useDialogs } from "@/components/dialogs/DialogProvider";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/format";
@@ -135,6 +135,34 @@ export function Dashboard() {
             </Section>
           </div>
 
+          {/* Phones and tablets have no sidebar: the groups and friends live here, on the Home tab. */}
+          <div className="mt-4 grid gap-4 md:grid-cols-2 lg:hidden">
+            <Section title="Groups" actions={<AddButton label="Create a group" onClick={() => dialogs.createGroup()} />}>
+              {groups === undefined ? (
+                <p className="text-text-faint px-4 py-7 text-center text-sm">Loading…</p>
+              ) : groups.length === 0 ? (
+                <p className="text-text-faint px-4 py-7 text-center text-sm">No groups yet.</p>
+              ) : (
+                <ul className="p-1">
+                  {groups.map((g) => (
+                    <ListRow key={g._id} to={`/groups/${g._id}`} name={g.name} avatar={<GroupAvatar group={g} size="sm" />} balances={g.myBalance} />
+                  ))}
+                </ul>
+              )}
+            </Section>
+            <Section title="Friends" actions={<AddButton label="Add a friend" onClick={() => dialogs.addFriend()} />}>
+              {friends.length === 0 ? (
+                <p className="text-text-faint px-4 py-7 text-center text-sm">No friends yet.</p>
+              ) : (
+                <ul className="p-1">
+                  {friends.map((f) => (
+                    <ListRow key={f.user._id} to={`/friends/${f.user._id}`} name={f.user.name} avatar={<UserAvatar user={f.user} size="sm" />} balances={f.balances} plain />
+                  ))}
+                </ul>
+              )}
+            </Section>
+          </div>
+
           {recentItems && recentItems.length > 0 ? (
             <Section
               className="mt-4"
@@ -162,6 +190,29 @@ export function Dashboard() {
         </>
       )}
     </div>
+  );
+}
+
+/** The "+" in a section's title row; a full touch target without making the row taller. */
+function AddButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <Button variant="ghost" size="icon-sm" className="text-text-faint -my-2 -mr-2" aria-label={label} onClick={onClick}>
+      <Plus />
+    </Button>
+  );
+}
+
+/** A group or friend row on the Home tab: avatar, name, the balance with them, and a chevron. */
+function ListRow({ to, name, avatar, balances, plain }: { to: string; name: string; avatar: React.ReactNode; balances: Record<string, number>; plain?: boolean }) {
+  return (
+    <li>
+      <Link to={to} className="hover:bg-surface-2 active:bg-surface-2 flex min-h-11 items-center gap-3 rounded-[10px] px-3 py-2 outline-none transition-colors duration-100 focus-visible:ring-[3px] focus-visible:ring-ring">
+        {avatar}
+        <span className="min-w-0 flex-1 truncate text-sm font-medium">{name}</span>
+        <BalanceChip balances={balances} plain={plain} />
+        <ChevronRight className="text-text-faint size-4 shrink-0" />
+      </Link>
+    </li>
   );
 }
 

@@ -232,7 +232,8 @@
     @apply bg-background text-foreground antialiased;
     overscroll-behavior-y: none;
     -webkit-tap-highlight-color: transparent;
-    /* Installed on a phone the page runs under the status bar (viewport-fit=cover). */
+    /* Under a notch or camera cut-out in landscape, and on any platform that still runs the page
+       under its status bar (viewport-fit=cover); zero where the status bar is its own strip. */
     padding-top: env(safe-area-inset-top);
   }
   /* The phone tab bar: 3.5rem of tabs + its top border + the home-indicator area of an installed iPhone app. */

@@ -8,12 +8,23 @@ import { useOfflineStatus } from "@/lib/convex";
 import { useMe } from "@/lib/hooks";
 import { cn } from "@/lib/utils";
 
-/** Account switcher at the foot of the sidebar: name, email and the account-level pages. */
-export function UserMenu({ className, onNavigate }: { className?: string; onNavigate?: () => void }) {
-  const me = useMe();
+/** Logs out and returns to the landing page, after a warning when offline changes would be lost. */
+export function useLogOut() {
   const { signOut } = useAuthActions();
   const { pending } = useOfflineStatus();
   const confirm = useConfirm();
+  const navigate = useNavigate();
+  return async () => {
+    if (pending > 0 && !(await confirm({ title: "Log out anyway?", description: `${pending} change${pending === 1 ? "" : "s"} haven't synced yet and would be lost.`, action: "Log out" }))) return;
+    await signOut();
+    navigate("/");
+  };
+}
+
+/** Account switcher at the foot of the sidebar: name, email and the account-level pages. */
+export function UserMenu({ className, onNavigate }: { className?: string; onNavigate?: () => void }) {
+  const me = useMe();
+  const logOut = useLogOut();
   const navigate = useNavigate();
   const go = (to: string) => {
     onNavigate?.();
@@ -57,12 +68,7 @@ export function UserMenu({ className, onNavigate }: { className?: string; onNavi
           <Trash2 /> Deleted items
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onClick={async () => {
-            if (pending > 0 && !(await confirm({ title: "Log out anyway?", description: `${pending} change${pending === 1 ? "" : "s"} haven't synced yet and would be lost.`, action: "Log out" }))) return;
-            void signOut().then(() => navigate("/"));
-          }}
-        >
+        <DropdownMenuItem onClick={() => void logOut()}>
           <LogOut /> Log out
         </DropdownMenuItem>
       </DropdownMenuContent>

@@ -45,6 +45,7 @@ export function FriendPage() {
   return (
     <div>
       <PageHeader
+        back={{ to: "/dashboard", label: "Home" }}
         leading={<UserAvatar user={friend.user} size="lg" />}
         title={friend.user.name}
         subtitle={

@@ -1,10 +1,12 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { Activity, LayoutDashboard, Plus, ReceiptText, UserRound } from "lucide-react";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { NavLink, Outlet, useLocation, useSearchParams, type NavLinkProps } from "react-router";
 import { DialogProvider, useDialogs } from "@/components/dialogs/DialogProvider";
+import { CommandPaletteContext } from "@/lib/commandPalette";
 import { takeHandoff } from "@/lib/handoff";
 import { cn } from "@/lib/utils";
+import { CommandPalette } from "./CommandPalette";
 import { InstallBanner } from "./InstallPrompt";
 import { OfflineBanner } from "./OfflineBanner";
 import { useQuickActions } from "./quickActions";
@@ -64,6 +66,43 @@ function MobileTabBar() {
   );
 }
 
+function isTypingTarget(el: EventTarget | null) {
+  if (!(el instanceof HTMLElement)) return false;
+  return el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName);
+}
+
+/**
+ * Owns the search palette: the top bar's search box and every page header's search button open
+ * it through CommandPaletteContext. ⌘K / Ctrl+K toggles it from anywhere; "/" opens it outside a
+ * text field.
+ */
+function CommandPaletteProvider({ children }: { children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const value = useMemo(() => ({ open: () => setOpen(true) }), []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const k = e.key.toLowerCase();
+      if ((e.metaKey || e.ctrlKey) && k === "k") {
+        e.preventDefault();
+        setOpen((o) => !o);
+      } else if (k === "/" && !e.metaKey && !e.ctrlKey && !e.altKey && !isTypingTarget(e.target)) {
+        e.preventDefault();
+        setOpen(true);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  return (
+    <CommandPaletteContext.Provider value={value}>
+      {children}
+      <CommandPalette open={open} onOpenChange={setOpen} />
+    </CommandPaletteContext.Provider>
+  );
+}
+
 /**
  * `?add=expense` (the home-screen shortcut) opens the add-expense dialog once, then clears itself.
  * So does a handoff from UnMoney waiting since /expenses/new (src/lib/handoff.ts).
@@ -109,19 +148,21 @@ function PageTransition() {
 export function AppShell() {
   return (
     <DialogProvider>
-      <ShortcutActions />
-      <div className="flex min-h-dvh">
-        <Sidebar />
-        <main className="min-w-0 flex-1 px-4 pt-4 pb-[calc(var(--tabbar-h)+1.5rem)] sm:px-6 lg:px-8 lg:pt-5 lg:pb-12" id="main">
-          <div className="mx-auto w-full max-w-[1040px]">
-            <TopBar />
-            <OfflineBanner />
-            <InstallBanner />
-            <PageTransition />
-          </div>
-        </main>
-      </div>
-      <MobileTabBar />
+      <CommandPaletteProvider>
+        <ShortcutActions />
+        <div className="flex min-h-dvh">
+          <Sidebar />
+          <main className="min-w-0 flex-1 px-4 pt-3 pb-[calc(var(--tabbar-h)+1.5rem)] sm:px-6 lg:px-8 lg:pt-5 lg:pb-12" id="main">
+            <div className="mx-auto w-full max-w-[1040px]">
+              <TopBar />
+              <OfflineBanner />
+              <InstallBanner />
+              <PageTransition />
+            </div>
+          </main>
+        </div>
+        <MobileTabBar />
+      </CommandPaletteProvider>
     </DialogProvider>
   );
 }
