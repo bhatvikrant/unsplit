@@ -11,14 +11,14 @@ import { UserMenu } from "./UserMenu";
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
   cn(
-    "pressable flex items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-sm font-medium outline-none focus-visible:ring-[3px] focus-visible:ring-ring",
-    isActive ? "bg-surface text-text shadow-card [&>svg]:text-brand" : "text-text-muted hover:bg-surface-2 hover:text-text",
+    "pressable flex items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-sm font-medium outline-none focus-visible:ring-[3px] focus-visible:ring-ring coarse:min-h-11",
+    isActive ? "bg-surface text-text shadow-card [&>svg]:text-brand" : "text-text-muted hover:bg-surface-2 hover:text-text active:bg-surface-2",
   );
 
 const rowClass = ({ isActive }: { isActive: boolean }) =>
   cn(
-    "pressable flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium outline-none focus-visible:ring-[3px] focus-visible:ring-ring",
-    isActive ? "bg-surface text-text shadow-card" : "text-text hover:bg-surface-2",
+    "pressable flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium outline-none focus-visible:ring-[3px] focus-visible:ring-ring coarse:min-h-11",
+    isActive ? "bg-surface text-text shadow-card" : "text-text hover:bg-surface-2 active:bg-surface-2",
   );
 
 function SectionHeading({ label, action, onAction }: { label: string; action: string; onAction: () => void }) {

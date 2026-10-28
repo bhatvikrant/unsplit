@@ -176,7 +176,7 @@ function HeroStat({ label, tone, children }: { label: string; tone: "owe" | "owe
 
 function FriendLine({ user, balances, action, onAction }: { user: { _id: string; name: string; image?: string }; balances: Record<string, number>; action: string; onAction: () => void }) {
   return (
-    <li className="group hover:bg-surface-2 flex items-center gap-3 rounded-[10px] px-3 py-2 transition-colors duration-100">
+    <li className="group hover:bg-surface-2 active:bg-surface-2 flex items-center gap-3 rounded-[10px] px-3 py-2 transition-colors duration-100">
       <Link to={`/friends/${user._id}`} className="flex min-w-0 flex-1 items-center gap-3 outline-none focus-visible:underline">
         <UserAvatar user={user} size="sm" />
         <span className="truncate text-sm font-medium">{user.name}</span>

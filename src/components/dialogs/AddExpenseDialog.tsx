@@ -467,7 +467,7 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
                   )}
                   <button
                     type="button"
-                    className="text-brand ml-auto text-xs font-medium hover:underline"
+                    className="text-brand active:bg-surface-2 ml-auto rounded-md text-xs font-medium hover:underline coarse:-my-2 coarse:min-h-11 coarse:px-2"
                     onClick={() => {
                       if (payerMode === "single") {
                         setPayerMode("multiple");
@@ -508,7 +508,7 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
 
             {/* Date + more */}
             <div className="flex flex-wrap items-center gap-2">
-              <Input type="date" aria-label="Date" className="bg-surface-2 h-8 w-auto rounded-lg text-[13px] font-medium shadow-none" value={toDateInputValue(date)} onChange={(e) => e.target.value && setDate(fromDateInputValue(e.target.value, date))} />
+              <Input type="date" aria-label="Date" className="bg-surface-2 h-8 w-auto rounded-lg text-[13px] font-medium shadow-none coarse:min-h-11" value={toDateInputValue(date)} onChange={(e) => e.target.value && setDate(fromDateInputValue(e.target.value, date))} />
               <Popover>
                 <PopoverTrigger asChild>
                   <Button type="button" variant="secondary" size="sm" className={cn(repeat !== "never" && "bg-brand-soft text-brand-ink hover:bg-brand-soft")}>

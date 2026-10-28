@@ -1,7 +1,7 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { Activity, LayoutDashboard, Plus, ReceiptText, UserRound } from "lucide-react";
-import { useEffect, useRef } from "react";
-import { NavLink, Outlet, useLocation, useSearchParams } from "react-router";
+import { useEffect, useRef, type ReactNode } from "react";
+import { NavLink, Outlet, useLocation, useSearchParams, type NavLinkProps } from "react-router";
 import { DialogProvider, useDialogs } from "@/components/dialogs/DialogProvider";
 import { takeHandoff } from "@/lib/handoff";
 import { cn } from "@/lib/utils";
@@ -12,7 +12,23 @@ import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 
 const tabClass = ({ isActive }: { isActive: boolean }) =>
-  cn("flex flex-col items-center gap-0.5 py-1 text-[10.5px] font-medium", isActive ? "text-brand" : "text-text-faint");
+  cn("flex h-full flex-col items-center justify-center gap-0.5 text-[10.5px]", isActive ? "text-brand font-semibold" : "text-text-faint font-medium");
+
+/** A tab bar item fills its cell; tapping the tab already open scrolls its page back to the top. */
+function Tab({ to, end, children }: { to: string; end?: boolean; children: ReactNode }) {
+  const { pathname } = useLocation();
+  const active = end ? pathname === to : pathname === to || pathname.startsWith(`${to}/`);
+  const onClick: NavLinkProps["onClick"] = (e) => {
+    if (!active) return;
+    e.preventDefault();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  return (
+    <NavLink to={to} end={end} className={tabClass} onClick={onClick}>
+      {children}
+    </NavLink>
+  );
+}
 
 /** Phone-only bottom navigation with the add-expense button in the middle. */
 function MobileTabBar() {
@@ -21,28 +37,28 @@ function MobileTabBar() {
   return (
     <nav aria-label="Primary" className="bg-surface/85 safe-bottom fixed inset-x-0 bottom-0 z-30 border-t backdrop-blur-xl lg:hidden">
       <div className="grid h-14 grid-cols-5 items-center">
-        <NavLink to="/dashboard" className={tabClass}>
+        <Tab to="/dashboard">
           <LayoutDashboard className="size-5" /> Home
-        </NavLink>
-        <NavLink to="/activity" className={tabClass}>
+        </Tab>
+        <Tab to="/activity">
           <Activity className="size-5" /> Activity
-        </NavLink>
+        </Tab>
         <div className="flex justify-center">
           <button
             type="button"
             aria-label="Add expense"
             onClick={addExpense}
-            className="pressable bg-brand shadow-btn -mt-6 flex size-12 items-center justify-center rounded-full outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
+            className="bg-brand shadow-btn ease-out-strong -mt-6 flex size-12 items-center justify-center rounded-full outline-none transition-transform duration-150 focus-visible:ring-[3px] focus-visible:ring-ring active:scale-95"
           >
             <Plus className="text-on-brand size-6" strokeWidth={2.25} />
           </button>
         </div>
-        <NavLink to="/expenses" end className={tabClass}>
+        <Tab to="/expenses" end>
           <ReceiptText className="size-5" /> Expenses
-        </NavLink>
-        <NavLink to="/account" className={tabClass}>
+        </Tab>
+        <Tab to="/account">
           <UserRound className="size-5" /> Account
-        </NavLink>
+        </Tab>
       </div>
     </nav>
   );
