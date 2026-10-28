@@ -1,5 +1,5 @@
 import { isTempId, useAction, useMutation, useQuery } from "@/lib/convex";
-import { Camera, Loader2, Repeat, Users, X } from "lucide-react";
+import { Camera, Loader2, Plus, Repeat, UserPlus, Users, X } from "lucide-react";
 import { useLayoutEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { api } from "@convex/_generated/api";
@@ -15,14 +15,17 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { RECEIPT_EDGE, uploadImage } from "@/lib/image";
 import { errorMessage, fromDateInputValue, toDateInputValue } from "@/lib/format";
 import { useDefaultCurrency, useMe } from "@/lib/hooks";
 import { CURRENCY_CODES, currencySymbol } from "@convex/lib/currencies";
 import { amountText, returnUrl, type Handoff } from "@/lib/handoff";
+import { defaultScope, rememberScope } from "@/lib/scope";
 import { cn } from "@/lib/utils";
+import { FriendFormFields, useFriendForm } from "./FriendForm";
+import { GroupFormFields, useGroupForm } from "./GroupForm";
 import { CategoryPicker, CurrencyPicker } from "./pickers";
 import { SplitEditor } from "./SplitEditor";
 import { emptySplit, fromSpec, itemizedTotal, newItem, toSpec, type SplitState } from "./splitState";
@@ -44,6 +47,17 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
   const scanReceipt = useAction(api.receipts.scan);
 
   const [scope, setScope] = useState<Scope>(options.groupId ? { kind: "group", id: options.groupId } : options.friendId ? { kind: "friend", id: options.friendId } : null);
+  // Set from the outside or by hand: then the remembered scope (src/lib/scope.ts) must not take over.
+  const scopeTouched = useRef(Boolean(options.groupId || options.friendId || options.expenseId));
+  const pickScope = (s: Scope) => {
+    scopeTouched.current = true;
+    setScope(s);
+    setCreating(null);
+  };
+  // A group or friend made right here, from the "With" picker, becomes the expense's scope.
+  const [creating, setCreating] = useState<"group" | "friend" | null>(null);
+  const groupForm = useGroupForm({ onCreated: (id) => pickScope({ kind: "group", id }) });
+  const friendForm = useFriendForm({ onAdded: (id) => pickScope({ kind: "friend", id }) });
   // From UnMoney: its amounts, date and words; its currency when it is one we know, and our category guessed from its category's name.
   const handoff = options.handoff;
   const handoffCurrency = handoff && CURRENCY_CODES.has(handoff.currency) ? handoff.currency : null;
@@ -108,6 +122,13 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
     if (!payer && me) setPayer(me._id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [peopleKey]);
+
+  // Nothing chosen: start on the scope used last time, or the only one there is.
+  useLayoutEffect(() => {
+    if (scope || scopeTouched.current || !groups || !friends) return;
+    const d = defaultScope(groups.map((g) => g._id), friends.map((f) => f.user._id));
+    if (d) setScope(d.kind === "group" ? { kind: "group", id: d.id as Id<"groups"> } : { kind: "friend", id: d.id as Id<"users"> });
+  }, [scope, groups, friends]);
 
   // Currency defaults to the group's last currency.
   useLayoutEffect(() => {
@@ -274,6 +295,7 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
           friendId: scope.kind === "friend" ? scope.id : undefined,
           receiptId: receipt && receipt !== "remove" ? receipt.storageId : undefined,
         });
+        rememberScope(scope);
         if (handoff && !isTempId(id)) {
           // back to UnMoney, which links its entries to this expense
           toast.success("Expense added. Back to UnMoney…");
@@ -309,33 +331,80 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
 
           <div className="space-y-5 px-5 pt-3 pb-5">
             {/* Scope */}
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-text-muted inline-flex items-center gap-1.5"><Users className="text-text-faint size-4" /> With</span>
-              <Select
-                value={scope ? `${scope.kind}:${scope.id}` : ""}
-                onValueChange={(v) => {
-                  const [kind, id] = v.split(":");
-                  setScope(kind === "group" ? { kind: "group", id: id as Id<"groups"> } : { kind: "friend", id: id as Id<"users"> });
-                }}
-                disabled={loadingEdit}
-              >
-                <SelectTrigger className="bg-surface-2 hover:bg-surface-3 h-8 w-auto max-w-[260px] min-w-40 rounded-full font-medium shadow-none" aria-label="Group or friend">
-                  <SelectValue placeholder="Choose a group or friend" />
-                </SelectTrigger>
-                <SelectContent>
-                  {groups?.map((g) => (
-                    <SelectItem key={g._id} value={`group:${g._id}`}>
-                      {g.name}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-text-muted inline-flex items-center gap-1.5"><Users className="text-text-faint size-4" /> With</span>
+                <Select
+                  value={scope ? `${scope.kind}:${scope.id}` : ""}
+                  onValueChange={(v) => {
+                    const [kind, id] = v.split(":");
+                    if (kind === "new") setCreating(id === "group" ? "group" : "friend");
+                    else pickScope(kind === "group" ? { kind: "group", id: id as Id<"groups"> } : { kind: "friend", id: id as Id<"users"> });
+                  }}
+                  disabled={loadingEdit}
+                >
+                  <SelectTrigger className="bg-surface-2 hover:bg-surface-3 h-8 w-auto max-w-[260px] min-w-40 rounded-full font-medium shadow-none" aria-label="Group or friend">
+                    <SelectValue placeholder="Choose a group or friend" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {groups && groups.length > 0 ? (
+                      <SelectGroup>
+                        <SelectLabel>Groups</SelectLabel>
+                        {groups.map((g) => (
+                          <SelectItem key={g._id} value={`group:${g._id}`} meta={`${g.memberCount} ${g.memberCount === 1 ? "member" : "members"}`}>
+                            {g.name}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    ) : null}
+                    {friends && friends.length > 0 ? (
+                      <SelectGroup>
+                        <SelectLabel>Friends</SelectLabel>
+                        {friends.map((f) => (
+                          <SelectItem key={f.user._id} value={`friend:${f.user._id}`}>
+                            {f.user.name}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    ) : null}
+                    {(groups && groups.length > 0) || (friends && friends.length > 0) ? <SelectSeparator /> : null}
+                    <SelectItem value="new:group">
+                      <Plus /> New group
                     </SelectItem>
-                  ))}
-                  {friends?.map((f) => (
-                    <SelectItem key={f.user._id} value={`friend:${f.user._id}`}>
-                      {f.user.name} (no group)
+                    <SelectItem value="new:friend">
+                      <UserPlus /> New friend
                     </SelectItem>
-                  ))}
-                  {groups?.length === 0 && friends?.length === 0 ? <div className="text-text-muted px-2 py-1.5 text-xs">Create a group or add a friend first.</div> : null}
-                </SelectContent>
-              </Select>
+                  </SelectContent>
+                </Select>
+              </div>
+              {!creating && groups?.length === 0 && friends?.length === 0 ? (
+                <p className="text-text-muted text-xs">No groups or friends yet. Start one from the list above; you can invite people by email.</p>
+              ) : null}
+              {creating ? (
+                <div className="shadow-ring space-y-3 rounded-xl p-3" data-testid={`new-${creating}`}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold">{creating === "group" ? "New group" : "New friend"}</span>
+                    <Button type="button" variant="ghost" size="icon-sm" aria-label="Close" onClick={() => setCreating(null)}>
+                      <X />
+                    </Button>
+                  </div>
+                  {creating === "group" ? <GroupFormFields form={groupForm} friends={friends} compact idPrefix="xg" /> : <FriendFormFields form={friendForm} idPrefix="xf" />}
+                  <div className="flex justify-end gap-2">
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setCreating(null)}>
+                      Cancel
+                    </Button>
+                    {creating === "group" ? (
+                      <Button type="button" size="sm" disabled={!groupForm.canSubmit} onClick={() => void groupForm.submit()}>
+                        {groupForm.busy ? "Creating…" : "Create group"}
+                      </Button>
+                    ) : (
+                      <Button type="button" size="sm" disabled={!friendForm.canSubmit} onClick={() => void friendForm.submit()}>
+                        {friendForm.busy ? "Adding…" : "Add friend"}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             {/* Amount hero + description */}

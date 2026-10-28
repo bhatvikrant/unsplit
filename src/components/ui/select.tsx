@@ -106,11 +106,13 @@ function SelectLabel({
   )
 }
 
+/** `meta`: faint text at the item's right (a count, a hint) that is not part of the chosen value shown in the trigger. */
 function SelectItem({
   className,
   children,
+  meta,
   ...props
-}: React.ComponentProps<typeof SelectPrimitive.Item>) {
+}: React.ComponentProps<typeof SelectPrimitive.Item> & { meta?: React.ReactNode }) {
   return (
     <SelectPrimitive.Item
       data-slot="select-item"
@@ -129,6 +131,11 @@ function SelectItem({
         </SelectPrimitive.ItemIndicator>
       </span>
       <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+      {meta !== undefined && meta !== null ? (
+        <span data-slot="select-item-meta" className="tnum ml-auto shrink-0 text-xs text-muted-foreground">
+          {meta}
+        </span>
+      ) : null}
     </SelectPrimitive.Item>
   )
 }

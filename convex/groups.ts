@@ -34,13 +34,15 @@ export const list = query({
       Promise.all(
         memberships.map(async (m) => {
           const g = await ctx.db.get(m.groupId);
-          return !g || g.deletedAt ? null : { g, cover: await coverUrl(ctx, g) };
+          if (!g || g.deletedAt) return null;
+          const [cover, memberIds] = await Promise.all([coverUrl(ctx, g), groupMemberIds(ctx, g._id)]);
+          return { g, cover, memberCount: memberIds.length };
         }),
       ),
     ]);
     return groups
       .filter((x) => x !== null)
-      .map(({ g, cover }) => ({ _id: g._id, name: g.name, type: g.type, coverUrl: cover, myBalance: mapToRecord(balances.byGroup.get(g._id)), createdAt: g._creationTime }))
+      .map(({ g, cover, memberCount }) => ({ _id: g._id, name: g.name, type: g.type, coverUrl: cover, memberCount, myBalance: mapToRecord(balances.byGroup.get(g._id)), createdAt: g._creationTime }))
       .sort((a, b) => b.createdAt - a.createdAt);
   },
 });
