@@ -7,8 +7,9 @@ import { api } from "@convex/_generated/api";
 import { GroupAvatar, UserAvatar } from "@/components/common/Avatars";
 import { BalanceChip } from "@/components/common/Money";
 import { useDialogs } from "@/components/dialogs/DialogProvider";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle, useIsPhoneDialog } from "@/components/ui/responsive-dialog";
 import { IS_MAC } from "@/lib/platform";
+import { cn } from "@/lib/utils";
 import { useQuickActions } from "./quickActions";
 
 const PAGES = [
@@ -62,6 +63,7 @@ function PaletteBody({ close }: { close: () => void }) {
   const groups = useQuery(api.groups.list);
   const friends = useQuery(api.friends.list);
   const [q, setQ] = useState("");
+  const phone = useIsPhoneDialog();
   const query = q.trim();
   const matches = matcher(query.toLowerCase());
   const run = (fn: () => void) => {
@@ -83,17 +85,29 @@ function PaletteBody({ close }: { close: () => void }) {
 
   return (
     <CommandPrimitive label="Search expenses" shouldFilter={false} loop className="flex flex-col">
-      <div className="flex items-center gap-2.5 border-b px-4">
-        <Search className="text-text-faint size-4 shrink-0" />
-        <CommandPrimitive.Input
-          value={q}
-          onValueChange={setQ}
-          placeholder="Search expenses, groups, friends…"
-          className="placeholder:text-text-faint h-12 w-full bg-transparent text-base outline-none sm:text-sm"
-        />
-        <kbd className="text-text-faint bg-surface-2 hidden rounded px-1.5 py-0.5 font-sans text-[11px] font-medium sm:block">esc</kbd>
+      {/* Phones: a native-style search view, the field in the sheet's top bar with Cancel on its right. */}
+      <div className={phone ? "bg-surface sticky top-0 z-10 flex items-center gap-1 px-3 pb-2" : "flex items-center gap-2.5 border-b px-4"}>
+        <div className={phone ? "bg-surface-2 flex h-10 min-w-0 flex-1 items-center gap-2 rounded-[10px] px-3" : "contents"}>
+          <Search className="text-text-faint size-4 shrink-0" />
+          <CommandPrimitive.Input
+            value={q}
+            onValueChange={setQ}
+            autoFocus
+            placeholder="Search expenses, groups, friends…"
+            className={cn("placeholder:text-text-faint w-full min-w-0 bg-transparent text-base outline-none sm:text-sm", phone ? "h-10" : "h-12")}
+          />
+        </div>
+        {phone ? (
+          <DialogClose asChild>
+            <button type="button" className="pressable text-brand flex min-h-11 shrink-0 items-center rounded-lg px-2 text-[15px] outline-none focus-visible:ring-[3px] focus-visible:ring-ring">
+              Cancel
+            </button>
+          </DialogClose>
+        ) : (
+          <kbd className="text-text-faint bg-surface-2 hidden rounded px-1.5 py-0.5 font-sans text-[11px] font-medium sm:block">esc</kbd>
+        )}
       </div>
-      <CommandPrimitive.List className="max-h-[min(60dvh,420px)] scroll-py-1 overflow-y-auto">
+      <CommandPrimitive.List className={phone ? "scroll-py-1" : "max-h-[min(60dvh,420px)] scroll-py-1 overflow-y-auto"}>
         {query ? (
           <Group heading="Expenses">
             <Item value={`search:${query}`} onSelect={() => run(() => navigate(`/expenses?q=${encodeURIComponent(query)}`))} hint="enter">
@@ -174,10 +188,7 @@ function PaletteBody({ close }: { close: () => void }) {
 export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        showCloseButton={false}
-        className="top-[max(4rem,env(safe-area-inset-top))] max-w-[calc(100%-1.5rem)] translate-y-0 gap-0 overflow-hidden p-0 sm:top-[18%] sm:max-w-xl"
-      >
+      <DialogContent showCloseButton={false} size="full" sheetClassName="pb-0 [--sheet-px:0px]" className="top-[18%] translate-y-0 gap-0 overflow-hidden p-0 sm:max-w-xl">
         <DialogTitle className="sr-only">Search</DialogTitle>
         <DialogDescription className="sr-only">Search expenses, jump to a group, friend or page, or run an action.</DialogDescription>
         <PaletteBody close={() => onOpenChange(false)} />

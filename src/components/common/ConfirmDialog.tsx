@@ -45,6 +45,13 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider value={confirm}>
       {children}
+      {/*
+        The other modals are bottom sheets on phones (ui/responsive-dialog.tsx); this one stays a
+        centred alert everywhere, on purpose. It is the native pattern for a destructive question
+        (iOS and Android both use a centred alert, not a sheet, for "Delete?"), it cannot be
+        swiped away by accident mid-question, it never has to stack on top of an open sheet, and
+        its two buttons are already full-width tap targets side by side.
+      */}
       <AlertDialog open={!!opts} onOpenChange={(o) => !o && settle(false)}>
         <AlertDialogContent size="sm">
           <AlertDialogHeader>

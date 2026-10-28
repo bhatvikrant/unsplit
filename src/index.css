@@ -274,6 +274,14 @@
       animation-duration: 0.01ms !important;
       transition-duration: 0.01ms !important;
     }
+    /* Bottom sheets (ui/responsive-dialog.tsx): no slide, just a short fade. Same layer and
+       !important as the rule above so it wins against it and against vaul's own stylesheet. */
+    [data-vaul-drawer] {
+      animation: sheet-fade-in 150ms var(--ease) both !important;
+    }
+    [data-vaul-drawer][data-state="closed"] {
+      animation-name: sheet-fade-out !important;
+    }
   }
 }
 
@@ -305,4 +313,31 @@
 
 @utility hero-gradient {
   background: linear-gradient(135deg, var(--hero-from) 0%, var(--hero-mid) 60%, var(--hero-to) 100%);
+}
+
+/*
+  Bottom sheets (ui/responsive-dialog.tsx). vaul animates its own slide and scrim at 500ms; the
+  app's sheets open in 350ms and close in 250ms, like the navigation drawer. Three attributes in
+  each selector so these win over vaul's injected rules whatever the stylesheet order.
+*/
+[data-vaul-drawer][data-vaul-drawer-direction="bottom"][data-state="open"],
+[data-vaul-overlay][data-vaul-snap-points="false"][data-state="open"] {
+  animation-duration: 350ms;
+}
+[data-vaul-drawer][data-vaul-drawer-direction="bottom"][data-state="closed"],
+[data-vaul-overlay][data-vaul-snap-points="false"][data-state="closed"] {
+  animation-duration: 250ms;
+}
+@keyframes sheet-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes sheet-fade-out {
+  to {
+    opacity: 0;
+  }
 }

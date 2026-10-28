@@ -56,7 +56,7 @@ export async function createGroup(page: Page, name: string, people: { name: stri
     await dialog.getByLabel("Name", { exact: true }).nth(i).fill(p.name);
     if (p.email) await dialog.getByLabel("Email", { exact: true }).nth(i).fill(p.email);
   }
-  await dialog.getByRole("button", { name: "Create group" }).click();
+  await dialog.getByRole("button", { name: /^Create( group)?$/ }).click();
   await expect(page).toHaveURL(/\/groups\//);
   await expect(page.getByRole("heading", { name })).toBeVisible();
 }

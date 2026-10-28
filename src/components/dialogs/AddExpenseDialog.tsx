@@ -12,7 +12,7 @@ import { UserAvatar } from "@/components/common/Avatars";
 import { Money } from "@/components/common/Money";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/responsive-dialog";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -317,11 +317,24 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[92dvh] overflow-y-auto p-0 sm:max-w-lg">
+      <DialogContent
+        className="max-h-[92dvh] overflow-y-auto p-0 sm:max-w-lg"
+        size="full"
+        sheetClassName="pb-0 [--sheet-px:0px]"
+        action={{ label: busy ? "Saving…" : "Save", type: "submit", disabled: busy || loadingEdit || !scope || Boolean(preview && "error" in preview) }}
+      >
         <form onSubmit={submit} className="flex flex-col">
-          <DialogHeader className="px-5 pt-5">
+          <DialogHeader className="sm:px-5 sm:pt-5">
             <DialogTitle>{editing ? "Edit expense" : "Add an expense"}</DialogTitle>
             <DialogDescription className="sr-only">Record a shared expense.</DialogDescription>
+            {/* Phones: what this expense does to my balance, under the sheet's top bar so it stays in view while the form scrolls. The row is always there so the form does not jump when it fills in. */}
+            <p className="text-text-faint col-span-full row-start-2 min-h-4 pb-1.5 text-center text-xs leading-4 sm:hidden" aria-live="polite">
+              {myNet !== null && myNet !== 0 ? (
+                <>
+                  You'll {myNet > 0 ? "lend" : "borrow"} <Money minor={myNet} currency={currency} abs className="text-text font-medium" />
+                </>
+              ) : null}
+            </p>
           </DialogHeader>
           {handoff ? (
             <p className="bg-surface-2 text-text-muted mx-5 mt-3 rounded-lg px-3 py-2 text-xs">
