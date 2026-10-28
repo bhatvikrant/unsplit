@@ -16,7 +16,7 @@ import { emptySplit, fromSpec, toSpec, type SplitState } from "@/components/dial
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Picker, PickerItem } from "@/components/ui/picker";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { downloadFile, errorMessage, monthLabel, pluralize, toCsv } from "@/lib/format";
@@ -281,19 +281,14 @@ export function GroupTotals() {
       <PageHeader leading={<GroupAvatar group={group} size="lg" />} title={group.name} subtitle="Totals" />
       <GroupNav groupId={groupId} current="totals" />
       <div className="mb-4 flex items-center gap-2">
-        <Select value={month} onValueChange={setMonth}>
-          <SelectTrigger className="w-48" aria-label="Period">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All time</SelectItem>
-            {totals?.months.map((m) => (
-              <SelectItem key={m} value={m}>
-                {monthLabel(m)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Picker value={month} onValueChange={setMonth} aria-label="Period" className="w-48">
+          <PickerItem value="all">All time</PickerItem>
+          {totals?.months.map((m) => (
+            <PickerItem key={m} value={m}>
+              {monthLabel(m)}
+            </PickerItem>
+          ))}
+        </Picker>
       </div>
       {totals === undefined ? (
         <RowSkeleton />
@@ -490,18 +485,13 @@ export function GroupSettings() {
           <div className="space-y-2 border-t p-4">
             {notMembers.length > 0 ? (
               <div className="flex gap-2">
-                <Select value={pickFriend} onValueChange={setPickFriend}>
-                  <SelectTrigger className="flex-1" aria-label="Add a friend">
-                    <SelectValue placeholder="Add an existing friend" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {notMembers.map((f) => (
-                      <SelectItem key={f.user._id} value={f.user._id}>
-                        {f.user.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Picker value={pickFriend} onValueChange={setPickFriend} aria-label="Add a friend" placeholder="Add an existing friend" className="flex-1">
+                  {notMembers.map((f) => (
+                    <PickerItem key={f.user._id} value={f.user._id} icon={<UserAvatar user={f.user} size="xs" />}>
+                      {f.user.name}
+                    </PickerItem>
+                  ))}
+                </Picker>
                 <Button
                   variant="secondary"
                   disabled={!pickFriend}

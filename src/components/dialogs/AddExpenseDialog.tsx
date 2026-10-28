@@ -14,12 +14,13 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/responsive-dialog";
 import { Input } from "@/components/ui/input";
+import { Picker, PickerGroup, PickerItem, PickerLabel, PickerSeparator, PickerSheet } from "@/components/ui/picker";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { RECEIPT_EDGE, uploadImage } from "@/lib/image";
 import { errorMessage, fromDateInputValue, toDateInputValue } from "@/lib/format";
 import { useDefaultCurrency, useMe } from "@/lib/hooks";
+import { usePhone } from "@/lib/media";
 import { CURRENCY_CODES, currencySymbol } from "@convex/lib/currencies";
 import { amountText, returnUrl, type Handoff } from "@/lib/handoff";
 import { defaultScope, rememberScope } from "@/lib/scope";
@@ -78,6 +79,8 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
   const [payers, setPayers] = useState<Record<string, string>>({});
   const [split, setSplit] = useState<SplitState | null>(null);
   const [repeat, setRepeat] = useState<RepeatInterval>("never");
+  const [repeatOpen, setRepeatOpen] = useState(false);
+  const phone = usePhone();
   const [emailReminder, setEmailReminder] = useState(false);
   const [receipt, setReceipt] = useState<{ storageId: Id<"_storage">; previewUrl: string } | null | "remove">(null);
   const [uploading, setUploading] = useState(false);
@@ -347,7 +350,7 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm">
                 <span className="text-text-muted inline-flex items-center gap-1.5"><Users className="text-text-faint size-4" /> With</span>
-                <Select
+                <Picker
                   value={scope ? `${scope.kind}:${scope.id}` : ""}
                   onValueChange={(v) => {
                     const [kind, id] = v.split(":");
@@ -355,40 +358,39 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
                     else pickScope(kind === "group" ? { kind: "group", id: id as Id<"groups"> } : { kind: "friend", id: id as Id<"users"> });
                   }}
                   disabled={loadingEdit}
+                  placeholder="Choose a group or friend"
+                  aria-label="Group or friend"
+                  title="With"
+                  className="bg-surface-2 hover:bg-surface-3 h-8 w-auto max-w-[260px] min-w-40 rounded-full font-medium shadow-none"
                 >
-                  <SelectTrigger className="bg-surface-2 hover:bg-surface-3 h-8 w-auto max-w-[260px] min-w-40 rounded-full font-medium shadow-none" aria-label="Group or friend">
-                    <SelectValue placeholder="Choose a group or friend" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {groups && groups.length > 0 ? (
-                      <SelectGroup>
-                        <SelectLabel>Groups</SelectLabel>
-                        {groups.map((g) => (
-                          <SelectItem key={g._id} value={`group:${g._id}`} meta={`${g.memberCount} ${g.memberCount === 1 ? "member" : "members"}`}>
-                            {g.name}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    ) : null}
-                    {friends && friends.length > 0 ? (
-                      <SelectGroup>
-                        <SelectLabel>Friends</SelectLabel>
-                        {friends.map((f) => (
-                          <SelectItem key={f.user._id} value={`friend:${f.user._id}`}>
-                            {f.user.name}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    ) : null}
-                    {(groups && groups.length > 0) || (friends && friends.length > 0) ? <SelectSeparator /> : null}
-                    <SelectItem value="new:group">
-                      <Plus /> New group
-                    </SelectItem>
-                    <SelectItem value="new:friend">
-                      <UserPlus /> New friend
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+                  {groups && groups.length > 0 ? (
+                    <PickerGroup>
+                      <PickerLabel>Groups</PickerLabel>
+                      {groups.map((g) => (
+                        <PickerItem key={g._id} value={`group:${g._id}`} meta={`${g.memberCount} ${g.memberCount === 1 ? "member" : "members"}`}>
+                          {g.name}
+                        </PickerItem>
+                      ))}
+                    </PickerGroup>
+                  ) : null}
+                  {friends && friends.length > 0 ? (
+                    <PickerGroup>
+                      <PickerLabel>Friends</PickerLabel>
+                      {friends.map((f) => (
+                        <PickerItem key={f.user._id} value={`friend:${f.user._id}`}>
+                          {f.user.name}
+                        </PickerItem>
+                      ))}
+                    </PickerGroup>
+                  ) : null}
+                  {(groups && groups.length > 0) || (friends && friends.length > 0) ? <PickerSeparator /> : null}
+                  <PickerItem value="new:group">
+                    <Plus /> New group
+                  </PickerItem>
+                  <PickerItem value="new:friend">
+                    <UserPlus /> New friend
+                  </PickerItem>
+                </Picker>
               </div>
               {!creating && groups?.length === 0 && friends?.length === 0 ? (
                 <p className="text-text-muted text-xs">No groups or friends yet. Start one from the list above; you can invite people by email.</p>
@@ -463,18 +465,13 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
                 <div className="flex flex-wrap items-center gap-2 text-sm">
                   <span className="text-text-muted text-xs font-semibold">Paid by</span>
                   {payerMode === "single" ? (
-                    <Select value={payer ?? ""} onValueChange={setPayer}>
-                      <SelectTrigger className="h-8 w-auto min-w-28 rounded-full font-medium" aria-label="Who paid">
-                        <SelectValue placeholder="Who paid?" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {people.map((p) => (
-                          <SelectItem key={p._id} value={p._id}>
-                            {p._id === me?._id ? "You" : p.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Picker value={payer ?? ""} onValueChange={setPayer} placeholder="Who paid?" aria-label="Who paid" title="Paid by" className="h-8 w-auto min-w-28 rounded-full font-medium">
+                      {people.map((p) => (
+                        <PickerItem key={p._id} value={p._id} icon={<UserAvatar user={p} size="xs" />}>
+                          {p._id === me?._id ? "You" : p.name}
+                        </PickerItem>
+                      ))}
+                    </Picker>
                   ) : (
                     <span className="font-medium">several people</span>
                   )}
@@ -521,36 +518,68 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
 
             {/* Date + more */}
             <div className="flex flex-wrap items-center gap-2">
-              <Input type="date" aria-label="Date" className="bg-surface-2 h-8 w-auto rounded-lg text-[13px] font-medium shadow-none coarse:min-h-11" value={toDateInputValue(date)} onChange={(e) => e.target.value && setDate(fromDateInputValue(e.target.value, date))} />
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button type="button" variant="secondary" size="sm" className={cn(repeat !== "never" && "bg-brand-soft text-brand-ink hover:bg-brand-soft")}>
-                    <Repeat /> {REPEAT_LABELS[repeat]}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-56 p-2" align="start">
-                  <div className="space-y-1">
-                    {(Object.keys(REPEAT_LABELS) as RepeatInterval[]).map((r) => (
-                      <button key={r} type="button" onClick={() => setRepeat(r)} className={cn("hover:bg-surface block w-full rounded-sm px-2 py-1.5 text-left text-sm", r === repeat && "bg-brand-soft text-brand font-medium")}>
-                        {REPEAT_LABELS[r]}
-                      </button>
-                    ))}
-                  </div>
-                  {repeat !== "never" ? (
-                    <>
-                      <label className="mt-2 flex items-center gap-2 border-t px-2 pt-2 text-xs">
-                        <Checkbox checked={emailReminder} onCheckedChange={(v) => setEmailReminder(Boolean(v))} /> Email everyone the day before
-                      </label>
-                      <p className="text-text-faint mt-2 px-2 text-xs">A copy is posted on each date with the same split. To change later ones, edit the newest copy.</p>
-                    </>
-                  ) : null}
-                </PopoverContent>
-              </Popover>
+              <Input type="date" aria-label="Date" className="bg-surface-2 h-8 w-auto rounded-lg text-[13px] font-medium shadow-none max-sm:h-11 coarse:min-h-11" value={toDateInputValue(date)} onChange={(e) => e.target.value && setDate(fromDateInputValue(e.target.value, date))} />
+              {phone ? (
+                <PickerSheet
+                  open={repeatOpen}
+                  onOpenChange={setRepeatOpen}
+                  title="Repeat"
+                  value={repeat}
+                  onValueChange={(r) => setRepeat(r as RepeatInterval)}
+                  closeOnSelect={false}
+                  trigger={
+                    <Button type="button" variant="secondary" size="sm" aria-label={`Repeat: ${REPEAT_LABELS[repeat]}`} className={cn("h-11 select-none", repeat !== "never" && "bg-brand-soft text-brand-ink hover:bg-brand-soft")}>
+                      <Repeat /> {REPEAT_LABELS[repeat]}
+                    </Button>
+                  }
+                  footer={
+                    repeat !== "never" ? (
+                      <>
+                        <label className="flex min-h-11 items-center gap-3 text-[15px]">
+                          <Checkbox checked={emailReminder} onCheckedChange={(v) => setEmailReminder(Boolean(v))} /> Email everyone the day before
+                        </label>
+                        <p className="text-text-faint mt-1 text-xs">A copy is posted on each date with the same split. To change later ones, edit the newest copy.</p>
+                      </>
+                    ) : null
+                  }
+                >
+                  {(Object.keys(REPEAT_LABELS) as RepeatInterval[]).map((r) => (
+                    <PickerItem key={r} value={r}>
+                      {REPEAT_LABELS[r]}
+                    </PickerItem>
+                  ))}
+                </PickerSheet>
+              ) : (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button type="button" variant="secondary" size="sm" className={cn(repeat !== "never" && "bg-brand-soft text-brand-ink hover:bg-brand-soft")}>
+                      <Repeat /> {REPEAT_LABELS[repeat]}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-56 p-2" align="start">
+                    <div className="space-y-1">
+                      {(Object.keys(REPEAT_LABELS) as RepeatInterval[]).map((r) => (
+                        <button key={r} type="button" onClick={() => setRepeat(r)} className={cn("hover:bg-surface block w-full rounded-sm px-2 py-1.5 text-left text-sm", r === repeat && "bg-brand-soft text-brand font-medium")}>
+                          {REPEAT_LABELS[r]}
+                        </button>
+                      ))}
+                    </div>
+                    {repeat !== "never" ? (
+                      <>
+                        <label className="mt-2 flex items-center gap-2 border-t px-2 pt-2 text-xs">
+                          <Checkbox checked={emailReminder} onCheckedChange={(v) => setEmailReminder(Boolean(v))} /> Email everyone the day before
+                        </label>
+                        <p className="text-text-faint mt-2 px-2 text-xs">A copy is posted on each date with the same split. To change later ones, edit the newest copy.</p>
+                      </>
+                    ) : null}
+                  </PopoverContent>
+                </Popover>
+              )}
               <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && void onFile(e.target.files[0])} />
-              <Button type="button" variant="secondary" size="sm" disabled={uploading} onClick={() => fileRef.current?.click()}>
+              <Button type="button" variant="secondary" size="sm" disabled={uploading} onClick={() => fileRef.current?.click()} className="max-sm:h-11">
                 {uploading ? <Loader2 className="animate-spin" /> : <Camera />} {receipt && receipt !== "remove" ? "Replace receipt" : "Add receipt"}
               </Button>
-              <Button type="button" variant="secondary" size="sm" onClick={() => setShowMore((v) => !v)}>
+              <Button type="button" variant="secondary" size="sm" onClick={() => setShowMore((v) => !v)} className="max-sm:h-11">
                 {showMore ? "Fewer options" : "Notes"}
               </Button>
             </div>

@@ -11,7 +11,7 @@ import { currencyDecimals } from "@convex/lib/money";
 import { CategoryIcon, EmptyState, PageHeader, RowSkeleton, Section } from "@/components/common/Misc";
 import { Money } from "@/components/common/Money";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Picker, PickerItem } from "@/components/ui/picker";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { monthLabel } from "@/lib/format";
 import { useFormatMoney, useLastDefined } from "@/lib/hooks";
@@ -128,30 +128,20 @@ export function ChartsPage() {
                 </TabsList>
               </Tabs>
             ) : null}
-            <Select value={String(months)} onValueChange={(v) => setMonths(Number(v))}>
-              <SelectTrigger className="w-32" aria-label="Period">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="3">3 months</SelectItem>
-                <SelectItem value="6">6 months</SelectItem>
-                <SelectItem value="12">12 months</SelectItem>
-                <SelectItem value="24">24 months</SelectItem>
-              </SelectContent>
-            </Select>
+            <Picker value={String(months)} onValueChange={(v) => setMonths(Number(v))} aria-label="Period" className="w-32">
+              <PickerItem value="3">3 months</PickerItem>
+              <PickerItem value="6">6 months</PickerItem>
+              <PickerItem value="12">12 months</PickerItem>
+              <PickerItem value="24">24 months</PickerItem>
+            </Picker>
             {currencies.length > 1 ? (
-              <Select value={cur} onValueChange={setCurrency}>
-                <SelectTrigger className="w-24" aria-label="Currency">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {currencies.map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {c}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Picker value={cur} onValueChange={setCurrency} aria-label="Currency" className="w-24">
+                {currencies.map((c) => (
+                  <PickerItem key={c} value={c}>
+                    {c}
+                  </PickerItem>
+                ))}
+              </Picker>
             ) : null}
           </>
         }

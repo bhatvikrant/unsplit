@@ -11,7 +11,7 @@ import { InstallSection } from "@/components/layout/InstallPrompt";
 import { CurrencyPicker } from "@/components/dialogs/pickers";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Picker, PickerItem } from "@/components/ui/picker";
 import { Switch } from "@/components/ui/switch";
 import { downloadFile, errorMessage } from "@/lib/format";
 import { AVATAR_EDGE, uploadImage } from "@/lib/image";
@@ -100,18 +100,13 @@ export function AccountPage() {
             <CurrencyPicker value={me.defaultCurrency} onChange={(c) => save({ defaultCurrency: c })} />
           </Field>
           <Field label="Time zone" hint={`Your browser reports ${browserTz}.`}>
-            <Select value={me.timeZone ?? browserTz} onValueChange={(v) => save({ timeZone: v })}>
-              <SelectTrigger className="w-full max-w-xs" aria-label="Time zone">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {(TIME_ZONES.length ? TIME_ZONES : [browserTz]).map((tz) => (
-                  <SelectItem key={tz} value={tz}>
-                    {tz}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Picker value={me.timeZone ?? browserTz} onValueChange={(v) => save({ timeZone: v })} aria-label="Time zone" searchable searchPlaceholder="Search time zones" className="w-full max-w-xs">
+              {(TIME_ZONES.length ? TIME_ZONES : [browserTz]).map((tz) => (
+                <PickerItem key={tz} value={tz}>
+                  {tz}
+                </PickerItem>
+              ))}
+            </Picker>
           </Field>
         </div>
       </Section>

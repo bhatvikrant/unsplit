@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@/lib/convex";
 import {
-  Activity, Banknote, Bell, CalendarDays, ChevronDown, ChevronRight, MessageCircle, Pencil, Plus, Receipt, Trash2, UserPlus, UserRound, Users, X,
+  Activity, Banknote, Bell, CalendarDays, CheckIcon, ChevronDown, ChevronRight, MessageCircle, Pencil, Plus, Receipt, Trash2, UserPlus, UserRound, Users, X,
   type LucideIcon,
 } from "lucide-react";
 import { endOfDay, endOfMonth, format, isThisYear, isToday, isYesterday, startOfDay, startOfMonth, startOfToday, startOfWeek, subMonths } from "date-fns";
@@ -12,10 +12,12 @@ import { GroupAvatar, UserAvatar } from "@/components/common/Avatars";
 import { EmptyState, PageHeader, RowSkeleton } from "@/components/common/Misc";
 import { Money } from "@/components/common/Money";
 import { Button } from "@/components/ui/button";
+import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { fromDateInputValue, toDateInputValue } from "@/lib/format";
 import { useLastDefined, useMe } from "@/lib/hooks";
+import { usePhone } from "@/lib/media";
 import { cn } from "@/lib/utils";
 
 type Feed = NonNullable<ReturnType<typeof useQuery<typeof api.activity.feed>>>;
@@ -415,43 +417,73 @@ function Chip({ active, children, ...props }: { active?: boolean; children: Reac
 function DateFilter({ period, custom, onChange }: { period: Period; custom: { from: number; to: number }; onChange: (p: Period, custom?: { from: number; to: number }) => void }) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(custom);
+  const phone = usePhone();
   const active = period !== "any";
-  return (
-    <Popover open={open} onOpenChange={(o) => { if (o) setDraft(custom); setOpen(o); }}>
-      <PopoverTrigger asChild>
-        <Chip active={active} className={cn(active && "bg-brand text-on-brand")} aria-label="Filter by date">
-          <CalendarDays className="size-3.5" />
-          {periodLabel(period, custom)}
-          <ChevronDown className="size-3.5 opacity-70" />
-        </Chip>
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-64 p-2">
-        <ul role="radiogroup" aria-label="Show activity from">
-          {PERIODS.map((p) => (
-            <li key={p.value}>
-              <button
-                type="button"
-                role="radio"
-                aria-checked={period === p.value}
-                className={cn("hover:bg-surface-2 flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-sm", period === p.value && "font-semibold")}
-                onClick={() => { onChange(p.value); setOpen(false); }}
-              >
-                {p.label}
-                {period === p.value ? <span className="bg-brand size-1.5 rounded-full" /> : null}
-              </button>
-            </li>
-          ))}
-        </ul>
-        <div className="border-line mt-1 border-t px-2.5 pt-2.5 pb-1">
-          <div className={cn("mb-1.5 text-sm", period === "custom" && "font-semibold")}>Custom range</div>
-          <div className="grid grid-cols-[2.5rem_1fr] items-center gap-x-2 gap-y-1.5 text-[13px]">
-            <label htmlFor="activity-from" className="text-text-muted">From</label>
-            <Input id="activity-from" type="date" className="bg-surface-2 h-8 min-w-0 rounded-lg px-2 text-[13px] shadow-none" value={toDateInputValue(draft.from)} max={toDateInputValue(draft.to)} onChange={(e) => e.target.value && setDraft((d) => ({ ...d, from: fromDateInputValue(e.target.value, d.from) }))} />
-            <label htmlFor="activity-to" className="text-text-muted">To</label>
-            <Input id="activity-to" type="date" className="bg-surface-2 h-8 min-w-0 rounded-lg px-2 text-[13px] shadow-none" value={toDateInputValue(draft.to)} min={toDateInputValue(draft.from)} onChange={(e) => e.target.value && setDraft((d) => ({ ...d, to: fromDateInputValue(e.target.value, d.to) }))} />
-          </div>
-          <Button size="sm" className="mt-2 w-full" onClick={() => { onChange("custom", draft); setOpen(false); }}>Apply range</Button>
+  const onOpenChange = (o: boolean) => {
+    if (o) setDraft(custom);
+    setOpen(o);
+  };
+  const chip = (
+    <Chip active={active} className={cn(active && "bg-brand text-on-brand", "select-none")} aria-label="Filter by date">
+      <CalendarDays className="size-3.5" />
+      {periodLabel(period, custom)}
+      <ChevronDown className="size-3.5 opacity-70" />
+    </Chip>
+  );
+  // The same radio list and custom range in both: desktop gets a popover, phones a sheet with bigger rows.
+  const body = (
+    <>
+      <ul role="radiogroup" aria-label="Show activity from">
+        {PERIODS.map((p) => (
+          <li key={p.value}>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={period === p.value}
+              className={cn(
+                "flex w-full items-center justify-between text-left select-none",
+                phone ? "border-line active:bg-surface-2 min-h-12 border-b px-4 text-[15px]" : "hover:bg-surface-2 rounded-lg px-2.5 py-2 text-sm",
+                period === p.value && "font-semibold",
+              )}
+              onClick={() => { onChange(p.value); setOpen(false); }}
+            >
+              {p.label}
+              {period === p.value ? phone ? <CheckIcon className="text-brand size-5" strokeWidth={2.5} /> : <span className="bg-brand size-1.5 rounded-full" /> : null}
+            </button>
+          </li>
+        ))}
+      </ul>
+      <div className={cn(phone ? "safe-bottom px-4 pt-3 pb-4" : "border-line mt-1 border-t px-2.5 pt-2.5 pb-1")}>
+        <div className={cn("mb-1.5", phone ? "text-[15px]" : "text-sm", period === "custom" && "font-semibold")}>Custom range</div>
+        <div className={cn("grid grid-cols-[2.5rem_1fr] items-center gap-x-2 gap-y-1.5", phone ? "text-[15px]" : "text-[13px]")}>
+          <label htmlFor="activity-from" className="text-text-muted">From</label>
+          <Input id="activity-from" type="date" className={cn("bg-surface-2 min-w-0 rounded-lg px-2 shadow-none", phone ? "h-11 text-base" : "h-8 text-[13px]")} value={toDateInputValue(draft.from)} max={toDateInputValue(draft.to)} onChange={(e) => e.target.value && setDraft((d) => ({ ...d, from: fromDateInputValue(e.target.value, d.from) }))} />
+          <label htmlFor="activity-to" className="text-text-muted">To</label>
+          <Input id="activity-to" type="date" className={cn("bg-surface-2 min-w-0 rounded-lg px-2 shadow-none", phone ? "h-11 text-base" : "h-8 text-[13px]")} value={toDateInputValue(draft.to)} min={toDateInputValue(draft.from)} onChange={(e) => e.target.value && setDraft((d) => ({ ...d, to: fromDateInputValue(e.target.value, d.to) }))} />
         </div>
+        <Button size={phone ? "lg" : "sm"} className={cn("mt-2 w-full", phone && "h-11")} onClick={() => { onChange("custom", draft); setOpen(false); }}>Apply range</Button>
+      </div>
+    </>
+  );
+  if (phone) {
+    return (
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        <DrawerTrigger asChild>{chip}</DrawerTrigger>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>Show activity from</DrawerTitle>
+          </DrawerHeader>
+          <DrawerDescription className="sr-only">Pick a period, or a custom date range.</DrawerDescription>
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{body}</div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+  return (
+    <Popover open={open} onOpenChange={onOpenChange}>
+      <PopoverTrigger asChild>{chip}</PopoverTrigger>
+      <PopoverContent align="start" className="w-64 p-2">
+        {body}
       </PopoverContent>
     </Popover>
   );
