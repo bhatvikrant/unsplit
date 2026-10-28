@@ -72,6 +72,10 @@ const applyScheme = () => document.documentElement.classList.toggle("dark", sche
 applyScheme();
 scheme.addEventListener("change", applyScheme);
 
+// iOS Safari only applies :active (the pressed look on rows and buttons) once a touchstart
+// listener exists somewhere on the page.
+document.addEventListener("touchstart", () => {}, { passive: true });
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ConvexAuthProvider client={convex}>

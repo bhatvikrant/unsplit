@@ -1,5 +1,6 @@
 import { useConvex, useMutation, useQuery, useRequireOnline } from "@/lib/convex";
 import { ArrowLeft, ArrowRight, BarChart3, Check, Copy, Download, HandCoins, Link2, Plus, Receipt, RefreshCw, Settings, Sigma, Undo2, UserMinus, UserPlus, X } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { toast } from "sonner";
@@ -41,26 +42,38 @@ function useGroup() {
 }
 
 export function GroupNav({ groupId, current }: { groupId: Id<"groups">; current: "expenses" | "totals" | "charts" | "settings" }) {
+  const reduce = useReducedMotion();
   const items = [
     { key: "expenses", to: `/groups/${groupId}`, label: "Expenses", icon: Receipt },
     { key: "totals", to: `/groups/${groupId}/totals`, label: "Totals", icon: Sigma },
     { key: "charts", to: `/groups/${groupId}/charts`, label: "Charts", icon: BarChart3 },
     { key: "settings", to: `/groups/${groupId}/settings`, label: "Settings", icon: Settings },
   ] as const;
+  // On phones the four tabs share the width, labels only, and nothing scrolls: a strip that
+  // overflows by a few pixels pans under every touch. Desktop keeps the icons. The indicator is
+  // one element that slides between tabs (shared layoutId across the page components).
   return (
-    <nav className="no-scrollbar mb-5 flex gap-0.5 overflow-x-auto border-b" aria-label="Group sections">
+    <nav className="mb-5 flex overflow-hidden border-b sm:gap-0.5" aria-label="Group sections">
       {items.map((it) => (
         <Link
           key={it.key}
           to={it.to}
           aria-current={current === it.key ? "page" : undefined}
           className={cn(
-            "relative flex items-center gap-1.5 rounded-t-lg px-3 pt-2 pb-2.5 text-sm font-medium whitespace-nowrap outline-none transition-colors duration-100 focus-visible:ring-[3px] focus-visible:ring-ring",
-            "after:bg-brand after:absolute after:right-2.5 after:bottom-[-1px] after:left-2.5 after:h-0.5 after:rounded-full after:opacity-0 after:transition-opacity after:duration-150",
-            current === it.key ? "text-text after:opacity-100 [&>svg]:text-brand" : "text-text-muted hover:text-text",
+            "relative flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-t-lg px-1 pt-2 pb-2.5 text-sm font-medium whitespace-nowrap outline-none transition-colors duration-100 focus-visible:ring-[3px] focus-visible:ring-ring active:bg-surface-2 coarse:min-h-11 sm:flex-none sm:px-3",
+            current === it.key ? "text-text [&>svg]:text-brand" : "text-text-muted hover:text-text",
           )}
         >
-          <it.icon className="size-4" /> {it.label}
+          <it.icon className="hidden size-4 sm:block" />
+          <span className="truncate">{it.label}</span>
+          {current === it.key ? (
+            <motion.span
+              layoutId="group-nav-indicator"
+              aria-hidden
+              className="bg-brand absolute right-2.5 bottom-[-1px] left-2.5 h-0.5 rounded-full"
+              transition={reduce ? { duration: 0 } : { type: "spring", stiffness: 500, damping: 40 }}
+            />
+          ) : null}
         </Link>
       ))}
     </nav>
@@ -180,7 +193,7 @@ export function GroupPage() {
             {group.debts.length > 0 ? (
               <ul className="space-y-0.5 border-t px-2 py-2 text-[13px]">
                 {group.debts.map((d, i) => (
-                  <li key={i} className="hover:bg-surface-2 flex items-center gap-1.5 rounded-lg px-2 py-1.5 transition-colors duration-100">
+                  <li key={i} className="hover:bg-surface-2 coarse:min-h-11 coarse:py-0 flex items-center gap-1.5 rounded-lg px-2 py-1.5 transition-colors duration-100">
                     <span className={cn("truncate", d.from === me?._id && "font-medium")}>{name(d.from)}</span>
                     <ArrowRight className="text-text-faint size-3.5 shrink-0" />
                     <span className={cn("truncate", d.to === me?._id && "font-medium")}>{name(d.to)}</span>
@@ -188,7 +201,10 @@ export function GroupPage() {
                     {!group.deletedAt ? (
                       <button
                         type="button"
-                        className={cn("ml-1 text-xs font-semibold hover:underline", d.from === me?._id || d.to === me?._id ? "text-brand" : "text-text-faint")}
+                        className={cn(
+                          "active:bg-surface-2 coarse:self-stretch coarse:-mr-1 coarse:px-2 ml-1 rounded-md text-xs font-semibold transition-colors duration-100 hover:underline",
+                          d.from === me?._id || d.to === me?._id ? "text-brand" : "text-text-faint",
+                        )}
                         onClick={() => dialogs.settleUp({ groupId, payerId: d.from as Id<"users">, payeeId: d.to as Id<"users">, amountMinor: d.amountMinor, currency: d.currency })}
                       >
                         {d.from === me?._id ? "Settle" : d.to === me?._id ? "Remind" : "Record"}
@@ -521,7 +537,7 @@ export function GroupSettings() {
               <span className="font-medium">Simplify debts</span>
               <span className="text-text-muted block text-xs">Reshuffles who pays whom so fewer payments settle everyone. Totals never change. Anyone in the group can switch this.</span>
             </span>
-            <Switch checked={group.simplifyDebts} onCheckedChange={(v) => save({ simplifyDebts: v })} disabled={saving} />
+            <Switch size="touch" checked={group.simplifyDebts} onCheckedChange={(v) => save({ simplifyDebts: v })} disabled={saving} />
           </label>
           <div className="border-t p-4">
             <label className="flex items-center justify-between gap-3 text-sm">
@@ -529,7 +545,7 @@ export function GroupSettings() {
                 <span className="font-medium">Default split</span>
                 <span className="text-text-muted block text-xs">New expenses in this group start with this split instead of equal.</span>
               </span>
-              <Switch checked={defaultOn} onCheckedChange={(v) => { setDefaultOn(v); if (!v) void save({ defaultSplit: null }); }} />
+              <Switch size="touch" checked={defaultOn} onCheckedChange={(v) => { setDefaultOn(v); if (!v) void save({ defaultSplit: null }); }} />
             </label>
             {defaultOn && split ? (
               <div className="mt-3 space-y-3">

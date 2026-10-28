@@ -83,7 +83,7 @@ export function ExpenseRow({
     <Link
       to={`/expenses/${item._id}`}
       className={cn(
-        "hover:bg-surface-2 focus-visible:ring-ring flex items-center gap-3 rounded-[10px] px-3 py-2.5 outline-none transition-colors duration-100 focus-visible:ring-[3px]",
+        "hover:bg-surface-2 active:bg-surface-2 focus-visible:ring-ring flex items-center gap-3 rounded-[10px] px-3 py-2.5 outline-none transition-colors duration-100 focus-visible:ring-[3px]",
         item.deletedAt && "opacity-60",
       )}
     >

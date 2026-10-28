@@ -3,6 +3,8 @@
 @import "@fontsource-variable/geist";
 
 @custom-variant dark (&:is(.dark *));
+/* Touch screens: larger hit areas without changing the mouse sizes. */
+@custom-variant coarse (@media (pointer: coarse));
 
 /*
   UnSplit theme.
@@ -246,12 +248,22 @@
   [role="button"] {
     touch-action: manipulation;
   }
-  /* From the home screen: no link preview sheet on a long press. */
-  @media (display-mode: standalone) {
-    a,
-    button {
-      -webkit-touch-callout: none;
-    }
+  /* A long press on a control shows neither a text selection nor the link preview sheet;
+     content (paragraphs, amounts, inputs) stays selectable. */
+  a,
+  button,
+  [role="button"],
+  [role="tab"],
+  nav,
+  label,
+  [data-slot="select-trigger"] {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+  label :is(input, textarea) {
+    user-select: text;
+    -webkit-user-select: text;
   }
   button:not(:disabled),
   [role="button"]:not(:disabled) {
@@ -273,6 +285,14 @@
     *::after {
       animation-duration: 0.01ms !important;
       transition-duration: 0.01ms !important;
+    }
+    /* Bottom sheets (ui/responsive-dialog.tsx): no slide, just a short fade. Same layer and
+       !important as the rule above so it wins against it and against vaul's own stylesheet. */
+    [data-vaul-drawer] {
+      animation: sheet-fade-in 150ms var(--ease) both !important;
+    }
+    [data-vaul-drawer][data-state="closed"] {
+      animation-name: sheet-fade-out !important;
     }
   }
 }
@@ -305,4 +325,31 @@
 
 @utility hero-gradient {
   background: linear-gradient(135deg, var(--hero-from) 0%, var(--hero-mid) 60%, var(--hero-to) 100%);
+}
+
+/*
+  Bottom sheets (ui/responsive-dialog.tsx). vaul animates its own slide and scrim at 500ms; the
+  app's sheets open in 350ms and close in 250ms, like the navigation drawer. Three attributes in
+  each selector so these win over vaul's injected rules whatever the stylesheet order.
+*/
+[data-vaul-drawer][data-vaul-drawer-direction="bottom"][data-state="open"],
+[data-vaul-overlay][data-vaul-snap-points="false"][data-state="open"] {
+  animation-duration: 350ms;
+}
+[data-vaul-drawer][data-vaul-drawer-direction="bottom"][data-state="closed"],
+[data-vaul-overlay][data-vaul-snap-points="false"][data-state="closed"] {
+  animation-duration: 250ms;
+}
+@keyframes sheet-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes sheet-fade-out {
+  to {
+    opacity: 0;
+  }
 }

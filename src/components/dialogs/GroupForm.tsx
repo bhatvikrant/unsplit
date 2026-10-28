@@ -119,7 +119,7 @@ export function GroupFormFields({ form, friends, compact, idPrefix = "g" }: { fo
             <span className="font-medium">Simplify debts</span>
             <span className="text-text-muted block text-xs">Fewer payments to settle everyone up. Can be changed later.</span>
           </span>
-          <Switch checked={simplify} onCheckedChange={setSimplify} />
+          <Switch size="touch" checked={simplify} onCheckedChange={setSimplify} />
         </label>
       ) : null}
     </div>

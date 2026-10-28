@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { createBrowserRouter, Navigate } from "react-router";
+import { createBrowserRouter, Navigate, ScrollRestoration } from "react-router";
 import { RowSkeleton } from "@/components/common/Misc";
 import { AppShell } from "@/components/layout/AppShell";
 import { RedirectIfAuthed, RequireAuth } from "@/components/layout/RequireAuth";
@@ -38,6 +38,8 @@ export const router = createBrowserRouter([
     element: (
       <RequireAuth>
         <AppShell />
+        {/* Back to a long list lands where it was left; a new page starts at the top. */}
+        <ScrollRestoration />
       </RequireAuth>
     ),
     children: [

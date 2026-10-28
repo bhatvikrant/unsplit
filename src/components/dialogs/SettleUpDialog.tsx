@@ -7,7 +7,7 @@ import { minorToDecimalString, parseMoney } from "@convex/lib/money";
 import { UserAvatar } from "@/components/common/Avatars";
 import { Field } from "@/components/common/Misc";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/responsive-dialog";
 import { Input } from "@/components/ui/input";
 import { Picker, PickerItem } from "@/components/ui/picker";
 import { Textarea } from "@/components/ui/textarea";
@@ -118,7 +118,7 @@ export function SettleUpDialog({ options, onClose }: { options: SettleUpOptions;
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" size="full" action={{ label: busy ? "Saving…" : "Record", type: "submit", disabled: busy || !scope || !payerId || !payeeId || payerId === payeeId }}>
         <form onSubmit={submit}>
           <DialogHeader>
             <DialogTitle>Settle up</DialogTitle>

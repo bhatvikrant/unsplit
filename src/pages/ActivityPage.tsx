@@ -404,7 +404,7 @@ function Chip({ active, children, ...props }: { active?: boolean; children: Reac
       aria-pressed={active}
       {...props}
       className={cn(
-        "pressable inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium whitespace-nowrap",
+        "pressable inline-flex h-10 shrink-0 snap-start items-center gap-1.5 rounded-full px-3.5 text-[13px] font-medium whitespace-nowrap",
         active ? "bg-text text-bg" : "bg-surface text-text-muted shadow-card hover:bg-surface-2",
         props.className,
       )}
@@ -526,7 +526,7 @@ export function ActivityPage() {
     <div className="max-w-2xl">
       <PageHeader title="Recent activity" />
 
-      <div className="no-scrollbar -mx-4 mb-4 flex items-center gap-2 overflow-x-auto px-4 sm:mx-0 sm:px-0" role="toolbar" aria-label="Filter activity">
+      <div className="no-scrollbar -mx-4 mb-4 flex snap-x snap-proximity items-center gap-2 overflow-x-auto overscroll-x-contain px-4 sm:mx-0 sm:px-0" role="toolbar" aria-label="Filter activity">
         <DateFilter period={period} custom={custom} onChange={(p, c) => select({ period: p, custom: c })} />
         <span className="bg-line-strong mx-0.5 h-5 w-px shrink-0" aria-hidden />
         {KINDS.map((k) => (

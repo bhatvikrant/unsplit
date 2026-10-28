@@ -2,7 +2,7 @@ import { useQuery } from "@/lib/convex";
 import { useNavigate } from "react-router";
 import { api } from "@convex/_generated/api";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/responsive-dialog";
 import { GroupFormFields, useGroupForm } from "./GroupForm";
 
 export function CreateGroupDialog({ onClose }: { onClose: () => void }) {
@@ -17,7 +17,11 @@ export function CreateGroupDialog({ onClose }: { onClose: () => void }) {
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-md">
+      <DialogContent
+        className="max-h-[90dvh] overflow-y-auto sm:max-w-md"
+        size="full"
+        action={{ label: form.busy ? "Creating…" : "Create", onClick: () => void form.submit(), disabled: !form.canSubmit }}
+      >
         <DialogHeader>
           <DialogTitle>Start a group</DialogTitle>
           <DialogDescription>A place for expenses a set of people share.</DialogDescription>

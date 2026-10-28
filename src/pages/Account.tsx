@@ -201,7 +201,7 @@ export function NotificationSettings() {
                   <span className="font-medium">{p.label}</span>
                   {p.hint ? <span className="text-text-muted block text-xs">{p.hint}</span> : null}
                 </span>
-                <Switch checked={prefs[p.key]} onCheckedChange={(v) => update({ notifPrefs: { ...prefs, [p.key]: v } }).catch((e) => toast.error(errorMessage(e)))} />
+                <Switch size="touch" checked={prefs[p.key]} onCheckedChange={(v) => update({ notifPrefs: { ...prefs, [p.key]: v } }).catch((e) => toast.error(errorMessage(e)))} />
               </label>
             </li>
           ))}
