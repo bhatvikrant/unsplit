@@ -9,7 +9,7 @@ import { Field } from "@/components/common/Misc";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Picker, PickerItem } from "@/components/ui/picker";
 import { Textarea } from "@/components/ui/textarea";
 import { errorMessage, fromDateInputValue, toDateInputValue } from "@/lib/format";
 import { useDefaultCurrency, useMe } from "@/lib/hooks";
@@ -107,20 +107,13 @@ export function SettleUpDialog({ options, onClose }: { options: SettleUpOptions;
   };
 
   const personSelect = (value: string, onChange: (v: string) => void, label: string) => (
-    <Select value={value} onValueChange={onChange}>
-      <SelectTrigger aria-label={label} className="w-full">
-        <SelectValue placeholder={label} />
-      </SelectTrigger>
-      <SelectContent>
-        {people.map((p) => (
-          <SelectItem key={p._id} value={p._id}>
-            <span className="flex items-center gap-2">
-              <UserAvatar user={p} size="xs" /> {p._id === me?._id ? "You" : p.name}
-            </span>
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <Picker value={value} onValueChange={onChange} aria-label={label} placeholder={label} className="w-full">
+      {people.map((p) => (
+        <PickerItem key={p._id} value={p._id} icon={<UserAvatar user={p} size="xs" />}>
+          {p._id === me?._id ? "You" : p.name}
+        </PickerItem>
+      ))}
+    </Picker>
   );
 
   return (
@@ -133,23 +126,18 @@ export function SettleUpDialog({ options, onClose }: { options: SettleUpOptions;
           </DialogHeader>
           <div className="mt-4 space-y-4">
             <Field label="Where" htmlFor="scope">
-              <Select value={scope} onValueChange={(v) => { setScope(v); setAmountTouched(false); }}>
-                <SelectTrigger id="scope" className="w-full">
-                  <SelectValue placeholder="Group or friend" />
-                </SelectTrigger>
-                <SelectContent>
-                  {groups?.map((g) => (
-                    <SelectItem key={g._id} value={`group:${g._id}`}>
-                      {g.name}
-                    </SelectItem>
-                  ))}
-                  {friendsList?.map((f) => (
-                    <SelectItem key={f.user._id} value={`friend:${f.user._id}`}>
-                      {f.user.name} (no group)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Picker value={scope} onValueChange={(v) => { setScope(v); setAmountTouched(false); }} id="scope" placeholder="Group or friend" title="Where" className="w-full">
+                {groups?.map((g) => (
+                  <PickerItem key={g._id} value={`group:${g._id}`}>
+                    {g.name}
+                  </PickerItem>
+                ))}
+                {friendsList?.map((f) => (
+                  <PickerItem key={f.user._id} value={`friend:${f.user._id}`}>
+                    {f.user.name} (no group)
+                  </PickerItem>
+                ))}
+              </Picker>
             </Field>
             <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
               <Field label="Payer">{personSelect(payerId, (v) => { setPayerId(v); setAmountTouched(false); }, "Payer")}</Field>
