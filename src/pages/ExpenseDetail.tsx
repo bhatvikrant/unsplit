@@ -58,11 +58,16 @@ export function ExpenseDetail() {
   const post = async (ev: FormEvent) => {
     ev.preventDefault();
     if (!comment.trim()) return;
+    // The comment shows in the list straight away (optimistic), so clear the box with it rather
+    // than when the server confirms; on a slow connection the text otherwise sits there inviting a
+    // second post. A failure puts it back.
+    const content = comment;
+    setComment("");
     setPosting(true);
     try {
-      await addComment({ expenseId: e._id, content: comment });
-      setComment("");
+      await addComment({ expenseId: e._id, content });
     } catch (err) {
+      setComment(content);
       toast.error(errorMessage(err));
     } finally {
       setPosting(false);
