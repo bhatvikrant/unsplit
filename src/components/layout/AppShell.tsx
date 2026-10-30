@@ -1,7 +1,7 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { Activity, LayoutDashboard, Plus, ReceiptText, UserRound } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { NavLink, Outlet, useLocation, useSearchParams, type NavLinkProps } from "react-router";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
+import { NavLink, Outlet, useLocation, useNavigationType, useSearchParams, type NavLinkProps } from "react-router";
 import { DialogProvider, useDialogs } from "@/components/dialogs/DialogProvider";
 import { CommandPaletteContext } from "@/lib/commandPalette";
 import { takeHandoff } from "@/lib/handoff";
@@ -23,7 +23,7 @@ function Tab({ to, end, children }: { to: string; end?: boolean; children: React
   const onClick: NavLinkProps["onClick"] = (e) => {
     if (!active) return;
     e.preventDefault();
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    document.getElementById("main")?.scrollTo({ top: 0, behavior: "smooth" });
   };
   return (
     <NavLink to={to} end={end} className={tabClass} onClick={onClick}>
@@ -145,23 +145,59 @@ function PageTransition() {
   );
 }
 
+/** Where each history entry was scrolled to, so Back returns to the same place. */
+const scrollPositions = new Map<string, number>();
+
+/**
+ * The content panel is the scroller, not the page (see AppShell), so React Router's
+ * ScrollRestoration, which only knows the window, can't do this: a new page starts at the top,
+ * Back restores where that entry was left. Search-param changes on the same page (filters) keep
+ * the position.
+ */
+function useMainScrollRestoration(main: RefObject<HTMLElement | null>) {
+  const location = useLocation();
+  const navType = useNavigationType();
+  const lastPath = useRef(location.pathname);
+  useEffect(() => {
+    const el = main.current;
+    if (!el) return;
+    const save = () => scrollPositions.set(location.key, el.scrollTop);
+    el.addEventListener("scroll", save, { passive: true });
+    return () => el.removeEventListener("scroll", save);
+  }, [main, location.key]);
+  useLayoutEffect(() => {
+    const el = main.current;
+    if (!el) return;
+    const samePage = lastPath.current === location.pathname;
+    lastPath.current = location.pathname;
+    const saved = scrollPositions.get(location.key);
+    if (navType === "POP" && saved !== undefined) {
+      el.scrollTop = saved;
+      // The page may still be filling in from the cache; try again once it has painted.
+      requestAnimationFrame(() => (el.scrollTop = saved));
+    } else if (!samePage) el.scrollTop = 0;
+  }, [main, location.key, location.pathname, navType]);
+}
+
 export function AppShell() {
+  const main = useRef<HTMLElement>(null);
+  useMainScrollRestoration(main);
   return (
     <DialogProvider>
       <CommandPaletteProvider>
         <ShortcutActions />
-        <div className="flex min-h-dvh">
+        {/* The shell fills the screen and never scrolls; the content panel (main) does. iOS 26
+            draws its own soft blur at the top edge whenever the page itself is scrolled, which a
+            page can't switch off; a page that never scrolls never gets it. Fixed, so the body's
+            safe-area padding doesn't add to its height. The top bar is a plain block at the top,
+            its padding reaching up behind the status bar in solid page colour. */}
+        <div className="fixed inset-0 flex">
           <Sidebar />
-          <div className="min-w-0 flex-1">
-            {/* Pinned to the very top of every page in solid page colour, reaching up behind the
-                status bar: its padding is the status bar's height, and the negative margin takes
-                back the body's own safe-area padding. iOS 26 colours the status bar from a
-                fixed or sticky bar touching the top edge and blurs it when there is none, so the
-                bar has to start at 0, not below the status bar. */}
-            <header className="bg-background sticky top-0 z-20 -mt-[env(safe-area-inset-top)] border-b pt-[env(safe-area-inset-top)]">
+          <div className="flex min-w-0 flex-1 flex-col">
+            <header className="bg-background z-20 shrink-0 border-b pt-[env(safe-area-inset-top)]">
               <TopBar />
             </header>
-            <main className="px-4 pt-4 pb-[calc(var(--tabbar-h)+1.5rem)] sm:px-6 lg:px-8 lg:pt-5 lg:pb-12" id="main">
+            <main ref={main} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pt-4 pb-[calc(var(--tabbar-h)+1.5rem)] sm:px-6 lg:px-8 lg:pt-5 lg:pb-12" id="main">
               <div className="mx-auto w-full max-w-[1040px]">
                 <OfflineBanner />
                 <InstallBanner />
