@@ -15,6 +15,12 @@ import { errorMessage, fromDateInputValue, toDateInputValue } from "@/lib/format
 import { useDefaultCurrency, useMe } from "@/lib/hooks";
 import { CurrencyPicker } from "./pickers";
 
+/**
+ * Everything is optional; whatever is left out is filled in from the balances so the dialog opens
+ * ready to record. `friendId` names the person to settle with, not a scope: the payment lands in
+ * whichever group (or their non-group expenses) holds the biggest balance with them. With nothing
+ * given at all, it starts with the friend you have the biggest balance with.
+ */
 export type SettleUpOptions = { groupId?: Id<"groups">; friendId?: Id<"users">; payerId?: Id<"users">; payeeId?: Id<"users">; amountMinor?: number; currency?: string };
 
 export function SettleUpDialog({ options, onClose }: { options: SettleUpOptions; onClose: () => void }) {
@@ -24,10 +30,38 @@ export function SettleUpDialog({ options, onClose }: { options: SettleUpOptions;
   const friendsList = useQuery(api.friends.list);
   const record = useMutation(api.expenses.recordPayment);
 
-  const [scope, setScope] = useState<string>(options.groupId ? `group:${options.groupId}` : options.friendId ? `friend:${options.friendId}` : "");
+  const [scope, setScope] = useState<string>(options.groupId ? `group:${options.groupId}` : "");
   const [kind, scopeId] = scope.split(":");
   const group = useQuery(api.groups.get, kind === "group" ? { groupId: scopeId as Id<"groups"> } : "skip");
   const friend = useQuery(api.friends.get, kind === "friend" ? { friendId: scopeId as Id<"users"> } : "skip");
+
+  // The person this payment is with: named by the caller, or the other side of a named payer and
+  // recipient, or else the friend with the biggest balance (amounts compared across currencies as is).
+  const counterpartId = useMemo(() => {
+    if (options.friendId) return options.friendId;
+    const named = [options.payerId, options.payeeId].find((id) => id && id !== me?._id);
+    if (named) return named;
+    let best: Id<"users"> | undefined;
+    let bestAbs = 0;
+    for (const f of friendsList ?? [])
+      for (const v of Object.values(f.balances))
+        if (Math.abs(v) > bestAbs) [best, bestAbs] = [f.user._id, Math.abs(v)];
+    return best;
+  }, [options.friendId, options.payerId, options.payeeId, me, friendsList]);
+  const counterpart = useQuery(api.friends.get, !scope && counterpartId ? { friendId: counterpartId } : "skip");
+
+  // No group given: settle where the balance with that person is, in the direction asked for if a
+  // payer and recipient were named. Nothing owed anywhere: their non-group expenses.
+  useLayoutEffect(() => {
+    if (scope || !me || !counterpart || counterpart.user._id !== counterpartId) return;
+    const sign = options.payerId === me._id ? -1 : options.payeeId === me._id ? 1 : 0;
+    let best: Id<"groups"> | null | undefined;
+    let bestAbs = 0;
+    for (const b of counterpart.breakdown)
+      for (const v of Object.values(b.balances))
+        if (v !== 0 && (sign === 0 || Math.sign(v) === sign) && Math.abs(v) > bestAbs) [best, bestAbs] = [b.groupId, Math.abs(v)];
+    setScope(best ? `group:${best}` : `friend:${counterpartId}`);
+  }, [scope, me, counterpart, counterpartId, options.payerId, options.payeeId]);
 
   const people = useMemo(() => {
     if (kind === "group" && group) return group.members;
@@ -45,16 +79,34 @@ export function SettleUpDialog({ options, onClose }: { options: SettleUpOptions;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Defaults fill in before paint, so the selects never show their placeholders for a frame.
-  // Default payer/payee: me and the first person I owe (or who owes me).
+  // Non-group balances with the friend in a friend scope; positive = they owe me.
+  const pairBalances = useMemo(() => (kind === "friend" && friend ? friend.breakdown.find((b) => b.groupId === null)?.balances ?? {} : {}), [kind, friend]);
+
+  // Defaults fill in before paint, so the selects never show their placeholders for a frame. Kept
+  // when both people are in this scope; otherwise the biggest debt involving me (with the
+  // counterpart first), else any debt in the group, else me paying the counterpart.
   useLayoutEffect(() => {
     if (!me || people.length === 0) return;
-    if (!payerId && !payeeId) {
-      setPayerId(me._id);
-      const other = people.find((p) => p._id !== me._id);
-      if (other) setPayeeId(other._id);
-    } else if (!payerId) setPayerId(me._id);
-  }, [me, people, payerId, payeeId]);
+    const inScope = (id: string) => people.some((p) => p._id === id);
+    if (inScope(payerId) && inScope(payeeId) && payerId !== payeeId) return;
+    let pair: [string, string] | undefined;
+    if (kind === "group" && group) {
+      const debts = [...group.debts].sort((a, b) => b.amountMinor - a.amountMinor);
+      const mine = debts.filter((d) => d.from === me._id || d.to === me._id);
+      const d = mine.find((d) => d.from === counterpartId || d.to === counterpartId) ?? mine[0] ?? debts[0];
+      if (d) pair = [d.from, d.to];
+    } else if (kind === "friend" && friend) {
+      const v = Object.values(pairBalances).find((v) => v !== 0) ?? 0;
+      pair = v > 0 ? [friend.user._id, me._id] : [me._id, friend.user._id];
+    }
+    if (!pair) {
+      const other = people.find((p) => p._id === counterpartId) ?? people.find((p) => p._id !== me._id);
+      if (!other) return;
+      pair = [me._id, other._id];
+    }
+    setPayerId(pair[0]);
+    setPayeeId(pair[1]);
+  }, [me, people, payerId, payeeId, kind, group, friend, pairBalances, counterpartId]);
 
   // Suggested amount: what payer owes payee in this scope, in the chosen currency.
   const owedByPayer = useMemo(() => {
@@ -63,19 +115,19 @@ export function SettleUpDialog({ options, onClose }: { options: SettleUpOptions;
     if (kind === "group" && group) {
       for (const d of group.debts) if (d.from === payerId && d.to === payeeId) out[d.currency] = (out[d.currency] ?? 0) + d.amountMinor;
     } else if (kind === "friend" && friend && me) {
-      for (const [cur, v] of Object.entries(friend.total)) {
-        // friend.total positive = friend owes me
+      // Only the non-group balance: a payment here never touches what's owed inside a group.
+      for (const [cur, v] of Object.entries(pairBalances)) {
         if (payerId === me._id && payeeId === friend.user._id && v < 0) out[cur] = -v;
         if (payerId === friend.user._id && payeeId === me._id && v > 0) out[cur] = v;
       }
     }
     return out;
-  }, [kind, group, friend, me, payerId, payeeId]);
+  }, [kind, group, friend, me, payerId, payeeId, pairBalances]);
 
   useLayoutEffect(() => {
     if (amountTouched) return;
     const currencies = Object.keys(owedByPayer);
-    if (currencies.length === 0) return;
+    if (currencies.length === 0) return setAmount("");
     const cur = currencies.includes(currency) ? currency : currencies[0];
     setCurrency(cur);
     setAmount(minorToDecimalString(owedByPayer[cur], cur));
@@ -126,7 +178,7 @@ export function SettleUpDialog({ options, onClose }: { options: SettleUpOptions;
           </DialogHeader>
           <div className="mt-4 space-y-4">
             <Field label="Where" htmlFor="scope">
-              <Picker value={scope} onValueChange={(v) => { setScope(v); setAmountTouched(false); }} id="scope" placeholder="Group or friend" title="Where" className="w-full">
+              <Picker value={scope} onValueChange={(v) => { setScope(v); setPayerId(""); setPayeeId(""); setAmountTouched(false); }} id="scope" placeholder="Group or friend" title="Where" className="w-full">
                 {groups?.map((g) => (
                   <PickerItem key={g._id} value={`group:${g._id}`}>
                     {g.name}

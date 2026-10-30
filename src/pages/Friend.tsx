@@ -12,7 +12,6 @@ import { BalanceSummary } from "@/components/common/Money";
 import { useDialogs } from "@/components/dialogs/DialogProvider";
 import { Button } from "@/components/ui/button";
 import { downloadFile, errorMessage, formatDate, toCsv } from "@/lib/format";
-import { useMe } from "@/lib/hooks";
 import { useConfirm } from "@/components/common/ConfirmDialog";
 import { usePagedExpenses } from "@/lib/usePagedExpenses";
 import { NotFound } from "./NotFound";
@@ -20,7 +19,6 @@ import { NotFound } from "./NotFound";
 export function FriendPage() {
   const { id } = useParams();
   const friendId = id as Id<"users">;
-  const me = useMe();
   const friend = useQuery(api.friends.get, id ? { friendId } : "skip");
   const remind = useAction(api.friends.remind);
   const remove = useMutation(api.friends.remove);
@@ -40,7 +38,6 @@ export function FriendPage() {
 
   const theyOwe = Object.values(friend.total).some((v) => v > 0);
   const settled = Object.values(friend.total).every((v) => v === 0);
-  const nonGroupOnly = friend.breakdown.every((b) => b.groupId === null);
 
   return (
     <div>
@@ -59,7 +56,7 @@ export function FriendPage() {
             <Button onClick={() => dialogs.addExpense({ friendId })}>
               <Plus /> Add expense
             </Button>
-            <Button variant="secondary" onClick={() => dialogs.settleUp(nonGroupOnly ? { friendId, payerId: theyOwe ? friendId : me?._id, payeeId: theyOwe ? me?._id : friendId } : { payerId: theyOwe ? friendId : me?._id, payeeId: theyOwe ? me?._id : friendId })}>
+            <Button variant="secondary" onClick={() => dialogs.settleUp({ friendId })}>
               <HandCoins /> Settle up
             </Button>
           </>

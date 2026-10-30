@@ -119,7 +119,7 @@ export function Dashboard() {
               {owe.length === 0 ? <p className="text-text-faint px-4 py-7 text-center text-sm">You don't owe anyone.</p> : (
                 <ul className="p-1">
                   {owe.map((f) => (
-                    <FriendLine key={f.user._id} user={f.user} balances={Object.fromEntries(Object.entries(f.balances).filter(([, v]) => v < 0))} action="Settle up" onAction={() => dialogs.settleUp({ payerId: me?._id, payeeId: f.user._id })} />
+                    <FriendLine key={f.user._id} user={f.user} balances={Object.fromEntries(Object.entries(f.balances).filter(([, v]) => v < 0))} action="Settle up" onAction={() => dialogs.settleUp({ friendId: f.user._id, payerId: me?._id, payeeId: f.user._id })} />
                   ))}
                 </ul>
               )}
@@ -128,7 +128,7 @@ export function Dashboard() {
               {owed.length === 0 ? <p className="text-text-faint px-4 py-7 text-center text-sm">Nobody owes you.</p> : (
                 <ul className="p-1">
                   {owed.map((f) => (
-                    <FriendLine key={f.user._id} user={f.user} balances={Object.fromEntries(Object.entries(f.balances).filter(([, v]) => v > 0))} action="Settle up" onAction={() => dialogs.settleUp({ payerId: f.user._id, payeeId: me?._id })} />
+                    <FriendLine key={f.user._id} user={f.user} balances={Object.fromEntries(Object.entries(f.balances).filter(([, v]) => v > 0))} action="Settle up" onAction={() => dialogs.settleUp({ friendId: f.user._id, payerId: f.user._id, payeeId: me?._id })} />
                   ))}
                 </ul>
               )}
