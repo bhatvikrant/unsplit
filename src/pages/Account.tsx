@@ -1,4 +1,5 @@
 import { useAuthActions } from "@convex-dev/auth/react";
+import { DisplayDiagnostics } from "@/components/common/DisplayDiagnostics";
 import { useConvex, useMutation, useRequireOnline } from "@/lib/convex";
 import { BarChart3, ChevronRight, Download, LogOut, Mail, Repeat, Trash2, type LucideIcon } from "lucide-react";
 import { useLayoutEffect, useRef, useState } from "react";
@@ -169,6 +170,11 @@ export function AccountPage() {
           >
             Delete account
           </Button>
+        </div>
+      </Section>
+      <Section title="Display diagnostics">
+        <div className="p-4">
+          <DisplayDiagnostics />
         </div>
       </Section>
     </div>
