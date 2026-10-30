@@ -153,8 +153,9 @@ export function AppShell() {
         <div className="flex min-h-dvh">
           <Sidebar />
           <div className="min-w-0 flex-1">
-            {/* Pinned to the top of every page: a solid strip in the page colour, no blur. */}
-            <header className="bg-background sticky top-0 z-20 border-b">
+            {/* Pinned to the top of every page, just below the status bar (the strip behind the
+                status bar is body::before in src/index.css): solid page colour, no blur. */}
+            <header className="bg-background sticky top-[env(safe-area-inset-top)] z-20 border-b">
               <TopBar />
             </header>
             <main className="px-4 pt-4 pb-[calc(var(--tabbar-h)+1.5rem)] sm:px-6 lg:px-8 lg:pt-5 lg:pb-12" id="main">
