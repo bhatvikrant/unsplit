@@ -25,7 +25,7 @@ export function CurrencyPicker({ value, onChange, className, compact }: { value:
         searchable
         searchPlaceholder="Search currencies"
         trigger={
-          <Button type="button" variant="outline" role="combobox" aria-expanded={open} aria-label={`Currency: ${value}`} className={cn("h-11 justify-between font-medium select-none", compact ? "w-[84px] px-2" : "w-[120px]", className)}>
+          <Button type="button" variant="outline" role="combobox" aria-expanded={open} aria-label={`Currency: ${value}`} className={cn("shadow-ring h-11 justify-between font-medium select-none", compact ? "w-[84px] px-2" : "w-[120px]", className)}>
             <span className="tnum">{compact ? value : `${currencySymbol(value)} ${value}`}</span>
             <ChevronsUpDown className="text-text-faint size-3.5" />
           </Button>
@@ -43,7 +43,7 @@ export function CurrencyPicker({ value, onChange, className, compact }: { value:
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button type="button" variant="outline" role="combobox" aria-expanded={open} aria-label={`Currency: ${value}`} className={cn("justify-between font-medium", compact ? "w-[84px] px-2" : "w-[120px]", className)}>
+        <Button type="button" variant="outline" role="combobox" aria-expanded={open} aria-label={`Currency: ${value}`} className={cn("shadow-ring justify-between font-medium", compact ? "w-[84px] px-2" : "w-[120px]", className)}>
           <span className="tnum">{compact ? value : `${currencySymbol(value)} ${value}`}</span>
           <ChevronsUpDown className="text-text-faint size-3.5" />
         </Button>

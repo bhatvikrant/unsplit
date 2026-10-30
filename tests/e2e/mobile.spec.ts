@@ -31,7 +31,7 @@ test("mobile: settle up from home opens prefilled and records from the sheet's t
   await signUp(page, "Mo Settle", `${uniq("ms")}@unsplit.test`);
   await page.getByRole("button", { name: "Start a group" }).click();
   const create = page.getByRole("dialog");
-  await create.getByPlaceholder(/Lisbon trip/).fill("Vibes");
+  await create.getByPlaceholder(/Lisbon trip/).fill("Vibes with the Noida 37 running buddies and friends");
   await create.getByRole("button", { name: "Add a person" }).click();
   await create.getByLabel("Name", { exact: true }).first().fill("Beena");
   await create.getByRole("button", { name: /^Create( group)?$/ }).click();
@@ -48,7 +48,19 @@ test("mobile: settle up from home opens prefilled and records from the sheet's t
   await expect(dialog.getByLabel("Payer")).toContainText("Beena");
   await expect(dialog.getByLabel("Recipient")).toContainText("You");
   await expect(dialog.getByLabel("Amount", { exact: true })).toHaveValue("40.00");
+  // Picking the person already on the other side swaps the two instead of leaving Beena -> Beena.
+  await dialog.getByLabel("Recipient").click();
+  await page.getByRole("option", { name: "Beena" }).click();
+  await expect(dialog.getByLabel("Payer")).toContainText("You");
+  await expect(dialog.getByLabel("Recipient")).toContainText("Beena");
+  await dialog.getByLabel("Payer").click();
+  await page.getByRole("option", { name: "Beena" }).click();
+  await expect(dialog.getByLabel("Payer")).toContainText("Beena");
+  await expect(dialog.getByLabel("Recipient")).toContainText("You");
+  await expect(dialog.getByLabel("Amount", { exact: true })).toHaveValue("40.00");
   await dialog.getByRole("button", { name: "Record", exact: true }).click();
   await expect(dialog).toBeHidden();
   await expect(page.getByText("Nobody owes you.")).toBeVisible();
+  // A long group name truncates instead of widening Home past the screen.
+  expect(await page.evaluate(() => window.innerWidth)).toBe(await page.evaluate(() => document.documentElement.clientWidth));
 });

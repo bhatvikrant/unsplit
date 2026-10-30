@@ -145,7 +145,7 @@ export function GroupPage() {
       />
       <GroupNav groupId={groupId} current="expenses" />
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="min-w-0">
           <ExpenseList
             items={items}
@@ -299,7 +299,7 @@ export function GroupTotals() {
         Object.entries(totals.totals).map(([currency, t]) => (
           <div key={currency} className="mb-6">
             {Object.keys(totals.totals).length > 1 ? <h2 className="text-text-muted mb-2 text-sm font-medium">{currency}</h2> : null}
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {metrics.map(([k, label]) => (
                 <div key={k} className="card p-4">
                   <div className="text-text-muted text-xs font-medium">{label}</div>

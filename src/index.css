@@ -262,6 +262,15 @@
     -webkit-user-select: none;
     -webkit-touch-callout: none;
   }
+  /* iOS Safari draws date and time fields as its own control: it drops the ring, ignores the
+     height and centres the value, so the field reads as loose text. Give them back to our styles. */
+  input:is([type="date"], [type="time"], [type="datetime-local"]) {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  input::-webkit-date-and-time-value {
+    text-align: left;
+  }
   label :is(input, textarea) {
     user-select: text;
     -webkit-user-select: text;

@@ -158,6 +158,19 @@ export function SettleUpDialog({ options, onClose }: { options: SettleUpOptions;
     }
   };
 
+  // Picking the person already on the other side swaps the two, so payer and recipient can never
+  // end up the same person (which left Record disabled with no way forward).
+  const pickPayer = (v: string) => {
+    if (v === payeeId) setPayeeId(payerId);
+    setPayerId(v);
+    setAmountTouched(false);
+  };
+  const pickPayee = (v: string) => {
+    if (v === payerId) setPayerId(payeeId);
+    setPayeeId(v);
+    setAmountTouched(false);
+  };
+
   const personSelect = (value: string, onChange: (v: string) => void, label: string) => (
     <Picker value={value} onValueChange={onChange} aria-label={label} placeholder={label} className="w-full">
       {people.map((p) => (
@@ -191,23 +204,23 @@ export function SettleUpDialog({ options, onClose }: { options: SettleUpOptions;
                 ))}
               </Picker>
             </Field>
-            <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
-              <Field label="Payer">{personSelect(payerId, (v) => { setPayerId(v); setAmountTouched(false); }, "Payer")}</Field>
+            <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-end gap-2">
+              <Field label="Payer">{personSelect(payerId, pickPayer, "Payer")}</Field>
               <ArrowRight className="text-text-faint mb-2.5 size-4" />
-              <Field label="Recipient">{personSelect(payeeId, (v) => { setPayeeId(v); setAmountTouched(false); }, "Recipient")}</Field>
+              <Field label="Recipient">{personSelect(payeeId, pickPayee, "Recipient")}</Field>
             </div>
             <Field label="Amount" htmlFor="amount" error={error} hint={Object.keys(owedByPayer).length > 1 ? "There are balances in more than one currency. Record one payment per currency." : undefined}>
               <div className="flex gap-2">
                 <CurrencyPicker value={currency} compact onChange={(c) => { setCurrency(c); setAmountTouched(true); }} />
-                <Input id="amount" inputMode="decimal" required className="tnum text-lg font-semibold" value={amount} onChange={(e) => { setAmount(e.target.value); setAmountTouched(true); }} />
+                <Input id="amount" inputMode="decimal" required className="tnum text-lg font-semibold max-sm:h-11" value={amount} onChange={(e) => { setAmount(e.target.value); setAmountTouched(true); }} />
               </div>
             </Field>
             <div className="grid grid-cols-2 gap-2">
               <Field label="Date" htmlFor="pdate">
-                <Input id="pdate" type="date" value={toDateInputValue(date)} onChange={(e) => e.target.value && setDate(fromDateInputValue(e.target.value, date))} />
+                <Input id="pdate" type="date" className="max-sm:h-11" value={toDateInputValue(date)} onChange={(e) => e.target.value && setDate(fromDateInputValue(e.target.value, date))} />
               </Field>
               <Field label="Note" htmlFor="pnotes">
-                <Textarea id="pnotes" rows={1} placeholder="Optional" value={notes} onChange={(e) => setNotes(e.target.value)} />
+                <Textarea id="pnotes" rows={1} className="min-h-9 max-sm:min-h-11" placeholder="Optional" value={notes} onChange={(e) => setNotes(e.target.value)} />
               </Field>
             </div>
           </div>

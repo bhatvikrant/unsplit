@@ -40,7 +40,7 @@ export function Landing() {
             </div>
           </motion.div>
         </section>
-        <section className="grid gap-4 pb-24 sm:grid-cols-2 lg:grid-cols-3">
+        <section className="grid grid-cols-1 gap-4 pb-24 sm:grid-cols-2 lg:grid-cols-3">
           {features.map((f, i) => (
             <motion.div
               key={f.title}

@@ -154,7 +154,7 @@ export function ExpenseDetail() {
       ) : null}
 
       <Section title={e.isPayment ? "Payment" : `Split ${SPLIT_LABEL[e.splitMethod] ?? ""}`}>
-        <div className="grid gap-0 divide-y sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+        <div className="grid grid-cols-1 gap-0 divide-y sm:grid-cols-2 sm:divide-x sm:divide-y-0">
           <div className="p-3">
             <div className="text-text-faint mb-2 text-xs font-medium">{e.isPayment ? "Paid by" : payers.length > 1 ? "Paid by" : "Paid by"}</div>
             <ul className="space-y-2">
