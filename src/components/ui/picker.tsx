@@ -327,7 +327,7 @@ function Picker({ value = "", onValueChange, placeholder, disabled, title, searc
         >
           <span className="flex min-w-0 flex-1 items-center gap-2 truncate">
             {chosen?.icon}
-            <span className="flex min-w-0 items-center gap-2 truncate [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-text-muted">{chosen ? chosen.label : placeholder}</span>
+            <span className="min-w-0 truncate [&>svg]:mr-2 [&>svg]:inline [&>svg]:size-4 [&>svg]:align-[-2px] [&>svg]:text-text-muted">{chosen ? chosen.label : placeholder}</span>
           </span>
           <ChevronDownIcon className="text-text-faint size-4 shrink-0" />
         </button>
