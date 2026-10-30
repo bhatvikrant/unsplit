@@ -237,9 +237,9 @@
     padding-top: env(safe-area-inset-top);
   }
   /* A solid strip in the page colour behind the status bar, fixed in place. iOS 26 runs installed
-     web apps under the status bar whatever the status-bar-style says, and blurs whatever scrolls
-     beneath it; with this strip there is nothing beneath it to blur. Zero height elsewhere. Below
-     dialog and sheet overlays (z-50) so they still dim it. */
+     web apps under the status bar whatever the status-bar-style says; inside the app the top bar
+     itself reaches up behind it (AppShell), and this covers the pages without one (landing,
+     login, join). Zero height elsewhere. Below dialog and sheet overlays (z-50) so they still dim it. */
   body::before {
     content: "";
     position: fixed;
