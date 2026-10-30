@@ -215,14 +215,12 @@ export function SettleUpDialog({ options, onClose }: { options: SettleUpOptions;
                 <Input id="amount" inputMode="decimal" required className="tnum text-lg font-semibold max-sm:h-11" value={amount} onChange={(e) => { setAmount(e.target.value); setAmountTouched(true); }} />
               </div>
             </Field>
-            <div className="grid grid-cols-2 gap-2">
-              <Field label="Date" htmlFor="pdate">
-                <Input id="pdate" type="date" className="max-sm:h-11" value={toDateInputValue(date)} onChange={(e) => e.target.value && setDate(fromDateInputValue(e.target.value, date))} />
-              </Field>
-              <Field label="Note" htmlFor="pnotes">
-                <Textarea id="pnotes" rows={1} className="min-h-9 max-sm:min-h-11" placeholder="Optional" value={notes} onChange={(e) => setNotes(e.target.value)} />
-              </Field>
-            </div>
+            <Field label="Date" htmlFor="pdate">
+              <Input id="pdate" type="date" className="max-sm:h-11" value={toDateInputValue(date)} onChange={(e) => e.target.value && setDate(fromDateInputValue(e.target.value, date))} />
+            </Field>
+            <Field label="Note" htmlFor="pnotes">
+              <Textarea id="pnotes" rows={2} placeholder="Optional" value={notes} onChange={(e) => setNotes(e.target.value)} />
+            </Field>
           </div>
           <DialogFooter className="mt-5">
             <Button type="button" variant="ghost" onClick={onClose}>
