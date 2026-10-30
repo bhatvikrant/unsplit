@@ -168,7 +168,7 @@ export function ChartsPage() {
           </Section>
 
           <Section title="By category">
-            <div className="grid items-center gap-4 p-4 sm:grid-cols-[auto_1fr]">
+            <div className="grid grid-cols-1 items-center gap-4 p-4 sm:grid-cols-[auto_1fr]">
               <GroupDonut data={byParent} total={total} currency={cur!} />
               <ul className="space-y-1.5 text-sm" aria-label="Share of spending by category group">
                 {byParent.map((g) => (

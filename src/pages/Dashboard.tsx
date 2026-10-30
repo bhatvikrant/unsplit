@@ -75,7 +75,7 @@ export function Dashboard() {
         <>
           <section className="hero-gradient shadow-hero relative mb-4 overflow-hidden rounded-[18px] px-6 py-5 text-white">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(600px_200px_at_85%_-20%,rgba(255,255,255,0.22),transparent_60%)]" />
-            <div className="relative grid gap-5 sm:grid-cols-[1.4fr_1fr_1fr] sm:items-end lg:grid-cols-[1.4fr_1fr_1fr_auto]">
+            <div className="relative grid grid-cols-1 gap-5 sm:grid-cols-[1.4fr_1fr_1fr] sm:items-end lg:grid-cols-[1.4fr_1fr_1fr_auto]">
               <div>
                 <div className="text-[12.5px] font-medium text-white/80">
                   {nets.length === 0 ? "Overall" : nets.every((n) => n.net < 0) ? "Overall, you owe" : nets.every((n) => n.net > 0) ? "Overall, you're owed" : "Overall"}
@@ -114,12 +114,12 @@ export function Dashboard() {
             </div>
           </section>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <Section title="You owe" actions={<span className="text-text-faint text-xs">{owe.length === 0 ? "" : `${owe.length} ${owe.length === 1 ? "person" : "people"}`}</span>}>
               {owe.length === 0 ? <p className="text-text-faint px-4 py-7 text-center text-sm">You don't owe anyone.</p> : (
                 <ul className="p-1">
                   {owe.map((f) => (
-                    <FriendLine key={f.user._id} user={f.user} balances={Object.fromEntries(Object.entries(f.balances).filter(([, v]) => v < 0))} action="Settle up" onAction={() => dialogs.settleUp({ payerId: me?._id, payeeId: f.user._id })} />
+                    <FriendLine key={f.user._id} user={f.user} balances={Object.fromEntries(Object.entries(f.balances).filter(([, v]) => v < 0))} action="Settle up" onAction={() => dialogs.settleUp({ friendId: f.user._id, payerId: me?._id, payeeId: f.user._id })} />
                   ))}
                 </ul>
               )}
@@ -128,7 +128,7 @@ export function Dashboard() {
               {owed.length === 0 ? <p className="text-text-faint px-4 py-7 text-center text-sm">Nobody owes you.</p> : (
                 <ul className="p-1">
                   {owed.map((f) => (
-                    <FriendLine key={f.user._id} user={f.user} balances={Object.fromEntries(Object.entries(f.balances).filter(([, v]) => v > 0))} action="Settle up" onAction={() => dialogs.settleUp({ payerId: f.user._id, payeeId: me?._id })} />
+                    <FriendLine key={f.user._id} user={f.user} balances={Object.fromEntries(Object.entries(f.balances).filter(([, v]) => v > 0))} action="Settle up" onAction={() => dialogs.settleUp({ friendId: f.user._id, payerId: f.user._id, payeeId: me?._id })} />
                   ))}
                 </ul>
               )}
@@ -136,7 +136,7 @@ export function Dashboard() {
           </div>
 
           {/* Phones and tablets have no sidebar: the groups and friends live here, on the Home tab. */}
-          <div className="mt-4 grid gap-4 md:grid-cols-2 lg:hidden">
+          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:hidden">
             <Section title="Groups" actions={<AddButton label="Create a group" onClick={() => dialogs.createGroup()} />}>
               {groups === undefined ? (
                 <p className="text-text-faint px-4 py-7 text-center text-sm">Loading…</p>
