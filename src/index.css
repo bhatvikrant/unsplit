@@ -236,20 +236,6 @@
        under its status bar (viewport-fit=cover); zero where the status bar is its own strip. */
     padding-top: env(safe-area-inset-top);
   }
-  /* A solid strip in the page colour behind the status bar, fixed in place. iOS 26 runs installed
-     web apps under the status bar whatever the status-bar-style says; inside the app the top bar
-     itself reaches up behind it (AppShell), and this covers the pages without one (landing,
-     login, join). Zero height elsewhere. Below dialog and sheet overlays (z-50) so they still dim it. */
-  body::before {
-    content: "";
-    position: fixed;
-    inset-inline: 0;
-    top: 0;
-    z-index: 40;
-    height: env(safe-area-inset-top);
-    background: var(--background);
-    pointer-events: none;
-  }
   /* The phone tab bar: 3.5rem of tabs + its top border + the home-indicator area of an installed iPhone app. */
   :root {
     --tabbar-h: calc(3.5rem + 1px + env(safe-area-inset-bottom));
