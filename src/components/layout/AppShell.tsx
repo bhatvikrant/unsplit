@@ -153,12 +153,8 @@ export function AppShell() {
         <div className="flex min-h-dvh">
           <Sidebar />
           <div className="min-w-0 flex-1">
-            {/* Pinned to the very top of every page in solid page colour, reaching up behind the
-                status bar: its padding is the status bar's height, and the negative margin takes
-                back the body's own safe-area padding. iOS 26 colours the status bar from a
-                fixed or sticky bar touching the top edge and blurs it when there is none, so the
-                bar has to start at 0, not below the status bar. */}
-            <header className="bg-background sticky top-0 z-20 -mt-[env(safe-area-inset-top)] border-b pt-[env(safe-area-inset-top)]">
+            {/* Pinned to the top of every page: a solid strip in the page colour, no blur. */}
+            <header className="bg-background sticky top-0 z-20 border-b">
               <TopBar />
             </header>
             <main className="px-4 pt-4 pb-[calc(var(--tabbar-h)+1.5rem)] sm:px-6 lg:px-8 lg:pt-5 lg:pb-12" id="main">
