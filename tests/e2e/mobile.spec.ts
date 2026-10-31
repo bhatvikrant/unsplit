@@ -6,9 +6,8 @@ test("mobile: menu sheet, add expense, no horizontal overflow", async ({ page })
   await page.getByRole("button", { name: "Open menu" }).click();
   await expect(page.getByRole("link", { name: "All expenses" })).toBeVisible();
   await page.keyboard.press("Escape");
-  // The content scrolls inside its panel; the page itself never does, and the top bar stays put.
-  await page.evaluate(() => document.getElementById("main")!.scrollTo(0, 600));
-  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+  // The top bar stays pinned while the page scrolls.
+  await page.evaluate(() => window.scrollTo(0, 600));
   const top = await page.getByRole("button", { name: "Open menu" }).evaluate((el) => el.getBoundingClientRect().top);
   expect(top).toBeGreaterThanOrEqual(0);
   expect(top).toBeLessThan(60);

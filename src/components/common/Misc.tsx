@@ -47,7 +47,7 @@ export function PageNav({ back, trailing, className }: { back: BackLink; trailin
 
 /**
  * Every page's title block: a large title on phones, with a back row above it on a pushed page
- * (`back` given). Search lives in the pinned top bar (src/components/layout/TopBar.tsx).
+ * (`back` given). Search lives in the sticky top bar (src/components/layout/TopBar.tsx).
  */
 export function PageHeader({ title, subtitle, leading, actions, back, className }: { title: ReactNode; subtitle?: ReactNode; leading?: ReactNode; actions?: ReactNode; back?: BackLink; className?: string }) {
   return (
