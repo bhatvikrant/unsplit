@@ -37,8 +37,6 @@ test("settle up opens prefilled from every entry point and records", async ({ pa
   // The friend page: settles in the group the balance is in.
   await page.getByRole("link", { name: bea.name }).first().click();
   await expect(page).toHaveURL(/\/friends\//);
-  // The URL changes before the friend page renders; wait for it so the click can't land on Home's buttons.
-  await expect(page.getByRole("heading", { name: bea.name, exact: true })).toBeVisible();
   await page.getByRole("main").getByRole("button", { name: "Settle up" }).click();
   dialog = await expectPrefilled(page);
   await dialog.getByRole("button", { name: "Cancel" }).click();

@@ -11,8 +11,8 @@ import { SidebarContent } from "./Sidebar";
 import { UserMenu } from "./UserMenu";
 
 /**
- * The bar at the top of every page (AppShell keeps it there while the content scrolls): a solid
- * strip in the page colour, never translucent or blurred.
+ * The bar pinned to the top of every page (AppShell gives it `sticky`): a solid strip in the
+ * page colour, never translucent or blurred.
  *
  * Phones and tablets: menu button (opens the navigation sheet), the brand, and a search button.
  * Desktop: a search box that opens the command palette, plus the two actions people reach for
