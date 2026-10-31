@@ -105,7 +105,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
 export function Sidebar() {
   return (
-    <aside className="sticky top-0 hidden h-dvh w-[248px] shrink-0 flex-col gap-4 overflow-y-auto border-r px-3 pt-3 pb-3 lg:flex">
+    <aside className="hidden h-full w-[248px] shrink-0 flex-col gap-4 overflow-y-auto border-r px-3 pt-3 pb-3 lg:flex">
       <Link to="/dashboard" className="mb-1 inline-flex w-fit rounded-lg px-2 py-1.5 outline-none focus-visible:ring-[3px] focus-visible:ring-ring" aria-label="UnSplit home">
         <Logo />
       </Link>
