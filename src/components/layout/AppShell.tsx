@@ -1,5 +1,5 @@
 import { motion, useReducedMotion } from "framer-motion";
-import { Activity, LayoutDashboard, Plus, ReceiptText, UserRound } from "lucide-react";
+import { Activity, LayoutDashboard, Plus, ReceiptText, CircleEllipsis } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { NavLink, Outlet, useLocation, useSearchParams, type NavLinkProps } from "react-router";
 import { DialogProvider, useDialogs } from "@/components/dialogs/DialogProvider";
@@ -59,7 +59,7 @@ function MobileTabBar() {
           <ReceiptText className="size-5" /> Expenses
         </Tab>
         <Tab to="/account">
-          <UserRound className="size-5" /> Account
+          <CircleEllipsis className="size-5" /> More
         </Tab>
       </div>
     </nav>

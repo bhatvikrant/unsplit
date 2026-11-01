@@ -200,7 +200,7 @@ test("friend page, non-group expense, account settings", async ({ page }) => {
   await saveExpense(page, ex);
   await expect(page.getByText(/40\.00/).first()).toBeVisible();
 
-  await page.goto("/account");
+  await page.goto("/account/profile");
   await page.getByLabel("Name").fill("Alex T.");
   await page.getByLabel("Name").blur();
   // saved on blur: the account switcher at the foot of the sidebar shows the new name

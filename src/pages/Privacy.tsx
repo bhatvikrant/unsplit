@@ -49,7 +49,7 @@ export function Privacy() {
 
         <h2 className="text-text mt-10 text-lg font-semibold">Email</h2>
         <p className="mt-2">
-          You can turn every notification email off in Account → Notifications. Invites are sent only when you or a friend ask for them. Reminders are rate-limited so nobody can flood you.
+          You can turn every notification email off in More → Email notifications. Invites are sent only when you or a friend ask for them. Reminders are rate-limited so nobody can flood you.
         </p>
 
         <h2 className="text-text mt-10 text-lg font-semibold">Your data is yours</h2>
@@ -64,7 +64,7 @@ export function Privacy() {
 
         <h2 className="text-text mt-10 text-lg font-semibold">Contact</h2>
         <p className="mt-2">
-          You can delete your account yourself from Account → Danger zone. For anything else about your data, contact whoever runs this UnSplit instance.
+          You can delete your account yourself from More → Delete account. For anything else about your data, contact whoever runs this UnSplit instance.
         </p>
       </main>
     </div>

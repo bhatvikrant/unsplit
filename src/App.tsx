@@ -3,7 +3,7 @@ import { createBrowserRouter, Navigate, ScrollRestoration } from "react-router";
 import { RowSkeleton } from "@/components/common/Misc";
 import { AppShell } from "@/components/layout/AppShell";
 import { RedirectIfAuthed, RequireAuth } from "@/components/layout/RequireAuth";
-import { AccountPage, NotificationSettings } from "@/pages/Account";
+import { AccountPage, BackupSettings, NotificationSettings, PreferencesSettings, ProfileSettings } from "@/pages/Account";
 import { ActivityPage } from "@/pages/ActivityPage";
 import { Login } from "@/pages/Auth";
 import { Dashboard } from "@/pages/Dashboard";
@@ -55,7 +55,10 @@ export const router = createBrowserRouter([
       { path: "/friends/:id", element: <FriendPage /> },
       { path: "/charts", element: charts },
       { path: "/account", element: <AccountPage /> },
+      { path: "/account/profile", element: <ProfileSettings /> },
+      { path: "/account/preferences", element: <PreferencesSettings /> },
       { path: "/account/notifications", element: <NotificationSettings /> },
+      { path: "/account/backup", element: <BackupSettings /> },
       { path: "/trash", element: <TrashPage /> },
       { path: "*", element: <NotFound /> },
     ],

@@ -19,7 +19,10 @@ const PAGES = [
   { to: "/charts", label: "Spending charts", icon: BarChart3, keywords: "stats totals category" },
   { to: "/expenses/recurring", label: "Recurring expenses", icon: Repeat, keywords: "repeat subscription monthly" },
   { to: "/trash", label: "Deleted items", icon: Trash2, keywords: "trash restore" },
-  { to: "/account", label: "Account settings", icon: Settings, keywords: "profile currency name" },
+  { to: "/account", label: "More & settings", icon: Settings, keywords: "account profile currency name version log out" },
+  { to: "/account/profile", label: "Profile", icon: Settings, keywords: "name photo avatar account" },
+  { to: "/account/preferences", label: "Preferences", icon: Settings, keywords: "default currency time zone" },
+  { to: "/account/backup", label: "Backup & export", icon: Settings, keywords: "download json data" },
 ];
 
 /** Case-insensitive substring match against every text, or everything when there is no query. */
