@@ -1,6 +1,5 @@
-import { Share, Smartphone, SquarePlus, X, type LucideIcon } from "lucide-react";
+import { Share, SquarePlus, X, type LucideIcon } from "lucide-react";
 import { useState, type ComponentProps, type ReactNode } from "react";
-import { Section } from "@/components/common/Misc";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/responsive-dialog";
 import { useInstall, useInstallNudge } from "@/lib/install";
@@ -72,30 +71,5 @@ export function InstallBanner() {
         <X />
       </Button>
     </div>
-  );
-}
-
-/** Account page card: install from here, or see that it already is. */
-export function InstallSection() {
-  const { installed, canPrompt, manual } = useInstall();
-  // Browsers with no install route (desktop Safari, Firefox) get nothing to click.
-  if (!installed && !canPrompt && !manual) return null;
-  return (
-    <Section title="App">
-      <div className="flex items-center gap-3 p-4">
-        <Smartphone className="text-text-faint size-5 shrink-0" />
-        <div className="min-w-0 flex-1">
-          <div className="text-text text-sm font-medium">{installed ? "Installed on this device" : "Install app"}</div>
-          <div className="text-text-muted text-xs">
-            {installed ? "UnSplit runs from your home screen and keeps working offline." : "Opens full screen from your home screen and works offline."}
-          </div>
-        </div>
-        {!installed ? (
-          <InstallButton variant="outline" size="sm">
-            {manual ? "How?" : "Install"}
-          </InstallButton>
-        ) : null}
-      </div>
-    </Section>
   );
 }

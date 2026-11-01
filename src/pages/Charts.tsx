@@ -116,7 +116,7 @@ export function ChartsPage() {
   return (
     <div className="max-w-3xl">
       <PageHeader
-        back={groupId ? { to: "/dashboard", label: "Home" } : { to: "/account", label: "Account" }}
+        back={groupId ? { to: "/dashboard", label: "Home" } : { to: "/account", label: "More" }}
         title={group ? `${group.name}: charts` : "Spending charts"}
         subtitle={mode === "mine" ? "Your share of expenses, by month and by category." : "Everything the group spent, by month and by category."}
         actions={
