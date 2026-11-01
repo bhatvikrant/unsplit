@@ -10,8 +10,22 @@ import { Drawer as DrawerPrimitive } from "vaul"
  * Phone-only by convention; desktop keeps Dialog / Popover / Select. Kept to shadcn's shape so a
  * ResponsiveDialog can be built on it.
  */
-function Drawer({ ...props }: React.ComponentProps<typeof DrawerPrimitive.Root>) {
-  return <DrawerPrimitive.Root data-slot="drawer" {...props} />
+/**
+ * True inside an open vaul sheet. A sheet opened from inside another one must be vaul's NestedRoot:
+ * a plain Root unlocks the page behind when it closes (vaul restores `body` as if it were the last
+ * sheet), so the outer sheet is left over a scrollable page, and on iOS the next drag on a sheet
+ * scrolls the page instead of moving the sheet.
+ */
+const InDrawerContext = React.createContext(false)
+
+function Drawer({ children, ...props }: React.ComponentProps<typeof DrawerPrimitive.Root>) {
+  const nested = React.use(InDrawerContext)
+  const Root = nested ? DrawerPrimitive.NestedRoot : DrawerPrimitive.Root
+  return (
+    <Root data-slot="drawer" {...props}>
+      <InDrawerContext value={true}>{children}</InDrawerContext>
+    </Root>
+  )
 }
 
 function DrawerTrigger({ ...props }: React.ComponentProps<typeof DrawerPrimitive.Trigger>) {
@@ -63,4 +77,4 @@ function DrawerDescription({ className, ...props }: React.ComponentProps<typeof 
   return <DrawerPrimitive.Description data-slot="drawer-description" className={cn("text-text-muted text-sm", className)} {...props} />
 }
 
-export { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerOverlay, DrawerPortal, DrawerTitle, DrawerTrigger }
+export { InDrawerContext, Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerOverlay, DrawerPortal, DrawerTitle, DrawerTrigger }

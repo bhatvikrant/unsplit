@@ -2,6 +2,7 @@ import * as React from "react"
 import { Drawer } from "vaul"
 import { cn } from "@/lib/utils"
 import { sheetBottomClass, useVisibleViewport } from "@/lib/visible-viewport"
+import { InDrawerContext } from "@/components/ui/drawer"
 
 import * as Desktop from "@/components/ui/dialog"
 
@@ -64,6 +65,7 @@ function Dialog({
   children,
 }: React.ComponentProps<typeof Desktop.Dialog>) {
   const phone = useIsPhoneDialog()
+  const nested = React.use(InDrawerContext)
   // Every caller unmounts the dialog as soon as it hears `onOpenChange(false)`, which would cut the
   // sheet's slide-out short. So on phones the sheet is held open until vaul's exit animation has
   // run, and the caller is told then.
@@ -82,7 +84,8 @@ function Dialog({
   }
   return (
     <PhoneContext value={true}>
-      <Drawer.Root
+      <SheetRoot
+        nested={nested}
         open={open === undefined ? undefined : open && !closing}
         defaultOpen={defaultOpen}
         modal={modal}
@@ -101,10 +104,15 @@ function Dialog({
           }, EXIT_MS)
         }}
       >
-        {children}
-      </Drawer.Root>
+        <InDrawerContext value={true}>{children}</InDrawerContext>
+      </SheetRoot>
     </PhoneContext>
   )
+}
+
+/** vaul's Root, or NestedRoot when this sheet opens from inside another (see InDrawerContext). */
+function SheetRoot({ nested, ...props }: React.ComponentProps<typeof Drawer.Root> & { nested: boolean }) {
+  return nested ? <Drawer.NestedRoot {...props} /> : <Drawer.Root {...props} />
 }
 
 function DialogTrigger(props: React.ComponentProps<typeof Desktop.DialogTrigger>) {
