@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { cn } from "@/lib/utils"
+import { sheetBottomClass, useVisibleViewport } from "@/lib/visible-viewport"
 import { Drawer as DrawerPrimitive } from "vaul"
 
 /**
@@ -30,12 +31,13 @@ function DrawerOverlay({ className, ...props }: React.ComponentProps<typeof Draw
 }
 
 function DrawerContent({ className, children, ...props }: React.ComponentProps<typeof DrawerPrimitive.Content>) {
+  useVisibleViewport()
   return (
     <DrawerPortal>
       <DrawerOverlay />
       <DrawerPrimitive.Content
         data-slot="drawer-content"
-        className={cn("bg-surface shadow-pop fixed inset-x-0 bottom-0 z-50 flex max-h-[88dvh] flex-col rounded-t-2xl outline-none", className)}
+        className={cn("bg-surface shadow-pop fixed inset-x-0 z-50 flex h-auto! max-h-[calc(var(--sheet-vv-h,100dvh)*0.88)] flex-col rounded-t-2xl outline-none", sheetBottomClass, className)}
         {...props}
       >
         <div aria-hidden className="bg-line-strong mx-auto mt-2 h-1.5 w-10 shrink-0 rounded-full" />

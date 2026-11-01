@@ -1,6 +1,7 @@
 import * as React from "react"
 import { Drawer } from "vaul"
 import { cn } from "@/lib/utils"
+import { sheetBottomClass, useVisibleViewport } from "@/lib/visible-viewport"
 
 import * as Desktop from "@/components/ui/dialog"
 
@@ -133,25 +134,6 @@ function DialogOverlay({ className, ...props }: React.ComponentProps<typeof Desk
   )
 }
 
-/**
- * vaul fits the sheet above the keyboard on a visualViewport "resize": it sets an inline height
- * from the sheet's top as getBoundingClientRect reports it, which includes the slide-in
- * transform. A field that autofocuses (the amount in Add expense) brings the keyboard up while the
- * sheet is still sliding, so that first measurement can be mid-slide and leave the sheet a few
- * lines tall; re-measuring then only confirms the short height, since the sheet now really is that
- * short. So once the slide has ended, with the keyboard still up, give the sheet its full height
- * back and ask vaul to measure again.
- */
-function fitAboveKeyboardAfterSlide(e: React.AnimationEvent<HTMLDivElement>) {
-  const el = e.currentTarget
-  const viewport = window.visualViewport
-  if (e.target !== el || !viewport || el.getAttribute("data-state") !== "open") return
-  if (viewport.height >= window.innerHeight - 60) return
-  el.style.height = ""
-  el.style.bottom = ""
-  viewport.dispatchEvent(new Event("resize"))
-}
-
 function DialogContent({
   className,
   children,
@@ -173,6 +155,7 @@ function DialogContent({
 }) {
   const phone = React.use(PhoneContext)
   const config = React.useMemo<SheetConfig>(() => ({ action, cancelLabel }), [action, cancelLabel])
+  useVisibleViewport(phone)
   if (!phone) {
     return (
       <Desktop.DialogContent className={className} showCloseButton={showCloseButton} {...props}>
@@ -185,11 +168,12 @@ function DialogContent({
       <DialogOverlay />
       <Drawer.Content
         data-slot="sheet-content"
-        onAnimationEnd={fitAboveKeyboardAfterSlide}
         data-size={size}
         className={cn(
-          "safe-bottom fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-2xl bg-surface shadow-pop outline-none",
-          size === "full" ? "h-[94dvh]" : "max-h-[94dvh]"
+          "safe-bottom fixed inset-x-0 z-50 flex flex-col rounded-t-2xl bg-surface shadow-pop outline-none",
+          sheetBottomClass,
+          // Sized from the visible height (see lib/visible-viewport), which shrinks with the keyboard up.
+          size === "full" ? "h-[calc(var(--sheet-vv-h,100dvh)*0.94)]!" : "h-auto! max-h-[calc(var(--sheet-vv-h,100dvh)*0.94)]"
         )}
         {...props}
       >
