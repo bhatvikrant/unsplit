@@ -201,7 +201,7 @@ function PickerSheet({ open, onOpenChange, trigger, title, value = "", onValueCh
       }}
     >
       <DrawerTrigger asChild>{trigger}</DrawerTrigger>
-      <DrawerContent className={cn(searchable && "h-[88dvh]")}>
+      <DrawerContent className={cn(searchable && "h-[calc(var(--sheet-vv-h,100dvh)*0.88)]!")}>
         <DrawerHeader>
           <DrawerTitle>{title}</DrawerTitle>
           {closeOnSelect ? null : (
