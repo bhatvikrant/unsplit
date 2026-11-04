@@ -7,7 +7,7 @@
  */
 import { currencyDecimals, minorToDecimalString } from "@convex/lib/money";
 
-export const UNMONEY_URL = ((import.meta.env.VITE_UNMONEY_URL as string | undefined) || "https://unmoney.vercel.app").replace(/\/$/, "");
+export const UNMONEY_URL = ((import.meta.env.VITE_UNMONEY_URL as string | undefined) || "https://unmoney.vikrantbhat.com").replace(/\/$/, "");
 
 /** Amounts are decimal strings in major units ("1234.50"); the date is an ISO day. */
 export type HandoffItem = { ref: string; name: string; amount: string };

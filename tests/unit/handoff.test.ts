@@ -33,7 +33,7 @@ describe("amounts and the trip back", () => {
   });
   it("sends the expense id and the entries back to UnMoney in the hash", () => {
     const url = returnUrl(good, "k57abc");
-    expect(url.startsWith("https://unmoney.vercel.app/unsplit/return#unsplit=")).toBe(true);
+    expect(url.startsWith("https://unmoney.vikrantbhat.com/unsplit/return#unsplit=")).toBe(true);
     const payload = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(url.split("#unsplit=")[1].replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0))));
     expect(payload).toEqual({ v: 1, expenseId: "k57abc", refs: ["t1", "t2"] });
   });
