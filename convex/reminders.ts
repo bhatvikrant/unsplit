@@ -33,7 +33,8 @@ export const recurringReminders = internalAction({
     const list = await ctx.runQuery(internal.reminders.upcoming, {});
     for (const r of list) {
       const amount = formatMoney(r.amountMinor, r.currency);
-      await sendEmail({
+      await sendEmail(ctx, {
+        kind: "activity",
         to: r.to,
         subject: `Heads up: "${r.description}" (${amount}) posts tomorrow`,
         text: `Hi ${r.name}, the recurring expense "${r.description}" for ${amount} will be added tomorrow.`,

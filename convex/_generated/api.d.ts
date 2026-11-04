@@ -12,6 +12,7 @@ import type * as activity from "../activity.js";
 import type * as auth from "../auth.js";
 import type * as comments from "../comments.js";
 import type * as crons from "../crons.js";
+import type * as emails from "../emails.js";
 import type * as expenses from "../expenses.js";
 import type * as exports from "../exports.js";
 import type * as files from "../files.js";
@@ -50,6 +51,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   comments: typeof comments;
   crons: typeof crons;
+  emails: typeof emails;
   expenses: typeof expenses;
   exports: typeof exports;
   files: typeof files;
@@ -106,4 +108,5 @@ export declare const internal: FilterApi<
 
 export declare const components: {
   rateLimiter: import("@convex-dev/rate-limiter/_generated/component.js").ComponentApi<"rateLimiter">;
+  resend: import("@convex-dev/resend/_generated/component.js").ComponentApi<"resend">;
 };

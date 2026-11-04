@@ -4,7 +4,7 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { assertFriends, ensureFriendship, friendshipOf, friendshipsOf, otherOf, pairKeyOf, requireUser, requireUserId } from "./lib/access";
 import { computeUserBalances, mapToRecord } from "./lib/balances";
-import { escapeHtml, layout, sendEmail, siteUrl } from "./lib/email";
+import { escapeHtml, layout, sendEmail, siteUrl, type SendResult } from "./lib/email";
 import { enforceLimit } from "./lib/rateLimit";
 import { formatMoney } from "./lib/money";
 import { findOrCreateUser, isValidEmail, normalizeEmail, publicUser, publicUsers } from "./lib/users";
@@ -107,12 +107,13 @@ export const sendInviteEmail = internalAction({
     const c = await ctx.runQuery(internal.friends.inviteContext, args);
     if (!c) return;
     const link = `${siteUrl()}/login`;
-    await sendEmail({
+    await sendEmail(ctx, {
+      kind: "essential",
       to: c.toEmail,
       subject: `${c.byName} wants to share expenses with you on UnSplit`,
       text: `${c.byName} added you on UnSplit, a free app for splitting shared costs. Sign in with Google using this email address to see what you share: ${link}`,
       html: layout(
-        `${escapeHtml(c.byName)} added you on UnSplit`,
+        `${c.byName} added you on UnSplit`,
         `<p>${escapeHtml(c.byName)} added you as a friend on UnSplit, a free app for splitting shared costs.</p><p>Sign in with Google using <strong>${escapeHtml(c.toEmail)}</strong> and everything they've shared with you will already be there.</p>`,
         link,
         "Join UnSplit",
@@ -141,6 +142,12 @@ export const logReminder = internalMutation({
   },
 });
 
+const REMIND_FAILURE: Record<Exclude<SendResult, "queued">, string> = {
+  not_configured: "Email isn't set up on this deployment yet",
+  suppressed: "Emails to this address bounce, so UnSplit stopped sending to it",
+  over_budget: "UnSplit has sent all the email it can today. Try again tomorrow.",
+};
+
 /** Email a friend what they owe you. */
 export const remind = action({
   args: { friendId: v.id("users") },
@@ -154,14 +161,16 @@ export const remind = action({
     await enforceLimit(ctx, "reminderToFriend", `${c.meId}:${friendId}`, "Reminder");
     const amounts = owed.map(([cur, v]) => formatMoney(v, cur)).join(" and ");
     const link = `${siteUrl()}/friends/${c.meId}`;
-    const ok = await sendEmail({
+    const result = await sendEmail(ctx, {
+      kind: "essential",
       to: c.friendEmail,
       subject: `Reminder: you owe ${c.meName} ${amounts}`,
       text: `Hi ${c.friendName}, a friendly reminder that you owe ${c.meName} ${amounts} on UnSplit. ${link}`,
-      html: layout(`A friendly reminder from ${escapeHtml(c.meName)}`, `<p>You currently owe ${escapeHtml(c.meName)} <strong>${escapeHtml(amounts)}</strong>.</p><p>Open UnSplit to see the details and settle up.</p>`, link, "View balance"),
+      html: layout(`A friendly reminder from ${c.meName}`, `<p>You currently owe ${escapeHtml(c.meName)} <strong>${escapeHtml(amounts)}</strong>.</p><p>Open UnSplit to see the details and settle up.</p>`, link, "View balance"),
     });
+    const ok = result === "queued";
     await ctx.runMutation(internal.friends.logReminder, { actorId: c.meId, friendId, sent: ok });
-    return { sent: ok, reason: ok ? undefined : "Email failed to send" };
+    return { sent: ok, reason: ok ? undefined : REMIND_FAILURE[result] };
   },
 });
 

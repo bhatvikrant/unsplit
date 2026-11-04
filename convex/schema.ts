@@ -248,6 +248,12 @@ export default defineSchema({
     .index("by_token", ["token"])
     .index("by_email", ["email"]),
 
+  /** Addresses we stop emailing: hard bounces and spam complaints (convex/emails.ts). */
+  emailSuppressions: defineTable({
+    email: v.string(),
+    reason: v.string(),
+  }).index("by_email", ["email"]),
+
   /** One row per offline-outbox op that created something; see lib/idempotency.ts. */
   idempotencyKeys: defineTable({
     userId: v.id("users"),
