@@ -150,10 +150,26 @@ on Vercel. The live instance is https://unsplit.vercel.app (Convex project
    until you publish it). Then:
    `npm run env:prod -- set AUTH_GOOGLE_ID <client id>` and
    `npm run env:prod -- set AUTH_GOOGLE_SECRET <client secret>`.
-7. **Email**: in [Resend](https://resend.com) add and verify your sending domain
-   (DNS records it shows you), create an API key, then
-   `npm run env:prod -- set RESEND_API_KEY re_...` and
-   `npm run env:prod -- set EMAIL_FROM "UnSplit <noreply@yourdomain.com>"`.
+7. **Email** (Resend, through the `@convex-dev/resend` component; see `convex/lib/email.ts`):
+   - In [Resend](https://resend.com) add the sending domain (production uses
+     `unsplit.vikrantbhat.com`, region Tokyo) and add the DKIM TXT and the two
+     `rsend`/`send` CNAMEs it shows, *DNS only* in Cloudflare, plus a `_dmarc` TXT
+     if the zone has none. Then *Verify DNS records*.
+   - Create a *Sending access* API key limited to that domain, copy it, and
+     `pbpaste | npm run env:prod -- set RESEND_API_KEY` (stdin keeps it out of
+     your shell history). `npm run env:prod -- set EMAIL_FROM "UnSplit <notifications@unsplit.vikrantbhat.com>"`.
+   - Add a Resend webhook to `https://<CONVEX_SITE_URL>/resend-webhook` with the
+     `email.sent`, `delivered`, `delivery_delayed`, `bounced`, `complained` and
+     `failed` events, copy its signing secret and
+     `pbpaste | npm run env:prod -- set RESEND_WEBHOOK_SECRET`. Hard bounces and
+     spam complaints then land in the `emailSuppressions` table and those
+     addresses are never emailed again.
+   - Resend's free plan sends 100 emails a day. The app stops itself at
+     `EMAIL_DAILY_CAP` (default 95) and gives activity emails only three quarters
+     of that, so invites and reminders still go out. Raise it after upgrading.
+   - `RESEND_TEST_MODE=1` on a deployment limits it to Resend's test addresses
+     (`delivered@resend.dev` and friends). Without `RESEND_API_KEY`, emails are
+     only logged.
 8. **Receipt scanning**: create a key in the [Claude Console](https://console.anthropic.com/settings/keys)
    and `npm run env:prod -- set ANTHROPIC_API_KEY sk-ant-...`.
 9. **Builds on Vercel's side**: the Vercel project is connected to
@@ -167,8 +183,11 @@ on Vercel. The live instance is https://unsplit.vercel.app (Convex project
 Each `npm run env:prod -- set` takes effect immediately; no redeploy needed. The
 helper scripts read the project from `.env.cloud.local`, so `.env.local` can stay
 on the anonymous local deployment.
-Custom domain: add it in Vercel (Project → Domains), then rerun step 5 with the
-new `SITE_URL`.
+Custom domain: production runs on `https://unsplit.vikrantbhat.com` (a *DNS
+only* CNAME in Cloudflare to the target Vercel shows under Project → Domains),
+and `unsplit.vercel.app` 308-redirects there, keeping the path. After changing
+the domain, `npm run env:prod -- set SITE_URL https://<new domain>`, or Google
+sign-in sends people back to the old one.
 
 ### Preview deployments
 

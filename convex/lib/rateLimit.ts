@@ -5,10 +5,21 @@
  * so the client toast says when to try again.
  */
 import { ConvexError } from "convex/values";
-import { HOUR, MINUTE, RateLimiter } from "@convex-dev/rate-limiter";
+import { DAY, HOUR, MINUTE, RateLimiter } from "@convex-dev/rate-limiter";
 import { components } from "../_generated/api";
 
+/**
+ * How many emails the whole app may send a day. Resend's free plan stops at 100 a day, so the
+ * default leaves a little headroom; set EMAIL_DAILY_CAP higher after upgrading. Activity emails
+ * (expense and group updates) get three quarters of it, so invites and reminders always fit.
+ */
+const EMAIL_DAILY_CAP = Math.max(1, Number(process.env.EMAIL_DAILY_CAP) || 95);
+const ACTIVITY_EMAIL_DAILY_CAP = Math.max(1, Math.floor(EMAIL_DAILY_CAP * 0.75));
+
 export const rateLimiter = new RateLimiter(components.rateLimiter, {
+  // App-wide email budgets (no key), refilling steadily over a day. See lib/email.ts.
+  emailDaily: { kind: "token bucket", rate: EMAIL_DAILY_CAP, period: DAY, capacity: EMAIL_DAILY_CAP },
+  activityEmailDaily: { kind: "token bucket", rate: ACTIVITY_EMAIL_DAILY_CAP, period: DAY, capacity: ACTIVITY_EMAIL_DAILY_CAP },
   // Invite emails per sender (friend adds + group member adds).
   inviteEmail: { kind: "token bucket", rate: 30, period: HOUR, capacity: 10 },
   // Reminder emails per sender.

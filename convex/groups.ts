@@ -354,12 +354,13 @@ export const sendGroupInviteEmail = internalAction({
     const c = await ctx.runQuery(internal.groups.groupInviteContext, args);
     if (!c) return;
     const link = `${siteUrl()}/join/${c.code}?email=${encodeURIComponent(c.toEmail)}`;
-    await sendEmail({
+    await sendEmail(ctx, {
+      kind: "essential",
       to: c.toEmail,
       subject: `${c.byName} added you to "${c.groupName}" on UnSplit`,
       text: `${c.byName} added you to the group "${c.groupName}" on UnSplit, a free app for splitting shared costs. Sign up with this email to see it: ${link}`,
       html: layout(
-        `You're in "${escapeHtml(c.groupName)}"`,
+        `You're in "${c.groupName}"`,
         `<p>${escapeHtml(c.byName)} added you to the group <strong>${escapeHtml(c.groupName)}</strong> on UnSplit, a free app for splitting shared costs.</p><p>Sign up with <strong>${escapeHtml(c.toEmail)}</strong> to see the expenses and balances.</p>`,
         link,
         "Open the group",

@@ -126,7 +126,7 @@ export const sendForActivity = internalAction({
     }
     for (const r of c.recipients) {
       if (!r.prefs[prefKey]) continue;
-      await sendEmail({ to: r.email, subject, text: subject, html: layout(subject, body, link, "Open in UnSplit") });
+      await sendEmail(ctx, { kind: "activity", to: r.email, subject, text: `${subject}\n\n${link}`, html: layout(subject, body, link, "Open in UnSplit") });
     }
   },
 });
