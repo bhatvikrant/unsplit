@@ -1,5 +1,13 @@
 {
   "buildCommand": "npx convex deploy -y --cmd 'npm run build' && node scripts/convex-preview-env.mjs",
+  "redirects": [
+    {
+      "source": "/((?!sw\\.js$).*)",
+      "has": [{ "type": "host", "value": "unsplit.vercel.app" }],
+      "destination": "https://unsplit.vikrantbhat.com/$1",
+      "permanent": true
+    }
+  ],
   "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
   "headers": [
     {
