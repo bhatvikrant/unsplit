@@ -7,7 +7,7 @@
  *   owedMinor  what a person's share of the cost is
  *   net        paid - owed. Positive = others owe them. Negative = they owe.
  */
-import { allocate, sumMinor } from "./money";
+import { allocate, formatMoney, sumMinor } from "./money";
 
 export type SplitMethod =
   | "equal"
@@ -48,11 +48,25 @@ export type Share = { userId: string; paidMinor: number; owedMinor: number };
 
 export class SplitError extends Error {
   field?: string;
-  constructor(message: string, field?: string) {
+  /** For "doesn't add up" errors: what was entered and the gap (total - entered) in minor units. */
+  gap?: { subject: string; minor: number };
+  constructor(message: string, field?: string, gap?: { subject: string; minor: number }) {
     super(message);
     this.name = "SplitError";
     this.field = field;
+    this.gap = gap;
   }
+}
+
+function gapError(subject: string, gapMinor: number, field: string): SplitError {
+  return new SplitError(`${subject} don't add up to the total`, field, { subject, minor: gapMinor });
+}
+
+/** The error in words, with any gap shown as money ("Amounts are ₹1,236.00 short of the total"). */
+export function splitErrorMessage(e: SplitError, currency: string): string {
+  if (!e.gap) return e.message;
+  const { subject, minor } = e.gap;
+  return `${subject} are ${formatMoney(Math.abs(minor), currency)} ${minor > 0 ? "short of" : "over"} the total`;
 }
 
 function keysOf(obj: Record<string, number>): string[] {
@@ -80,10 +94,7 @@ export function computeOwed(totalMinor: number, spec: SplitSpec): Record<string,
       }
       const sum = sumMinor(ids.map((id) => spec.amounts[id]));
       if (sum !== totalMinor) {
-        throw new SplitError(
-          `Amounts add up to a different total (off by ${totalMinor - sum})`,
-          "amounts",
-        );
+        throw gapError("Amounts", totalMinor - sum, "amounts");
       }
       return { ...spec.amounts };
     }
@@ -150,7 +161,7 @@ export function computeOwed(totalMinor: number, spec: SplitSpec): Record<string,
       const itemsTotal = sumMinor(items.map((it) => it.amountMinor));
       const expected = itemsTotal + taxMinor + tipMinor - discountMinor;
       if (expected !== totalMinor) {
-        throw new SplitError(`Items, tax and tip add up to a different total (off by ${totalMinor - expected})`, "amount");
+        throw gapError("Items, tax and tip", totalMinor - expected, "amount");
       }
       const subtotal: Record<string, number> = {};
       for (const it of items) {
@@ -178,7 +189,7 @@ export function buildShares(totalMinor: number, payers: Payer[], spec: SplitSpec
   }
   const paidSum = sumMinor(payers.map((p) => p.paidMinor));
   if (paidSum !== totalMinor) {
-    throw new SplitError(`Payments add up to a different total (off by ${totalMinor - paidSum})`, "payers");
+    throw gapError("Payments", totalMinor - paidSum, "payers");
   }
   const byUser = new Map<string, Share>();
   const get = (id: string) => {

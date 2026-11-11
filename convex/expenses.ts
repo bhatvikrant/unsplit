@@ -9,7 +9,7 @@ import { logActivity } from "./lib/activity";
 import { isCategory } from "./lib/categories";
 import { CURRENCY_CODES } from "./lib/currencies";
 import { nextOccurrence } from "./lib/recurring";
-import { buildShares, pairwiseDebts, SplitError, type Share, type SplitSpec } from "./lib/split";
+import { buildShares, pairwiseDebts, SplitError, splitErrorMessage, type Share, type SplitSpec } from "./lib/split";
 import { publicUser, publicUsers, type PublicUser } from "./lib/users";
 import { idempotent } from "./lib/idempotency";
 import { repeatInterval, splitSpec } from "./schema";
@@ -41,14 +41,14 @@ function validateCommon(args: { description: string; amountMinor: number; curren
   return { description, currency, category: isCategory(args.category) ? args.category : "general" };
 }
 
-function sharesOrThrow(total: number, payers: { userId: Id<"users">; paidMinor: number }[], spec: SplitSpec, allowed: Id<"users">[]): Share[] {
+function sharesOrThrow(total: number, currency: string, payers: { userId: Id<"users">; paidMinor: number }[], spec: SplitSpec, allowed: Id<"users">[]): Share[] {
   const allowedSet = new Set<string>(allowed);
   try {
     const shares = buildShares(total, payers, spec);
     for (const s of shares) if (!allowedSet.has(s.userId)) throw new ConvexError("Someone in this split isn't part of the group");
     return shares;
   } catch (e) {
-    if (e instanceof SplitError) throw new ConvexError(e.message);
+    if (e instanceof SplitError) throw new ConvexError(splitErrorMessage(e, currency));
     throw e;
   }
 }
@@ -338,7 +338,7 @@ export const create = mutation({
     return await idempotent(ctx, me._id, args.clientKey, async () => {
     const scope = await resolveScope(ctx, me._id, args);
     const common = validateCommon(args);
-    const shares = sharesOrThrow(args.amountMinor, args.payers, args.split as SplitSpec, scope.allowed);
+    const shares = sharesOrThrow(args.amountMinor, common.currency, args.payers, args.split as SplitSpec, scope.allowed);
     const repeat = args.repeat ?? "never";
     const id = await ctx.db.insert("expenses", {
       groupId: scope.groupId,
@@ -401,7 +401,7 @@ export const update = mutation({
     }
     const allowed = groupId ? await groupMemberIds(ctx, groupId) : pairUsers(pairKey!);
     const common = validateCommon(args);
-    const shares = sharesOrThrow(args.amountMinor, args.payers, args.split as SplitSpec, allowed);
+    const shares = sharesOrThrow(args.amountMinor, common.currency, args.payers, args.split as SplitSpec, allowed);
 
     const oldShares = await clearShares(ctx, old);
     if (old.receiptId && args.receiptId !== undefined && args.receiptId !== old.receiptId) await ctx.storage.delete(old.receiptId);

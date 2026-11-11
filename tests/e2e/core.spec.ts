@@ -26,17 +26,21 @@ test("exact, percent, shares, adjustment and itemized splits validate and save",
   await logIn(page, alex.email);
   await page.getByRole("link", { name: groupName }).first().click();
 
-  // Exact: sums must match
+  // Exact: whoever is left blank splits the rest, so it always adds up unless it goes over
   let dialog = await openAddExpense(page);
   await dialog.getByLabel("Description", { exact: true }).fill("Taxi");
   await dialog.getByLabel("Amount", { exact: true }).fill("30");
   await dialog.getByRole("tab", { name: "Exact amounts" }).click();
-  await dialog.getByLabel("Alex Tester amount").fill("10");
-  await dialog.getByLabel("Bea Moreno amount").fill("10");
-  await expect(dialog.getByText(/off by/)).toBeVisible();
+  await expect(dialog.getByLabel("Chris Okafor amount")).toHaveAttribute("placeholder", "10.00");
+  await dialog.getByLabel("Alex Tester amount").fill("12");
+  await expect(dialog.getByLabel("Bea Moreno amount")).toHaveAttribute("placeholder", "9.00");
+  await expect(dialog.getByLabel("Chris Okafor amount")).toHaveAttribute("placeholder", "9.00");
+  await dialog.getByLabel("Bea Moreno amount").fill("25");
+  await expect(dialog.getByText("Amounts are $7.00 over the total")).toBeVisible();
   await expect(dialog.getByRole("button", { name: "Save" })).toBeDisabled();
-  await dialog.getByLabel("Chris Okafor amount").fill("10");
-  await expect(dialog.getByText(/off by/)).toHaveCount(0);
+  await dialog.getByLabel("Bea Moreno amount").fill("8");
+  await expect(dialog.getByLabel("Chris Okafor amount")).toHaveAttribute("placeholder", "10.00");
+  await expect(dialog.getByText(/over the total|short of the total/)).toHaveCount(0);
   await saveExpense(page, dialog);
 
   // Percent
