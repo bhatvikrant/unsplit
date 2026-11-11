@@ -1,5 +1,5 @@
 import { isTempId, useAction, useMutation, useQuery } from "@/lib/convex";
-import { Camera, Loader2, Plus, Repeat, UserPlus, Users, X } from "lucide-react";
+import { CalendarDays, Camera, Loader2, Plus, Repeat, ScanText, StickyNote, UserPlus, Users, Wallet, X } from "lucide-react";
 import { useLayoutEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { api } from "@convex/_generated/api";
@@ -8,33 +8,47 @@ import { suggestCategory } from "@convex/lib/categories";
 import { minorToDecimalString, parseMoney } from "@convex/lib/money";
 import { REPEAT_LABELS, type RepeatInterval } from "@convex/lib/recurring";
 import { buildShares, SplitError, splitErrorMessage } from "@convex/lib/split";
-import { UserAvatar } from "@/components/common/Avatars";
+import { GroupAvatar, UserAvatar } from "@/components/common/Avatars";
 import { Money } from "@/components/common/Money";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/responsive-dialog";
 import { Input } from "@/components/ui/input";
-import { Picker, PickerGroup, PickerItem, PickerLabel, PickerSeparator, PickerSheet } from "@/components/ui/picker";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Textarea } from "@/components/ui/textarea";
+import { Picker, PickerGroup, PickerItem, PickerLabel, PickerSeparator } from "@/components/ui/picker";
 import { RECEIPT_EDGE, uploadImage } from "@/lib/image";
-import { errorMessage, fromDateInputValue, toDateInputValue } from "@/lib/format";
+import { errorMessage, formatDate, fromDateInputValue, toDateInputValue } from "@/lib/format";
 import { useDefaultCurrency, useMe } from "@/lib/hooks";
-import { usePhone } from "@/lib/media";
-import { CURRENCY_CODES, currencySymbol } from "@convex/lib/currencies";
+import { CURRENCY_CODES } from "@convex/lib/currencies";
 import { amountText, returnUrl, type Handoff } from "@/lib/handoff";
 import { defaultScope, rememberScope } from "@/lib/scope";
 import { cn } from "@/lib/utils";
 import { FriendFormFields, useFriendForm } from "./FriendForm";
 import { GroupFormFields, useGroupForm } from "./GroupForm";
 import { CategoryPicker, CurrencyPicker } from "./pickers";
-import { SplitEditor } from "./SplitEditor";
+import { FormCard, Row, RowBody, RowButton, RowIcon, RowPicker } from "./FormRows";
+import { SplitEditor, SplitMethodRow } from "./SplitEditor";
 import { emptySplit, exactFromAmounts, fromSpec, itemizedTotal, newItem, toSpec, type SplitState } from "./splitState";
 
 /** `handoff`: entries sent over by UnMoney, which the form starts from (src/lib/handoff.ts). */
 export type AddExpenseOptions = { groupId?: Id<"groups">; friendId?: Id<"users">; expenseId?: Id<"expenses">; handoff?: Handoff };
 
 type Scope = { kind: "group"; id: Id<"groups"> } | { kind: "friend"; id: Id<"users"> } | null;
+
+/** The "Paid by" choice that switches to typing what each person paid. */
+const SEVERAL = "__several";
+
+/** "Today, 12 Nov", "Yesterday, 11 Nov", "Mon, 3 Nov" or "3 Nov 2025". */
+function dateLabel(ms: number): string {
+  const d = new Date(ms);
+  const day = (offset: number) => {
+    const x = new Date();
+    x.setDate(x.getDate() + offset);
+    return x.toDateString();
+  };
+  if (d.toDateString() === day(0)) return `Today, ${formatDate(ms, "monthDay")}`;
+  if (d.toDateString() === day(-1)) return `Yesterday, ${formatDate(ms, "monthDay")}`;
+  return d.getFullYear() === new Date().getFullYear() ? `${d.toLocaleDateString("en-GB", { weekday: "short" })}, ${formatDate(ms, "monthDay")}` : formatDate(ms);
+}
 
 export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOptions; onClose: () => void }) {
   const me = useMe();
@@ -79,15 +93,12 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
   const [payers, setPayers] = useState<Record<string, string>>({});
   const [split, setSplit] = useState<SplitState | null>(null);
   const [repeat, setRepeat] = useState<RepeatInterval>("never");
-  const [repeatOpen, setRepeatOpen] = useState(false);
-  const phone = usePhone();
   const [emailReminder, setEmailReminder] = useState(false);
   const [receipt, setReceipt] = useState<{ storageId: Id<"_storage">; previewUrl: string } | null | "remove">(null);
   const [uploading, setUploading] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showMore, setShowMore] = useState(Boolean(handoff?.notes));
   const fileRef = useRef<HTMLInputElement>(null);
   const hydrated = useRef(false);
   // Mirrors categoryTouched synchronously so the suggestion effect can't run with stale state in the hydration commit.
@@ -169,7 +180,6 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
     const ids = existing.participants.map((p) => p._id);
     if (existing.splitSpec) setSplit(fromSpec(existing.splitSpec, ids, existing.currency, (m) => minorToDecimalString(m, existing.currency)));
     else setSplit({ ...emptySplit(ids), method: "exact", ...exactFromAmounts(Object.fromEntries(existing.shares.filter((s) => s.owedMinor > 0).map((s) => [s.userId, s.owedMinor])), ids, (m) => minorToDecimalString(m, existing.currency)) });
-    setShowMore(Boolean(existing.notes || existing.repeat !== "never" || existing.receiptUrl));
   }, [existing, me]);
 
   // Category suggestion from the description.
@@ -207,6 +217,8 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
     }
   }, [split, totalMinor, payerList, currency, peopleIds]);
 
+  const payerPerson = people.find((p) => p._id === payer);
+  const payerLabel = payerPerson ? (payerPerson._id === me?._id ? "You" : payerPerson.name) : "";
   const payerNames = people.filter((p) => payerList.some((x) => x.userId === p._id)).map((p) => p.name).join(", ");
 
   const onFile = async (file: File) => {
@@ -348,8 +360,7 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
           <div className="space-y-5 px-5 pt-3 pb-5">
             {/* Scope */}
             <div className="space-y-3">
-              <div className="flex items-center gap-2 text-sm">
-                <span className="text-text-muted inline-flex items-center gap-1.5"><Users className="text-text-faint size-4" /> With</span>
+              <div className="flex justify-center">
                 <Picker
                   value={scope ? `${scope.kind}:${scope.id}` : ""}
                   onValueChange={(v) => {
@@ -361,13 +372,13 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
                   placeholder="Choose a group or friend"
                   aria-label="Group or friend"
                   title="With"
-                  className="bg-surface-2 hover:bg-surface-3 h-8 w-auto max-w-[260px] min-w-40 rounded-full font-medium shadow-none"
+                  className="bg-surface-2 hover:bg-surface-3 h-9 w-auto max-w-[280px] min-w-40 rounded-full pr-3 pl-1.5 font-medium shadow-none"
                 >
                   {groups && groups.length > 0 ? (
                     <PickerGroup>
                       <PickerLabel>Groups</PickerLabel>
                       {groups.map((g) => (
-                        <PickerItem key={g._id} value={`group:${g._id}`} meta={`${g.memberCount} ${g.memberCount === 1 ? "member" : "members"}`}>
+                        <PickerItem key={g._id} value={`group:${g._id}`} icon={<GroupAvatar group={g} size="xs" />} meta={`${g.memberCount} ${g.memberCount === 1 ? "member" : "members"}`}>
                           {g.name}
                         </PickerItem>
                       ))}
@@ -377,7 +388,7 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
                     <PickerGroup>
                       <PickerLabel>Friends</PickerLabel>
                       {friends.map((f) => (
-                        <PickerItem key={f.user._id} value={`friend:${f.user._id}`}>
+                        <PickerItem key={f.user._id} value={`friend:${f.user._id}`} icon={<UserAvatar user={f.user} size="xs" />}>
                           {f.user.name}
                         </PickerItem>
                       ))}
@@ -423,30 +434,38 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
             </div>
 
             {/* Amount hero + description */}
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-text-faint shrink-0 text-xl font-medium">{currencySymbol(currency)}</span>
-                <Input
-                  aria-label="Amount"
-                  inputMode="decimal"
-                  placeholder="0.00"
-                  required
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  readOnly={split?.method === "itemized"}
-                  autoFocus={!editing}
-                  className={cn("tnum h-12 flex-1 bg-transparent px-0 text-[40px] font-semibold tracking-[-0.03em] shadow-none placeholder:text-text-faint/50 focus-visible:shadow-none md:text-[40px]", split?.method === "itemized" && "text-text-muted")}
-                />
+            <div className="space-y-4">
+              <div className="flex items-center justify-center gap-1.5">
                 <CurrencyPicker
                   value={currency}
-                  compact
+                  symbol
                   onChange={(c) => {
                     setCurrency(c);
                     setCurrencyTouched(true);
                   }}
                 />
+                {/* Sized to what's typed, so the amount sits centred: a hidden copy of the text sets the width. */}
+                <span className="inline-grid min-w-0">
+                  <span aria-hidden className="tnum invisible col-start-1 row-start-1 overflow-hidden px-0.5 text-[44px] leading-[1.15] font-semibold tracking-[-0.03em] whitespace-pre">
+                    {amount || "0.00"}
+                  </span>
+                  <input
+                    aria-label="Amount"
+                    inputMode="decimal"
+                    size={1}
+                    placeholder="0.00"
+                    required
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    readOnly={split?.method === "itemized"}
+                    autoFocus={!editing}
+                    className={cn("tnum placeholder:text-text-faint/50 col-start-1 row-start-1 w-full min-w-0 bg-transparent px-0.5 text-center text-[44px] leading-[1.15] font-semibold tracking-[-0.03em] outline-none", split?.method === "itemized" && "text-text-muted")}
+                  />
+                </span>
+                {/* Balances the currency button, so the amount sits in the middle. */}
+                <span aria-hidden className="w-9 shrink-0" />
               </div>
-              <div className="mt-3 flex items-center gap-2.5">
+              <div className="bg-surface shadow-ring focus-within:shadow-[0_0_0_1px_var(--brand),0_0_0_4px_var(--ring)] flex items-center gap-1 rounded-2xl p-1 transition-shadow">
                 <CategoryPicker
                   value={category}
                   onChange={(c) => {
@@ -455,152 +474,163 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
                     categoryLocked.current = true;
                   }}
                 />
-                <Input aria-label="Description" placeholder="What was it for?" required maxLength={200} value={description} onChange={(e) => setDescription(e.target.value)} className="h-10" />
+                <Input aria-label="Description" placeholder="What was it for?" required maxLength={200} value={description} onChange={(e) => setDescription(e.target.value)} className="h-11 bg-transparent px-2 text-[16px] shadow-none! sm:text-sm" />
               </div>
             </div>
 
-            {/* Paid by */}
+            {/* Who paid and how it's split */}
             {people.length > 0 && split ? (
               <div className="space-y-3">
-                <div className="flex flex-wrap items-center gap-2 text-sm">
-                  <span className="text-text-muted text-xs font-semibold">Paid by</span>
-                  {payerMode === "single" ? (
-                    <Picker value={payer ?? ""} onValueChange={setPayer} placeholder="Who paid?" aria-label="Who paid" title="Paid by" className="h-8 w-auto min-w-28 rounded-full font-medium">
-                      {people.map((p) => (
-                        <PickerItem key={p._id} value={p._id} icon={<UserAvatar user={p} size="xs" />}>
-                          {p._id === me?._id ? "You" : p.name}
-                        </PickerItem>
-                      ))}
-                    </Picker>
-                  ) : (
-                    <span className="font-medium">several people</span>
-                  )}
-                  <button
-                    type="button"
-                    className="text-brand active:bg-surface-2 ml-auto rounded-md text-xs font-medium hover:underline coarse:-my-2 coarse:min-h-11 coarse:px-2"
-                    onClick={() => {
-                      if (payerMode === "single") {
+                <FormCard>
+                  <RowPicker
+                    icon={<Wallet />}
+                    label="Paid by"
+                    title="Paid by"
+                    aria-label={`Paid by: ${payerMode === "multiple" ? "several people" : payerLabel}`}
+                    value={payerMode === "multiple" ? SEVERAL : (payer ?? "")}
+                    display={
+                      payerMode === "multiple" ? (
+                        "Several people"
+                      ) : payerPerson ? (
+                        <>
+                          <UserAvatar user={payerPerson} size="xs" /> {payerLabel}
+                        </>
+                      ) : (
+                        "Choose"
+                      )
+                    }
+                    strong
+                    options={[
+                      ...people.map((p) => ({ value: p._id, label: p._id === me?._id ? "You" : p.name, icon: <UserAvatar user={p} size="xs" /> })),
+                      { value: SEVERAL, label: "Several people", description: "Say how much each one paid", icon: <span className="bg-surface-2 text-text-muted flex size-6 items-center justify-center rounded-full"><Users className="size-3.5" /></span> },
+                    ]}
+                    onValueChange={(v) => {
+                      if (v === SEVERAL) {
+                        if (payerMode === "single" && payer && totalMinor !== null) setPayers({ [payer]: minorToDecimalString(totalMinor, currency) });
                         setPayerMode("multiple");
-                        if (payer && totalMinor !== null) setPayers({ [payer]: minorToDecimalString(totalMinor, currency) });
-                      } else setPayerMode("single");
+                      } else {
+                        setPayerMode("single");
+                        setPayer(v);
+                      }
                     }}
-                  >
-                    {payerMode === "single" ? "Multiple people paid" : "One person paid"}
-                  </button>
-                </div>
+                  />
+                  <SplitMethodRow state={split} onChange={setSplit} ids={peopleIds} currency={currency} />
+                </FormCard>
                 {payerMode === "multiple" ? (
-                  <ul className="shadow-ring divide-y overflow-hidden rounded-xl">
+                  <FormCard title="Who paid what">
                     {people.map((p) => (
-                      <li key={p._id} className="flex items-center gap-3 px-3 py-1.5">
-                        <UserAvatar user={p} size="xs" />
-                        <span className="flex-1 truncate text-sm">{p.name}</span>
-                        <Input inputMode="decimal" aria-label={`${p.name} paid`} className="tnum w-28 text-right" placeholder="0" value={payers[p._id] ?? ""} onChange={(e) => setPayers((x) => ({ ...x, [p._id]: e.target.value }))} />
-                      </li>
+                      <Row key={p._id}>
+                        <UserAvatar user={p} size="sm" />
+                        <RowBody className="min-h-14 py-2">
+                          <span className="flex-1 truncate text-[15px] sm:text-sm">{p.name}</span>
+                          <Input inputMode="decimal" aria-label={`${p.name} paid`} className="tnum w-28 text-right" placeholder="0" value={payers[p._id] ?? ""} onFocus={(e) => e.currentTarget.select()} onChange={(e) => setPayers((x) => ({ ...x, [p._id]: e.target.value }))} />
+                        </RowBody>
+                      </Row>
                     ))}
-                    <li className="text-text-muted flex justify-between px-3 py-1.5 text-xs">
-                      <span>Paid so far</span>
-                      <Money minor={payerList.reduce((a, b) => a + (Number.isNaN(b.paidMinor) ? 0 : b.paidMinor), 0)} currency={currency} />
-                      {totalMinor !== null ? (
+                    <Row className="text-text-muted text-xs">
+                      <RowBody className="justify-between">
+                        <span>Paid so far</span>
                         <span>
-                          of <Money minor={totalMinor} currency={currency} />
+                          <Money minor={payerList.reduce((a, b) => a + (Number.isNaN(b.paidMinor) ? 0 : b.paidMinor), 0)} currency={currency} />
+                          {totalMinor !== null ? (
+                            <>
+                              {" "}
+                              of <Money minor={totalMinor} currency={currency} />
+                            </>
+                          ) : null}
                         </span>
-                      ) : null}
-                    </li>
-                  </ul>
+                      </RowBody>
+                    </Row>
+                  </FormCard>
                 ) : null}
                 <SplitEditor state={split} onChange={setSplit} people={people} currency={currency} totalMinor={totalMinor} preview={preview} payerNames={payerNames} />
               </div>
             ) : scope ? (
-              <div className="text-text-muted flex items-center gap-2 text-sm">
+              <div className="text-text-muted flex items-center justify-center gap-2 text-sm">
                 <Loader2 className="size-4 animate-spin" /> Loading people…
               </div>
             ) : null}
 
-            {/* Date + more */}
-            <div className="flex flex-wrap items-center gap-2">
-              <Input type="date" aria-label="Date" className="bg-surface-2 h-8 w-auto rounded-lg text-[13px] font-medium shadow-none max-sm:h-11 coarse:min-h-11" value={toDateInputValue(date)} onChange={(e) => e.target.value && setDate(fromDateInputValue(e.target.value, date))} />
-              {phone ? (
-                <PickerSheet
-                  open={repeatOpen}
-                  onOpenChange={setRepeatOpen}
-                  title="Repeat"
-                  value={repeat}
-                  onValueChange={(r) => setRepeat(r as RepeatInterval)}
-                  closeOnSelect={false}
-                  trigger={
-                    <Button type="button" variant="secondary" size="sm" aria-label={`Repeat: ${REPEAT_LABELS[repeat]}`} className={cn("h-11 select-none", repeat !== "never" && "bg-brand-soft text-brand-ink hover:bg-brand-soft")}>
-                      <Repeat /> {REPEAT_LABELS[repeat]}
-                    </Button>
-                  }
-                  footer={
-                    repeat !== "never" ? (
-                      <>
-                        <label className="flex min-h-11 items-center gap-3 text-[15px]">
-                          <Checkbox checked={emailReminder} onCheckedChange={(v) => setEmailReminder(Boolean(v))} /> Email everyone the day before
-                        </label>
-                        <p className="text-text-faint mt-1 text-xs">A copy is posted on each date with the same split. To change later ones, edit the newest copy.</p>
-                      </>
-                    ) : null
-                  }
-                >
-                  {(Object.keys(REPEAT_LABELS) as RepeatInterval[]).map((r) => (
-                    <PickerItem key={r} value={r}>
-                      {REPEAT_LABELS[r]}
-                    </PickerItem>
-                  ))}
-                </PickerSheet>
-              ) : (
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button type="button" variant="secondary" size="sm" className={cn(repeat !== "never" && "bg-brand-soft text-brand-ink hover:bg-brand-soft")}>
-                      <Repeat /> {REPEAT_LABELS[repeat]}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-56 p-2" align="start">
-                    <div className="space-y-1">
-                      {(Object.keys(REPEAT_LABELS) as RepeatInterval[]).map((r) => (
-                        <button key={r} type="button" onClick={() => setRepeat(r)} className={cn("hover:bg-surface block w-full rounded-sm px-2 py-1.5 text-left text-sm", r === repeat && "bg-brand-soft text-brand font-medium")}>
-                          {REPEAT_LABELS[r]}
-                        </button>
-                      ))}
-                    </div>
-                    {repeat !== "never" ? (
-                      <>
-                        <label className="mt-2 flex items-center gap-2 border-t px-2 pt-2 text-xs">
-                          <Checkbox checked={emailReminder} onCheckedChange={(v) => setEmailReminder(Boolean(v))} /> Email everyone the day before
-                        </label>
-                        <p className="text-text-faint mt-2 px-2 text-xs">A copy is posted on each date with the same split. To change later ones, edit the newest copy.</p>
-                      </>
-                    ) : null}
-                  </PopoverContent>
-                </Popover>
-              )}
-              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && void onFile(e.target.files[0])} />
-              <Button type="button" variant="secondary" size="sm" disabled={uploading} onClick={() => fileRef.current?.click()} className="max-sm:h-11">
-                {uploading ? <Loader2 className="animate-spin" /> : <Camera />} {receipt && receipt !== "remove" ? "Replace receipt" : "Add receipt"}
-              </Button>
-              <Button type="button" variant="secondary" size="sm" onClick={() => setShowMore((v) => !v)} className="max-sm:h-11">
-                {showMore ? "Fewer options" : "Notes"}
-              </Button>
-            </div>
-
-            {receipt && receipt !== "remove" ? (
-              <div className="shadow-ring flex items-center gap-3 rounded-xl p-2">
-                <img src={receipt.previewUrl} alt="Receipt" className="size-16 rounded object-cover" />
-                <div className="flex-1 text-sm">
-                  <div className="font-medium">Receipt attached</div>
-                  <div className="text-text-muted text-xs">Scan it to fill in the items and total automatically.</div>
-                </div>
-                <Button type="button" size="sm" variant="secondary" disabled={scanning} onClick={() => void scan()}>
-                  {scanning ? <Loader2 className="animate-spin" /> : null} {scanning ? "Reading…" : "Scan receipt"}
-                </Button>
-                <Button type="button" variant="ghost" size="icon-sm" aria-label="Remove receipt" onClick={() => setReceipt(editing ? "remove" : null)}>
-                  <X />
-                </Button>
+            {/* Details */}
+            <FormCard title="Details">
+              <div data-row="" className="relative">
+                <RowButton icon={<CalendarDays />} label="Date" value={dateLabel(date)} tabIndex={-1} aria-hidden className="pointer-events-none" />
+                {/* The real control: an invisible date input over the whole row, so a tap opens the system date picker. */}
+                <input
+                  type="date"
+                  aria-label="Date"
+                  value={toDateInputValue(date)}
+                  onChange={(e) => e.target.value && setDate(fromDateInputValue(e.target.value, date))}
+                  onClick={(e) => {
+                    try {
+                      e.currentTarget.showPicker();
+                    } catch {
+                      /* older browsers open it themselves */
+                    }
+                  }}
+                  className="absolute inset-0 size-full cursor-pointer opacity-0"
+                />
               </div>
-            ) : null}
-
-            {showMore ? <Textarea aria-label="Notes" placeholder="Notes (optional)" rows={3} maxLength={2000} value={notes} onChange={(e) => setNotes(e.target.value)} /> : null}
+              <RowPicker
+                icon={<Repeat />}
+                label="Repeat"
+                title="Repeat"
+                aria-label={`Repeat: ${REPEAT_LABELS[repeat]}`}
+                value={repeat}
+                strong={repeat !== "never"}
+                closeOnSelect={false}
+                options={(Object.keys(REPEAT_LABELS) as RepeatInterval[]).map((r) => ({ value: r, label: REPEAT_LABELS[r] }))}
+                onValueChange={(r) => setRepeat(r as RepeatInterval)}
+                footer={
+                  repeat !== "never" ? (
+                    <>
+                      <label className="flex min-h-11 items-center gap-3 text-[15px] sm:min-h-8 sm:text-xs">
+                        <Checkbox checked={emailReminder} onCheckedChange={(v) => setEmailReminder(Boolean(v))} /> Email everyone the day before
+                      </label>
+                      <p className="text-text-faint mt-1 text-xs">A copy is posted on each date with the same split. To change later ones, edit the newest copy.</p>
+                    </>
+                  ) : null
+                }
+              />
+              {receipt && receipt !== "remove" ? (
+                <Row>
+                  <img src={receipt.previewUrl} alt="Receipt" className="size-8 shrink-0 rounded-lg object-cover" />
+                  <RowBody className="min-h-14 py-2">
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[15px] sm:text-sm">Receipt</span>
+                      <button type="button" className="text-text-faint block text-xs hover:underline" disabled={uploading} onClick={() => fileRef.current?.click()}>
+                        {uploading ? "Uploading…" : "Replace photo"}
+                      </button>
+                    </span>
+                    <Button type="button" size="sm" variant="secondary" disabled={scanning} onClick={() => void scan()}>
+                      {scanning ? <Loader2 className="animate-spin" /> : <ScanText />} {scanning ? "Reading…" : "Scan"}
+                    </Button>
+                    <Button type="button" variant="ghost" size="icon-sm" aria-label="Remove receipt" onClick={() => setReceipt(editing ? "remove" : null)}>
+                      <X />
+                    </Button>
+                  </RowBody>
+                </Row>
+              ) : (
+                <RowButton icon={uploading ? <Loader2 className="animate-spin" /> : <Camera />} label="Receipt" value="Add photo" disabled={uploading} onClick={() => fileRef.current?.click()} />
+              )}
+              <Row className="items-start">
+                <RowIcon className="mt-2">
+                  <StickyNote />
+                </RowIcon>
+                <RowBody className="py-0">
+                  <textarea
+                    aria-label="Notes"
+                    placeholder="Add a note"
+                    rows={1}
+                    maxLength={2000}
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    className="placeholder:text-text-faint field-sizing-content min-h-12 w-full resize-none bg-transparent py-3 text-[15px] leading-6 outline-none sm:text-sm"
+                  />
+                </RowBody>
+              </Row>
+            </FormCard>
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && void onFile(e.target.files[0])} />
 
             {error ? (
               <p role="alert" className="text-danger text-sm">

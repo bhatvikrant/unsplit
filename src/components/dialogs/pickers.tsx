@@ -1,4 +1,4 @@
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { useState } from "react";
 import { CATEGORY_GROUPS, categoryBySlug } from "@convex/lib/categories";
 import { CURRENCIES, currencySymbol } from "@convex/lib/currencies";
@@ -11,9 +11,15 @@ import { usePhone } from "@/lib/media";
 import { cn } from "@/lib/utils";
 
 /** Searchable currency list: a Command popover on desktop, a picker sheet with search on phones. */
-export function CurrencyPicker({ value, onChange, className, compact }: { value: string; onChange: (code: string) => void; className?: string; compact?: boolean }) {
+export function CurrencyPicker({ value, onChange, className, compact, symbol }: { value: string; onChange: (code: string) => void; className?: string; compact?: boolean; /** The trigger is just the currency's symbol, for sitting in front of an amount. */ symbol?: boolean }) {
   const [open, setOpen] = useState(false);
   const phone = usePhone();
+  const symbolTrigger = symbol ? (
+    <button type="button" role="combobox" aria-expanded={open} aria-label={`Currency: ${value}`} title="Change currency" className={cn("text-text-faint hover:text-text-muted active:bg-surface-2 flex min-h-11 shrink-0 items-center gap-0.5 rounded-lg px-1 font-medium select-none", className)}>
+      <span className="text-2xl">{currencySymbol(value)}</span>
+      <ChevronDown className="size-3.5" />
+    </button>
+  ) : null;
   if (phone) {
     return (
       <PickerSheet
@@ -24,12 +30,12 @@ export function CurrencyPicker({ value, onChange, className, compact }: { value:
         onValueChange={onChange}
         searchable
         searchPlaceholder="Search currencies"
-        trigger={
+        trigger={symbolTrigger ?? (
           <Button type="button" variant="outline" role="combobox" aria-expanded={open} aria-label={`Currency: ${value}`} className={cn("shadow-ring h-11 justify-between font-medium select-none", compact ? "w-[84px] px-2" : "w-[120px]", className)}>
             <span className="tnum">{compact ? value : `${currencySymbol(value)} ${value}`}</span>
             <ChevronsUpDown className="text-text-faint size-3.5" />
           </Button>
-        }
+        )}
       >
         {CURRENCIES.map((c) => (
           <PickerItem key={c.code} value={c.code} keywords={c.name} meta={c.symbol}>
@@ -43,10 +49,12 @@ export function CurrencyPicker({ value, onChange, className, compact }: { value:
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button type="button" variant="outline" role="combobox" aria-expanded={open} aria-label={`Currency: ${value}`} className={cn("shadow-ring justify-between font-medium", compact ? "w-[84px] px-2" : "w-[120px]", className)}>
-          <span className="tnum">{compact ? value : `${currencySymbol(value)} ${value}`}</span>
-          <ChevronsUpDown className="text-text-faint size-3.5" />
-        </Button>
+        {symbolTrigger ?? (
+          <Button type="button" variant="outline" role="combobox" aria-expanded={open} aria-label={`Currency: ${value}`} className={cn("shadow-ring justify-between font-medium", compact ? "w-[84px] px-2" : "w-[120px]", className)}>
+            <span className="tnum">{compact ? value : `${currencySymbol(value)} ${value}`}</span>
+            <ChevronsUpDown className="text-text-faint size-3.5" />
+          </Button>
+        )}
       </PopoverTrigger>
       <PopoverContent className="w-[260px] p-0" align="start">
         <Command>
@@ -93,9 +101,9 @@ export function CategoryPicker({ value, onChange }: { value: string; onChange: (
         searchable
         searchPlaceholder="Search categories"
         trigger={
-          <Button type="button" variant="outline" size="icon-lg" role="combobox" aria-expanded={open} aria-label={`Category: ${cat.name}`} title={cat.name} className="size-11 p-0 select-none">
-            <CategoryIcon slug={value} size="md" className="bg-transparent" />
-          </Button>
+          <button type="button" role="combobox" aria-expanded={open} aria-label={`Category: ${cat.name}`} title={cat.name} className="flex size-11 shrink-0 items-center justify-center rounded-xl select-none active:opacity-70">
+            <CategoryIcon slug={value} size="md" />
+          </button>
         }
       >
         {CATEGORY_GROUPS.map((g) => (
@@ -114,9 +122,9 @@ export function CategoryPicker({ value, onChange }: { value: string; onChange: (
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button type="button" variant="outline" size="icon-lg" aria-label={`Category: ${cat.name}`} title={cat.name} className="p-0">
-          <CategoryIcon slug={value} size="md" className="bg-transparent" />
-        </Button>
+        <button type="button" aria-label={`Category: ${cat.name}`} title={cat.name} className="flex size-10 shrink-0 items-center justify-center rounded-xl outline-none hover:opacity-80 focus-visible:shadow-[0_0_0_2px_var(--ring)]">
+          <CategoryIcon slug={value} size="md" />
+        </button>
       </PopoverTrigger>
       <PopoverContent className="w-[280px] p-0" align="start">
         <Command>
