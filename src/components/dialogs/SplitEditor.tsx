@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { newItem, type SplitState } from "./splitState";
+import { editExact, newItem, resolveExact, type SplitState } from "./splitState";
 
 type Person = { _id: string; name: string; image?: string | null };
 
@@ -23,7 +23,7 @@ const LABELS: Record<SplitMethod, string> = {
 
 const HELP: Record<SplitMethod, string> = {
   equal: "Everyone ticked pays the same.",
-  exact: "Type what each person owes. Must add up to the total.",
+  exact: "Type what anyone owes. Whoever you leave blank splits the rest.",
   percent: "Give each person a percentage. Must add up to 100%.",
   shares: "Give each person a number of shares. 2 shares pays twice as much as 1.",
   adjustment: "Add an extra amount for some people; the rest is split equally.",
@@ -52,10 +52,19 @@ export function SplitEditor({
   const set = (patch: Partial<SplitState>) => onChange({ ...state, ...patch });
   const ids = people.map((p) => p._id);
   const owed = preview && "owed" in preview ? preview.owed : null;
+  const exact = state.method === "exact" ? resolveExact(state, ids, totalMinor, currency) : null;
 
-  const amountInput = (value: string, onValue: (v: string) => void, label: string, suffix?: string) => (
+  const amountInput = (value: string, onValue: (v: string) => void, label: string, suffix?: string, auto?: string) => (
     <div className="relative w-28">
-      <Input inputMode="decimal" aria-label={label} value={value} onChange={(e) => onValue(e.target.value)} className={cn("tnum text-right", suffix && "pr-7")} placeholder="0" />
+      <Input
+        inputMode="decimal"
+        aria-label={label}
+        value={value}
+        onChange={(e) => onValue(e.target.value)}
+        onFocus={(e) => e.currentTarget.select()}
+        className={cn("tnum text-right", suffix && "pr-7", auto !== undefined && "placeholder:text-text-muted")}
+        placeholder={auto ?? "0"}
+      />
       {suffix ? <span className="text-text-faint pointer-events-none absolute top-1/2 right-2.5 -translate-y-1/2 text-sm">{suffix}</span> : null}
     </div>
   );
@@ -71,7 +80,15 @@ export function SplitEditor({
             type="button"
             role="tab"
             aria-selected={state.method === m}
-            onClick={() => set({ method: m, items: m === "itemized" && state.items.length === 0 ? [newItem(ids)] : state.items })}
+            onClick={() => {
+              // Coming from "Equally" with people unticked: they start at 0 instead of sharing the rest.
+              const unticked = m === "exact" && state.exactFixed.length === 0 ? ids.filter((id) => state.selected[id] === false) : [];
+              set({
+                method: m,
+                items: m === "itemized" && state.items.length === 0 ? [newItem(ids)] : state.items,
+                ...(unticked.length > 0 && unticked.length < ids.length ? { exact: Object.fromEntries(unticked.map((id) => [id, "0"])), exactFixed: unticked } : {}),
+              });
+            }}
             className={cn("pressable rounded-lg px-2.5 py-1 text-xs font-medium coarse:min-h-10", state.method === m ? "bg-surface text-text shadow-[0_1px_2px_rgba(0,0,0,0.08),0_0_0_1px_var(--line)]" : "text-text-muted hover:text-text")}
           >
             {LABELS[m]}
@@ -90,8 +107,13 @@ export function SplitEditor({
                   <Checkbox checked={checked} aria-label={`Include ${p.name}`} onCheckedChange={(v) => set({ selected: { ...state.selected, [p._id]: Boolean(v) } })} />
                 ) : null}
                 <UserAvatar user={p} size="sm" />
-                <span className="min-w-0 flex-1 truncate text-sm">{p.name}</span>
-                {state.method === "exact" && amountInput(state.exact[p._id] ?? "", (v) => set({ exact: { ...state.exact, [p._id]: v } }), `${p.name} amount`)}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm">{p.name}</span>
+                  {exact && exact.auto[p._id] !== undefined && !(p._id in exact.fixed) ? <span className="text-text-faint block text-xs">Splits the rest</span> : null}
+                </span>
+                {exact && (p._id in exact.fixed
+                  ? amountInput(state.exact[p._id] ?? "", (v) => onChange(editExact(state, p._id, v, ids)), `${p.name} amount`)
+                  : amountInput("", (v) => onChange(editExact(state, p._id, v, ids)), `${p.name} amount`, undefined, exact.auto[p._id] !== undefined ? minorToDecimalString(exact.auto[p._id], currency) : undefined))}
                 {state.method === "percent" && amountInput(state.percent[p._id] ?? "", (v) => set({ percent: { ...state.percent, [p._id]: v } }), `${p.name} percent`, "%")}
                 {state.method === "shares" && amountInput(state.shares[p._id] ?? "", (v) => set({ shares: { ...state.shares, [p._id]: v } }), `${p.name} shares`, "sh")}
                 {state.method === "adjustment" && checked && amountInput(state.adjustments[p._id] ?? "", (v) => set({ adjustments: { ...state.adjustments, [p._id]: v } }), `${p.name} extra`, "+")}
@@ -167,7 +189,11 @@ export function SplitEditor({
         <span>
           {state.method === "percent" ? `${sumOf(state.percent).toFixed(2)}% of 100%` : null}
           {state.method === "shares" ? `${sumOf(state.shares)} shares` : null}
-          {state.method === "exact" && totalMinor !== null ? <>Entered: <Money minor={Object.values(state.exact).reduce((a, v) => a + (parseMoneySafe(v, currency) ?? 0), 0)} currency={currency} /> of <Money minor={totalMinor} currency={currency} /></> : null}
+          {exact && totalMinor !== null && exact.leftMinor !== null && exact.leftMinor >= 0 && !(preview && "error" in preview) ? (
+            <>
+              Adds up to <Money minor={totalMinor} currency={currency} />
+            </>
+          ) : null}
           {state.method === "reimbursement" && payerNames ? `${payerNames} received the refund` : null}
         </span>
         {preview && "error" in preview ? <span className="text-danger">{preview.error}</span> : null}
@@ -176,13 +202,3 @@ export function SplitEditor({
   );
 }
 
-function parseMoneySafe(v: string, currency: string): number | null {
-  if (v.trim() === "") return 0;
-  const n = Number(v);
-  if (!Number.isFinite(n)) return null;
-  // Reuse the exact minor conversion for display consistency.
-  const str = minorToDecimalString(0, currency);
-  void str;
-  const decimals = (minorToDecimalString(1, currency).split(".")[1] ?? "").length;
-  return Math.round(n * 10 ** decimals);
-}

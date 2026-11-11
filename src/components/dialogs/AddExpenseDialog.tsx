@@ -7,7 +7,7 @@ import type { Id } from "@convex/_generated/dataModel";
 import { suggestCategory } from "@convex/lib/categories";
 import { minorToDecimalString, parseMoney } from "@convex/lib/money";
 import { REPEAT_LABELS, type RepeatInterval } from "@convex/lib/recurring";
-import { buildShares, SplitError } from "@convex/lib/split";
+import { buildShares, SplitError, splitErrorMessage } from "@convex/lib/split";
 import { UserAvatar } from "@/components/common/Avatars";
 import { Money } from "@/components/common/Money";
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,7 @@ import { FriendFormFields, useFriendForm } from "./FriendForm";
 import { GroupFormFields, useGroupForm } from "./GroupForm";
 import { CategoryPicker, CurrencyPicker } from "./pickers";
 import { SplitEditor } from "./SplitEditor";
-import { emptySplit, fromSpec, itemizedTotal, newItem, toSpec, type SplitState } from "./splitState";
+import { emptySplit, exactFromAmounts, fromSpec, itemizedTotal, newItem, toSpec, type SplitState } from "./splitState";
 
 /** `handoff`: entries sent over by UnMoney, which the form starts from (src/lib/handoff.ts). */
 export type AddExpenseOptions = { groupId?: Id<"groups">; friendId?: Id<"users">; expenseId?: Id<"expenses">; handoff?: Handoff };
@@ -168,7 +168,7 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
     }
     const ids = existing.participants.map((p) => p._id);
     if (existing.splitSpec) setSplit(fromSpec(existing.splitSpec, ids, existing.currency, (m) => minorToDecimalString(m, existing.currency)));
-    else setSplit({ ...emptySplit(ids), method: "exact", exact: Object.fromEntries(existing.shares.filter((s) => s.owedMinor > 0).map((s) => [s.userId, minorToDecimalString(s.owedMinor, existing.currency)])) });
+    else setSplit({ ...emptySplit(ids), method: "exact", ...exactFromAmounts(Object.fromEntries(existing.shares.filter((s) => s.owedMinor > 0).map((s) => [s.userId, s.owedMinor])), ids, (m) => minorToDecimalString(m, existing.currency)) });
     setShowMore(Boolean(existing.notes || existing.repeat !== "never" || existing.receiptUrl));
   }, [existing, me]);
 
@@ -197,15 +197,15 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
   const preview = useMemo(() => {
     if (!split || totalMinor === null || totalMinor <= 0 || payerList.length === 0) return null;
     try {
-      const spec = toSpec(split, currency);
+      const spec = toSpec(split, currency, { ids: peopleIds, totalMinor });
       const shares = buildShares(totalMinor, payerList, spec);
       const owed: Record<string, number> = {};
       for (const s of shares) if (s.owedMinor > 0 || spec.method === "reimbursement") owed[s.userId] = s.owedMinor;
       return { owed };
     } catch (e) {
-      return { error: e instanceof SplitError ? e.message : typeof e === "string" ? e : "Check the split" };
+      return { error: e instanceof SplitError ? splitErrorMessage(e, currency) : typeof e === "string" ? e : "Check the split" };
     }
-  }, [split, totalMinor, payerList, currency]);
+  }, [split, totalMinor, payerList, currency, peopleIds]);
 
   const payerNames = people.filter((p) => payerList.some((x) => x.userId === p._id)).map((p) => p.name).join(", ");
 
@@ -265,7 +265,7 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
     if (payerList.length === 0 || payerList.some((p) => Number.isNaN(p.paidMinor))) return setError("Say who paid");
     let spec;
     try {
-      spec = toSpec(split, currency);
+      spec = toSpec(split, currency, { ids: peopleIds, totalMinor });
     } catch (err) {
       return setError(typeof err === "string" ? err : "Check the split");
     }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { allocate, parseMoney, minorToDecimalString, currencyDecimals } from "../../convex/lib/money";
-import { buildShares, computeOwed, pairwiseDebts, simplifyDebts, SplitError } from "../../convex/lib/split";
+import { buildShares, computeOwed, pairwiseDebts, simplifyDebts, SplitError, splitErrorMessage } from "../../convex/lib/split";
 
 const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
 
@@ -37,7 +37,21 @@ describe("computeOwed", () => {
   });
   it("exact must sum", () => {
     expect(computeOwed(1000, { method: "exact", amounts: { a: 600, b: 400 } })).toEqual({ a: 600, b: 400 });
-    expect(() => computeOwed(1000, { method: "exact", amounts: { a: 600, b: 300 } })).toThrow(/off by 100/);
+    const gap = (fn: () => unknown) => {
+      try {
+        fn();
+      } catch (e) {
+        return e as SplitError;
+      }
+      throw new Error("expected a SplitError");
+    };
+    const short = gap(() => computeOwed(1000, { method: "exact", amounts: { a: 600, b: 300 } }));
+    expect(short.gap).toEqual({ subject: "Amounts", minor: 100 });
+    expect(splitErrorMessage(short, "USD")).toBe("Amounts are $1.00 short of the total");
+    // the screenshot bug: ₹89 typed against ₹1,325 used to read "off by 123600" (paise)
+    expect(splitErrorMessage(gap(() => computeOwed(132500, { method: "exact", amounts: { a: 8900, b: 0 } })), "INR")).toBe("Amounts are ₹1,236.00 short of the total");
+    expect(splitErrorMessage(gap(() => computeOwed(1000, { method: "exact", amounts: { a: 1100 } })), "USD")).toBe("Amounts are $1.00 over the total");
+    expect(splitErrorMessage(gap(() => computeOwed(1000, { method: "exact", amounts: { a: 1100 } })), "JPY")).toBe("Amounts are ¥100 over the total");
   });
   it("percent must be 100.00", () => {
     expect(computeOwed(1000, { method: "percent", percents: { a: 5000, b: 2500, c: 2500 } })).toEqual({ a: 500, b: 250, c: 250 });
@@ -71,7 +85,7 @@ describe("computeOwed", () => {
     });
     expect(sum(Object.values(shared))).toBe(1000);
     expect(() => computeOwed(1000, { method: "itemized", items: [{ name: "x", amountMinor: 1000, assigneeIds: [] }], taxMinor: 0, tipMinor: 0, discountMinor: 0 })).toThrow(/assigned/);
-    expect(() => computeOwed(999, { method: "itemized", items: [{ name: "x", amountMinor: 1000, assigneeIds: ["a"] }], taxMinor: 0, tipMinor: 0, discountMinor: 0 })).toThrow(/off by/);
+    expect(() => computeOwed(999, { method: "itemized", items: [{ name: "x", amountMinor: 1000, assigneeIds: ["a"] }], taxMinor: 0, tipMinor: 0, discountMinor: 0 })).toThrow(/don't add up/);
   });
 });
 
@@ -92,7 +106,7 @@ describe("buildShares + debts", () => {
     expect(debts).toEqual([{ from: "c", to: "a", amountMinor: 1000 }]);
   });
   it("payers must sum to total", () => {
-    expect(() => buildShares(3000, [{ userId: "a", paidMinor: 2000 }], { method: "equal", participants: ["a", "b"] })).toThrow(/off by 1000/);
+    expect(() => buildShares(3000, [{ userId: "a", paidMinor: 2000 }], { method: "equal", participants: ["a", "b"] })).toThrow(expect.objectContaining({ gap: { subject: "Payments", minor: 1000 } }));
   });
   it("reimbursement: receiver owes the recipients", () => {
     const shares = buildShares(3000, [{ userId: "a", paidMinor: 3000 }], { method: "reimbursement", amounts: { b: 2000, c: 1000 } });
