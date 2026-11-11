@@ -43,6 +43,20 @@ export function newItem(participantIds: string[]): ItemState {
 
 const num = (s: string) => (s.trim() === "" ? 0 : Number(s));
 
+/** Change the split method. Itemized starts with one empty line; exact amounts start people who were unticked under "Equally" at 0. */
+export function switchMethod(s: SplitState, method: SplitMethod, ids: string[]): SplitState {
+  const next: SplitState = { ...s, method };
+  if (method === "itemized" && s.items.length === 0) next.items = [newItem(ids)];
+  if (method === "exact" && s.exactFixed.length === 0) {
+    const unticked = ids.filter((id) => s.selected[id] === false);
+    if (unticked.length > 0 && unticked.length < ids.length) {
+      next.exact = Object.fromEntries(unticked.map((id) => [id, "0"]));
+      next.exactFixed = unticked;
+    }
+  }
+  return next;
+}
+
 /**
  * Who can be auto in an exact split: the people the split was set up for (an edited expense's
  * participants, or everyone in a new one). Anyone else stays at 0 until they're typed into.

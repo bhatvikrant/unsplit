@@ -11,7 +11,8 @@ import { ExpenseList } from "@/components/common/ExpenseList";
 import { EmptyState, Field, InfoHint, PageHeader, RowSkeleton, Section } from "@/components/common/Misc";
 import { BalanceChip, BalanceSummary, Money } from "@/components/common/Money";
 import { useDialogs } from "@/components/dialogs/DialogProvider";
-import { SplitEditor } from "@/components/dialogs/SplitEditor";
+import { FormCard } from "@/components/dialogs/FormRows";
+import { SplitEditor, SplitMethodRow } from "@/components/dialogs/SplitEditor";
 import { emptySplit, fromSpec, toSpec, type SplitState } from "@/components/dialogs/splitState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -350,6 +351,8 @@ export function GroupSettings() {
     setDefaultOn(Boolean(group.defaultSplit));
     setSplit(group.defaultSplit ? fromSpec(group.defaultSplit, memberIds, group.lastCurrency ?? "USD", (m) => String(m / 100)) : emptySplit(memberIds));
   }, [group, memberIds]);
+  // A default split can only be equal, by percentages or by shares.
+  const defaultState = split && (split.method === "equal" || split.method === "percent" || split.method === "shares" ? split : { ...split, method: "equal" as const });
 
   if (group === undefined) return failed ? <NotFound /> : <RowSkeleton />;
 
@@ -543,9 +546,12 @@ export function GroupSettings() {
               </span>
               <Switch size="touch" checked={defaultOn} onCheckedChange={(v) => { setDefaultOn(v); if (!v) void save({ defaultSplit: null }); }} />
             </label>
-            {defaultOn && split ? (
+            {defaultOn && defaultState ? (
               <div className="mt-3 space-y-3">
-                <SplitEditor state={{ ...split, method: split.method === "equal" || split.method === "percent" || split.method === "shares" ? split.method : "equal" }} onChange={setSplit} people={group.members} currency={group.lastCurrency ?? "USD"} totalMinor={null} preview={null} />
+                <FormCard>
+                  <SplitMethodRow state={defaultState} onChange={setSplit} ids={memberIds} currency={group.lastCurrency ?? "USD"} methods={["equal", "percent", "shares"]} />
+                </FormCard>
+                <SplitEditor state={defaultState} onChange={setSplit} people={group.members} currency={group.lastCurrency ?? "USD"} totalMinor={null} preview={null} />
                 <Button size="sm" onClick={() => void saveDefaultSplit()} disabled={saving}>
                   Save default split
                 </Button>

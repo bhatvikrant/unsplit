@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { createGroup, logIn, logOut, openAddExpense, saveExpense, signUp, synced, uniq } from "./helpers";
 
 test.describe.configure({ mode: "serial" });
@@ -6,6 +6,12 @@ test.describe.configure({ mode: "serial" });
 const alex = { name: "Alex Tester", email: `${uniq("alex")}@unsplit.test` };
 const bea = { name: "Bea Moreno", email: `${uniq("bea")}@unsplit.test` };
 const groupName = `Trip ${uniq("g")}`;
+
+/** The "Split" row opens a list of methods (a popover here, a sheet on phones). */
+async function chooseSplit(page: Page, dialog: Locator, method: string) {
+  await dialog.getByRole("button", { name: /^Split:/ }).click();
+  await page.getByRole("option", { name: new RegExp(`^${method}`) }).click();
+}
 
 test("sign up, create group, equal split, balances", async ({ page }) => {
   await signUp(page, alex.name, alex.email);
@@ -30,7 +36,7 @@ test("exact, percent, shares, adjustment and itemized splits validate and save",
   let dialog = await openAddExpense(page);
   await dialog.getByLabel("Description", { exact: true }).fill("Taxi");
   await dialog.getByLabel("Amount", { exact: true }).fill("30");
-  await dialog.getByRole("tab", { name: "Exact amounts" }).click();
+  await chooseSplit(page, dialog, "Exact amounts");
   await expect(dialog.getByLabel("Chris Okafor amount")).toHaveAttribute("placeholder", "10.00");
   await dialog.getByLabel("Alex Tester amount").fill("12");
   await expect(dialog.getByLabel("Bea Moreno amount")).toHaveAttribute("placeholder", "9.00");
@@ -47,7 +53,7 @@ test("exact, percent, shares, adjustment and itemized splits validate and save",
   dialog = await openAddExpense(page);
   await dialog.getByLabel("Description", { exact: true }).fill("Museum tickets");
   await dialog.getByLabel("Amount", { exact: true }).fill("45");
-  await dialog.getByRole("tab", { name: "Percentages" }).click();
+  await chooseSplit(page, dialog, "Percentages");
   await dialog.getByLabel("Alex Tester percent").fill("50");
   await dialog.getByLabel("Bea Moreno percent").fill("25");
   await dialog.getByLabel("Chris Okafor percent").fill("25");
@@ -57,10 +63,11 @@ test("exact, percent, shares, adjustment and itemized splits validate and save",
   dialog = await openAddExpense(page);
   await dialog.getByLabel("Description", { exact: true }).fill("Groceries");
   await dialog.getByLabel("Amount", { exact: true }).fill("60");
-  await dialog.getByRole("button", { name: "Multiple people paid" }).click();
+  await dialog.getByRole("button", { name: /^Paid by:/ }).click();
+  await page.getByRole("option", { name: /^Several people/ }).click();
   await dialog.getByLabel("Alex Tester paid").fill("40");
   await dialog.getByLabel("Bea Moreno paid").fill("20");
-  await dialog.getByRole("tab", { name: "Shares" }).click();
+  await chooseSplit(page, dialog, "Shares");
   await dialog.getByLabel("Alex Tester shares").fill("2");
   await dialog.getByLabel("Bea Moreno shares").fill("1");
   await dialog.getByLabel("Chris Okafor shares").fill("1");
@@ -70,14 +77,14 @@ test("exact, percent, shares, adjustment and itemized splits validate and save",
   dialog = await openAddExpense(page);
   await dialog.getByLabel("Description", { exact: true }).fill("Wine");
   await dialog.getByLabel("Amount", { exact: true }).fill("40");
-  await dialog.getByRole("tab", { name: "Adjustment" }).click();
+  await chooseSplit(page, dialog, "Adjustment");
   await dialog.getByLabel("Alex Tester extra").fill("10");
   await saveExpense(page, dialog);
 
   // Itemized: total is derived from items
   dialog = await openAddExpense(page);
   await dialog.getByLabel("Description", { exact: true }).fill("Lunch");
-  await dialog.getByRole("tab", { name: "Itemized" }).click();
+  await chooseSplit(page, dialog, "Itemized");
   await dialog.getByLabel("Item 1 name").fill("Burger");
   await dialog.getByLabel("Item 1 price").fill("12");
   await dialog.getByRole("button", { name: "Add item" }).click();
