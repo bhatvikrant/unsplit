@@ -103,7 +103,7 @@ export function RowPicker({
     return (
       <PickerSheet open={open} onOpenChange={setOpen} title={title} value={value} onValueChange={onValueChange} closeOnSelect={closeOnSelect} footer={footer} trigger={trigger}>
         {options.map((o) => (
-          <PickerItem key={o.value} value={o.value} icon={o.icon} className={o.description ? "min-h-15 py-2" : undefined}>
+          <PickerItem key={o.value} value={o.value} icon={o.icon ? <span aria-hidden className="contents">{o.icon}</span> : undefined} className={o.description ? "min-h-15 py-2" : undefined}>
             {o.description ? (
               <span className="flex min-w-0 flex-col">
                 <span className="truncate">{o.label}</span>
@@ -135,7 +135,7 @@ export function RowPicker({
               }}
               className={cn("hover:bg-surface-2 flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-sm", o.value === value && "font-medium")}
             >
-              {o.icon}
+              {o.icon ? <span aria-hidden className="contents">{o.icon}</span> : null}
               <span className="min-w-0 flex-1">
                 <span className="block truncate">{o.label}</span>
                 {o.description ? <span className="text-text-muted block truncate text-xs font-normal">{o.description}</span> : null}
