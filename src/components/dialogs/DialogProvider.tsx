@@ -1,10 +1,31 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, lazy, Suspense, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import type { Id } from "@convex/_generated/dataModel";
-import { AddExpenseDialog, type AddExpenseOptions } from "./AddExpenseDialog";
-import { SettleUpDialog, type SettleUpOptions } from "./SettleUpDialog";
-import { CreateGroupDialog } from "./CreateGroupDialog";
-import { AddFriendDialog } from "./AddFriendDialog";
-import { ConvertCurrencyDialog, type ConvertOptions } from "./ConvertCurrencyDialog";
+import type { AddExpenseOptions } from "./AddExpenseDialog";
+import type { SettleUpOptions } from "./SettleUpDialog";
+import type { ConvertOptions } from "./ConvertCurrencyDialog";
+
+/**
+ * The dialogs (the expense form above all, with its date and split pickers) are not needed until
+ * one is opened, so they stay out of the dashboard's first load. preloadDialogs() fetches them in
+ * the background once the app is up (AppShell), so a tap opens one at once, offline included.
+ */
+const loaders = {
+  addExpense: () => import("./AddExpenseDialog"),
+  settleUp: () => import("./SettleUpDialog"),
+  createGroup: () => import("./CreateGroupDialog"),
+  addFriend: () => import("./AddFriendDialog"),
+  convert: () => import("./ConvertCurrencyDialog"),
+};
+const AddExpenseDialog = lazy(() => loaders.addExpense().then((m) => ({ default: m.AddExpenseDialog })));
+const SettleUpDialog = lazy(() => loaders.settleUp().then((m) => ({ default: m.SettleUpDialog })));
+const CreateGroupDialog = lazy(() => loaders.createGroup().then((m) => ({ default: m.CreateGroupDialog })));
+const AddFriendDialog = lazy(() => loaders.addFriend().then((m) => ({ default: m.AddFriendDialog })));
+const ConvertCurrencyDialog = lazy(() => loaders.convert().then((m) => ({ default: m.ConvertCurrencyDialog })));
+
+/** Fetches every dialog's chunk ahead of use. Safe to call more than once: imports are cached. */
+export function preloadDialogs() {
+  for (const load of Object.values(loaders)) void load().catch(() => {});
+}
 
 type Dialogs = {
   addExpense: (opts?: AddExpenseOptions) => void;
@@ -44,11 +65,13 @@ export function DialogProvider({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider value={api}>
       {children}
-      {expense ? <AddExpenseDialog key={expense.key} options={expense.opts} onClose={closeExpense} /> : null}
-      {settle ? <SettleUpDialog key={settle.key} options={settle.opts} onClose={() => setSettle(null)} /> : null}
-      {group ? <CreateGroupDialog key={group} onClose={() => setGroup(null)} /> : null}
-      {friend ? <AddFriendDialog key={friend} onClose={() => setFriend(null)} /> : null}
-      {convert ? <ConvertCurrencyDialog key={convert.key} options={convert.opts} onClose={() => setConvert(null)} /> : null}
+      {/* Nothing stands in while a dialog's chunk arrives: it is preloaded, so that is a moment at
+          most. One boundary each, so opening one never hides another that is already open. */}
+      {expense ? <Suspense fallback={null}><AddExpenseDialog key={expense.key} options={expense.opts} onClose={closeExpense} /></Suspense> : null}
+      {settle ? <Suspense fallback={null}><SettleUpDialog key={settle.key} options={settle.opts} onClose={() => setSettle(null)} /></Suspense> : null}
+      {group ? <Suspense fallback={null}><CreateGroupDialog key={group} onClose={() => setGroup(null)} /></Suspense> : null}
+      {friend ? <Suspense fallback={null}><AddFriendDialog key={friend} onClose={() => setFriend(null)} /></Suspense> : null}
+      {convert ? <Suspense fallback={null}><ConvertCurrencyDialog key={convert.key} options={convert.opts} onClose={() => setConvert(null)} /></Suspense> : null}
     </Ctx.Provider>
   );
 }
