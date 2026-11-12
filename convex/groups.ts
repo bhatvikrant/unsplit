@@ -47,6 +47,28 @@ export const list = query({
   },
 });
 
+/**
+ * Every group of mine with what the add-expense form needs from it: the members, the default split
+ * and the last currency. Loaded once when the form opens, so picking a group in its "With" picker
+ * fills in "Paid by" and the split at once instead of waiting on `get` (which also works out debts).
+ */
+export const listForExpense = query({
+  args: {},
+  handler: async (ctx) => {
+    const me = await requireUserId(ctx);
+    const memberships = await ctx.db.query("groupMembers").withIndex("by_user", (q) => q.eq("userId", me)).collect();
+    const groups = await Promise.all(
+      memberships.map(async (m) => {
+        const g = await ctx.db.get(m.groupId);
+        if (!g || g.deletedAt) return null;
+        const members = await publicUsers(ctx, await groupMemberIds(ctx, g._id), me);
+        return { _id: g._id, members, defaultSplit: g.defaultSplit ?? null, lastCurrency: g.lastCurrency ?? null };
+      }),
+    );
+    return groups.filter((x) => x !== null);
+  },
+});
+
 export const listDeleted = query({
   args: {},
   handler: async (ctx) => {

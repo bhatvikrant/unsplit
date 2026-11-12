@@ -1,6 +1,6 @@
 import { isTempId, useAction, useMutation, useQuery } from "@/lib/convex";
 import { CalendarDays, Camera, Loader2, Plus, Repeat, ScanText, StickyNote, UserPlus, Users, Wallet, X } from "lucide-react";
-import { useLayoutEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
@@ -12,7 +12,7 @@ import { GroupAvatar, UserAvatar } from "@/components/common/Avatars";
 import { Money } from "@/components/common/Money";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/responsive-dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, useIsPhoneDialog } from "@/components/ui/responsive-dialog";
 import { Input } from "@/components/ui/input";
 import { Picker, PickerGroup, PickerItem, PickerLabel, PickerSeparator } from "@/components/ui/picker";
 import { RECEIPT_EDGE, uploadImage } from "@/lib/image";
@@ -71,14 +71,36 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
   };
   // A group or friend made right here, from the "With" picker, becomes the expense's scope.
   const [creating, setCreating] = useState<"group" | "friend" | null>(null);
+  // Phones make the group or friend in a sheet of its own; it keeps its title while it slides away.
+  const phoneSheets = useIsPhoneDialog();
+  const [sheetKind, setSheetKind] = useState<"group" | "friend">("group");
+  const startCreating = (kind: "group" | "friend") => {
+    setSheetKind(kind);
+    setCreating(kind);
+  };
+  // Desktop: the dropdown hands focus back to its trigger as it closes, after the inline form's
+  // autoFocus has run, so the name field is focused again once it has.
+  useEffect(() => {
+    if (!creating || phoneSheets) return;
+    const t = window.setTimeout(() => document.getElementById(creating === "group" ? "xgname" : "xfname")?.focus(), 0);
+    return () => window.clearTimeout(t);
+  }, [creating, phoneSheets]);
   const groupForm = useGroupForm({ onCreated: (id) => pickScope({ kind: "group", id }) });
   const friendForm = useFriendForm({ onAdded: (id) => pickScope({ kind: "friend", id }) });
   // From UnMoney: its amounts, date and words; its currency when it is one we know, and our category guessed from its category's name.
   const handoff = options.handoff;
   const handoffCurrency = handoff && CURRENCY_CODES.has(handoff.currency) ? handoff.currency : null;
   const handoffCategory = handoff ? suggestCategory(handoff.category ?? "") : null;
-  const group = useQuery(api.groups.get, scope?.kind === "group" ? { groupId: scope.id } : "skip");
-  const friend = useQuery(api.friends.get, scope?.kind === "friend" ? { friendId: scope.id } : "skip");
+  // Who is in the chosen group or friendship. Taken from what is already loaded (every group's
+  // members, the friends list), so a pick in the "With" picker fills the form in at once; the
+  // per-scope queries are only asked when that falls short (a group made a moment ago, offline).
+  const groupsForExpense = useQuery(api.groups.listForExpense);
+  const listedGroup = scope?.kind === "group" ? groupsForExpense?.find((g) => g._id === scope.id) : undefined;
+  const fetchedGroup = useQuery(api.groups.get, scope?.kind === "group" && !listedGroup ? { groupId: scope.id } : "skip");
+  const group = listedGroup ?? fetchedGroup;
+  const listedFriend = scope?.kind === "friend" ? friends?.find((f) => f.user._id === scope.id)?.user : undefined;
+  const fetchedFriend = useQuery(api.friends.get, scope?.kind === "friend" && !listedFriend ? { friendId: scope.id } : "skip");
+  const friendUser = listedFriend ?? fetchedFriend?.user;
 
   const [description, setDescription] = useState(handoff?.description ?? "");
   const [amount, setAmount] = useState(() => (handoff ? amountText(handoff.amount, handoffCurrency ?? defaultCurrency) : ""));
@@ -106,9 +128,9 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
 
   const people = useMemo(() => {
     if (scope?.kind === "group" && group) return group.members;
-    if (scope?.kind === "friend" && friend && me) return [me, friend.user];
+    if (scope?.kind === "friend" && friendUser && me) return [me, friendUser];
     return [];
-  }, [scope, group, friend, me]);
+  }, [scope, group, friendUser, me]);
   const peopleIds = useMemo(() => people.map((p) => p._id), [people]);
   const peopleKey = peopleIds.join(",");
 
@@ -365,7 +387,7 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
                   value={scope ? `${scope.kind}:${scope.id}` : ""}
                   onValueChange={(v) => {
                     const [kind, id] = v.split(":");
-                    if (kind === "new") setCreating(id === "group" ? "group" : "friend");
+                    if (kind === "new") startCreating(id === "group" ? "group" : "friend");
                     else pickScope(kind === "group" ? { kind: "group", id: id as Id<"groups"> } : { kind: "friend", id: id as Id<"users"> });
                   }}
                   disabled={loadingEdit}
@@ -406,7 +428,7 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
               {!creating && groups?.length === 0 && friends?.length === 0 ? (
                 <p className="text-text-muted text-xs">No groups or friends yet. Start one from the list above; you can invite people by email.</p>
               ) : null}
-              {creating ? (
+              {creating && !phoneSheets ? (
                 <div className="shadow-ring space-y-3 rounded-xl p-3" data-testid={`new-${creating}`}>
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-semibold">{creating === "group" ? "New group" : "New friend"}</span>
@@ -430,6 +452,27 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
                     )}
                   </div>
                 </div>
+              ) : null}
+              {/* Phones: its own sheet over this one, with Create in the top bar so the keyboard never covers it. */}
+              {phoneSheets ? (
+                <Dialog open={creating !== null} onOpenChange={(o) => !o && setCreating(null)}>
+                  <DialogContent
+                    size="full"
+                    action={
+                      sheetKind === "group"
+                        ? { label: groupForm.busy ? "Creating…" : "Create", onClick: () => void groupForm.submit(), disabled: !groupForm.canSubmit }
+                        : { label: friendForm.busy ? "Adding…" : "Add", onClick: () => void friendForm.submit(), disabled: !friendForm.canSubmit }
+                    }
+                  >
+                    <DialogHeader>
+                      <DialogTitle>{sheetKind === "group" ? "New group" : "New friend"}</DialogTitle>
+                      <DialogDescription className="sr-only">{sheetKind === "group" ? "Start a group; the expense goes in it." : "Add a friend; the expense is with them."}</DialogDescription>
+                    </DialogHeader>
+                    <div className="pt-3" data-testid={`new-${sheetKind}`}>
+                      {sheetKind === "group" ? <GroupFormFields form={groupForm} friends={friends} compact idPrefix="xg" /> : <FriendFormFields form={friendForm} idPrefix="xf" />}
+                    </div>
+                  </DialogContent>
+                </Dialog>
               ) : null}
             </div>
 
