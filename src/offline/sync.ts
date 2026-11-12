@@ -198,7 +198,8 @@ export class SyncEngine {
         }
         const spec = SPECS[op.fn];
         const sendArgs = spec?.clientKey ? { ...args, clientKey: op.id } : args;
-        await this.store.updateOp(op.id, { attempts: op.attempts + 1 });
+        // Bookkeeping only: the mutation is not held up waiting for the disk.
+        void this.store.updateOp(op.id, { attempts: op.attempts + 1 });
         let result: unknown;
         try {
           result = await this.client.mutation(makeFunctionReference<"mutation">(op.fn) as FunctionReference<"mutation">, sendArgs);
@@ -207,12 +208,14 @@ export class SyncEngine {
           await this.fail(op, errorText(e), e);
           continue;
         }
-        await this.store.complete(op.id, spec?.mapResult?.(op, result) ?? []);
+        // complete() updates memory at once and then writes to disk; the form hears back without waiting for the disk.
+        const saved = this.store.complete(op.id, spec?.mapResult?.(op, result) ?? []);
         const w = this.waiters.get(op.id);
         if (w) {
           this.waiters.delete(op.id);
           w.resolve(result);
         }
+        await saved;
         this.status = { ...this.status, lastError: null };
       }
     } finally {
