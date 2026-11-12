@@ -194,7 +194,7 @@ sign-in sends people back to the old one.
 Every push to a branch other than `main` gets a Vercel preview build, and that
 build gets its own Convex preview deployment (`preview/<branch>` in the Convex
 dashboard) with its own empty database, so a PR can be tried without touching
-production data. What makes that work:
+production data (smoke-tested 2026-11-12). What makes that work:
 
 1. **Preview deploy key**: in the Convex dashboard → project `unsplit` →
    Settings → Deploy keys, generate a *preview* deploy key (the CLI can only
