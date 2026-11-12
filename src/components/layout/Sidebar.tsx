@@ -29,7 +29,7 @@ function SectionHeading({ label, action, onAction }: { label: string; action: st
         type="button"
         aria-label={action}
         onClick={onAction}
-        className="pressable text-text-faint hover:bg-surface-2 hover:text-text flex size-6 items-center justify-center rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
+        className="pressable text-text-faint hover:bg-surface-2 hover:text-text flex size-6 items-center pointer-coarse:size-10 pointer-coarse:-my-2 justify-center rounded-md outline-none focus-visible:ring-[3px] focus-visible:ring-ring"
       >
         <Plus className="size-3.5" />
       </button>

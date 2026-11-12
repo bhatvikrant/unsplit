@@ -668,7 +668,7 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
                     maxLength={2000}
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    className="placeholder:text-text-faint field-sizing-content min-h-12 w-full resize-none bg-transparent py-3 text-[15px] leading-6 outline-none sm:text-sm"
+                    className="placeholder:text-text-faint field-sizing-content min-h-12 w-full resize-none bg-transparent py-3 text-base leading-6 outline-none sm:text-sm"
                   />
                 </RowBody>
               </Row>

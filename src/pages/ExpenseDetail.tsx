@@ -86,9 +86,11 @@ export function ExpenseDetail() {
             </Button>
           </div>
         ) : null}
-        <div className="flex items-start gap-4">
+        {/* Phones: the date, category and group line runs the full width under the icon instead
+            of a narrow column squeezed between the icon and the Edit / Delete buttons. */}
+        <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-4">
           <CategoryIcon slug={e.isPayment ? "payment" : e.category} size="lg" />
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0">
             <h1 className="text-text text-xl font-semibold break-words">{e.description}</h1>
             <div className="text-text mt-0.5 text-2xl font-semibold">
               <Money minor={e.amountMinor} currency={e.currency} />
@@ -97,14 +99,6 @@ export function ExpenseDetail() {
                   (was <Money minor={e.originalAmountMinor} currency={e.originalCurrency} />)
                 </span>
               ) : null}
-            </div>
-            <div className="text-text-muted mt-1 text-sm">
-              {formatDate(e.date, "long")} · {e.isPayment ? "Payment" : cat.name}
-              {e.group ? <> · <Link to={`/groups/${e.group._id}`} className="hover:underline">{e.group.name}</Link></> : e.friend ? <> · with <Link to={`/friends/${e.friend._id}`} className="hover:underline">{e.friend.name}</Link></> : null}
-            </div>
-            <div className="text-text-faint mt-1 text-xs">
-              Added by {e.createdByUser?.name ?? "someone"} {relativeTime(e._creationTime)}
-              {e.updatedAt - e._creationTime > 60_000 ? <> · last changed by {e.updatedByUser?.name ?? "someone"} {relativeTime(e.updatedAt)}</> : null}
             </div>
           </div>
           {!e.deletedAt ? (
@@ -134,6 +128,16 @@ export function ExpenseDetail() {
               </Button>
             </div>
           ) : null}
+          <div className="col-span-full mt-2 sm:col-span-1 sm:col-start-2 sm:mt-0">
+            <div className="text-text-muted mt-1 text-sm">
+              {formatDate(e.date, "long")} · {e.isPayment ? "Payment" : cat.name}
+              {e.group ? <> · <Link to={`/groups/${e.group._id}`} className="hover:underline">{e.group.name}</Link></> : e.friend ? <> · with <Link to={`/friends/${e.friend._id}`} className="hover:underline">{e.friend.name}</Link></> : null}
+            </div>
+            <div className="text-text-faint mt-1 text-xs">
+              Added by {e.createdByUser?.name ?? "someone"} {relativeTime(e._creationTime)}
+              {e.updatedAt - e._creationTime > 60_000 ? <> · last changed by {e.updatedByUser?.name ?? "someone"} {relativeTime(e.updatedAt)}</> : null}
+            </div>
+          </div>
         </div>
       </div>
 

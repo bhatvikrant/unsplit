@@ -123,9 +123,10 @@ export function ChartsPage() {
           <>
             {groupId ? (
               <Tabs value={mode} onValueChange={(v) => setMode(v as "mine" | "group")}>
-                <TabsList>
-                  <TabsTrigger value="group">Group</TabsTrigger>
-                  <TabsTrigger value="mine">My share</TabsTrigger>
+                {/* As tall as the period picker beside it on phones (44px), a full-size touch target. */}
+                <TabsList className="h-11! sm:h-9!">
+                  <TabsTrigger value="group" className="px-3">Group</TabsTrigger>
+                  <TabsTrigger value="mine" className="px-3">My share</TabsTrigger>
                 </TabsList>
               </Tabs>
             ) : null}

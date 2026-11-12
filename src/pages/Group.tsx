@@ -571,7 +571,8 @@ export function GroupSettings() {
 
         <Section title="Invite link">
           <div className="flex flex-wrap items-center gap-2 p-4 text-sm">
-            <code className="bg-surface min-w-0 flex-1 truncate rounded px-2 py-1 text-xs">{`${window.location.origin}/join/${group.inviteCode}`}</code>
+            {/* Its own full-width line on phones; beside Copy and Reset there it shrank to "http…". */}
+            <code className="bg-surface min-w-0 flex-1 basis-full truncate rounded px-2 py-1.5 text-xs sm:basis-0">{`${window.location.host}/join/${group.inviteCode}`}</code>
             <Button size="sm" variant="outline" onClick={() => { void navigator.clipboard.writeText(`${window.location.origin}/join/${group.inviteCode}`); toast.success("Link copied"); }}>
               <Copy /> Copy
             </Button>

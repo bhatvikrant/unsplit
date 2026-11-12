@@ -139,7 +139,10 @@ export function Section({ title, children, actions, className }: { title?: React
   );
 }
 
-/** Small (i) icon that explains a setting: on hover (desktop) and on tap (touch). */
+/**
+ * Small (i) icon that explains a setting: on hover (desktop) and on tap (touch). On touch screens an
+ * invisible ring widens the 20px icon to a 40px tap area.
+ */
 export function InfoHint({ text, label = "What does this do?", className }: { text: ReactNode; label?: string; className?: string }) {
   const [open, setOpen] = useState(false);
   const [tip, setTip] = useState(false);
@@ -154,7 +157,7 @@ export function InfoHint({ text, label = "What does this do?", className }: { te
               aria-label={label}
               onClick={stop}
               onKeyDown={stop}
-              className={cn("text-text-faint hover:text-text focus-visible:ring-ring inline-flex size-5 shrink-0 items-center justify-center rounded-full align-middle outline-none focus-visible:ring-[3px]", className)}
+              className={cn("text-text-faint hover:text-text focus-visible:ring-ring relative inline-flex size-5 shrink-0 after:absolute after:-inset-2.5 pointer-fine:after:hidden items-center justify-center rounded-full align-middle outline-none focus-visible:ring-[3px]", className)}
             >
               <Info className="size-3.5" />
             </button>
