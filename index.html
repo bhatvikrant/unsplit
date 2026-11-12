@@ -22,9 +22,32 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="description" content="UnSplit: split shared expenses with friends, flatmates and travel groups. Free, no limits." />
     <title>UnSplit</title>
+    <!-- Boot screen: the same pulsing logo as FullPageLoader, drawn from this file alone so a slow
+         connection shows the app (in the right theme) while the ~350 KB bundle downloads, instead of
+         a blank page for several seconds. React replaces it on its first render. -->
+    <style>
+      html { background: #f6f5f1; color: #1b1a17; }
+      html.dark { background: #131210; color: #f3f1ec; }
+      .boot { display: flex; min-height: 100vh; min-height: 100dvh; align-items: center; justify-content: center; }
+      .boot-mark { display: inline-flex; align-items: center; gap: 10px; animation: boot-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; font: 600 17px/1.5 "Geist Variable", system-ui, -apple-system, sans-serif; letter-spacing: -0.025em; }
+      .boot-mark svg { filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.12)); }
+      .boot-mark rect { fill: #1f7a55; }
+      .boot-mark path { stroke: #fff; }
+      html.dark .boot-mark rect { fill: #3fb47a; }
+      html.dark .boot-mark path { stroke: #0b1f15; }
+      @keyframes boot-pulse { 50% { opacity: 0.5; } }
+      @media (prefers-reduced-motion: reduce) { .boot-mark { animation: none; } }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="boot" aria-busy="true" aria-label="Loading UnSplit">
+        <span class="boot-mark">
+          <svg width="32" height="32" viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="150" /><path d="M320 192a64 64 0 1 0-64 64a64 64 0 1 1-64 64" fill="none" stroke-width="52" stroke-linecap="round" /></svg>
+          unsplit
+        </span>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
