@@ -2,10 +2,11 @@ import { motion, useReducedMotion } from "framer-motion";
 import { Activity, LayoutDashboard, Plus, ReceiptText, CircleEllipsis } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { NavLink, Outlet, useLocation, useSearchParams, type NavLinkProps } from "react-router";
-import { DialogProvider, useDialogs } from "@/components/dialogs/DialogProvider";
+import { DialogProvider, preloadDialogs, useDialogs } from "@/components/dialogs/DialogProvider";
 import { CommandPaletteContext } from "@/lib/commandPalette";
 import { takeHandoff } from "@/lib/handoff";
 import { cn } from "@/lib/utils";
+import { preloadPages } from "@/pageLoaders";
 import { CommandPalette } from "./CommandPalette";
 import { InstallBanner } from "./InstallPrompt";
 import { OfflineBanner } from "./OfflineBanner";
@@ -129,6 +130,35 @@ function ShortcutActions() {
 }
 
 /**
+ * The other pages and the dialogs are chunks of their own, left out of the first load. Once the
+ * page has loaded and the browser is idle, fetch them in the background, so a tap on Add expense
+ * or a link opens at once, and still opens if the connection drops before the service worker has
+ * them (src/pageLoaders.ts).
+ */
+function PreloadChunks() {
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let idle: number | undefined;
+    const run = () => {
+      preloadDialogs();
+      preloadPages();
+    };
+    const schedule = () => {
+      if ("requestIdleCallback" in window) idle = window.requestIdleCallback(run, { timeout: 3000 });
+      else timer = setTimeout(run, 1000);
+    };
+    if (document.readyState === "complete") schedule();
+    else window.addEventListener("load", schedule, { once: true });
+    return () => {
+      window.removeEventListener("load", schedule);
+      if (timer) clearTimeout(timer);
+      if (idle !== undefined) window.cancelIdleCallback(idle);
+    };
+  }, []);
+  return null;
+}
+
+/**
  * Each page settles in with a short rise and fade; none under reduced motion. Keyed by section
  * (/groups/:id), not the full path, so the tabs of one group swap in place instead of fading the
  * shared header out and back in on every click.
@@ -150,6 +180,7 @@ export function AppShell() {
     <DialogProvider>
       <CommandPaletteProvider>
         <ShortcutActions />
+        <PreloadChunks />
         <div className="flex min-h-dvh">
           <Sidebar />
           <div className="min-w-0 flex-1">

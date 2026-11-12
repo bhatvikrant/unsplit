@@ -1,65 +1,85 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, type ComponentType, type ReactNode } from "react";
 import { createBrowserRouter, Navigate, ScrollRestoration } from "react-router";
 import { RowSkeleton } from "@/components/common/Misc";
-import { AppShell } from "@/components/layout/AppShell";
-import { RedirectIfAuthed, RequireAuth } from "@/components/layout/RequireAuth";
-import { AccountPage, BackupSettings, NotificationSettings, PreferencesSettings, ProfileSettings } from "@/pages/Account";
-import { ActivityPage } from "@/pages/ActivityPage";
-import { Login } from "@/pages/Auth";
-import { Dashboard } from "@/pages/Dashboard";
-import { ExpenseDetail } from "@/pages/ExpenseDetail";
-import { AllExpenses, RecurringExpenses, TrashPage } from "@/pages/Expenses";
-import { FriendPage } from "@/pages/Friend";
-import { GroupPage, GroupSettings, GroupTotals } from "@/pages/Group";
+import { FullPageLoader, RedirectIfAuthed, RequireAuth } from "@/components/layout/RequireAuth";
+import { hasStoredSession, pageLoaders as load } from "@/pageLoaders";
+// Both tiny: a chunk of their own would only add a round trip before the redirect or the message.
 import { HandoffLanding } from "@/pages/Handoff";
-import { Join } from "@/pages/Join";
-import { Landing } from "@/pages/Landing";
 import { NotFound } from "@/pages/NotFound";
-import { Privacy } from "@/pages/Privacy";
 
-// Charts pull in recharts, a third of the bundle, for a page most visits never open. It loads on
-// first use; the service worker precaches the chunk, so it is still there offline.
-const ChartsPage = lazy(() => import("@/pages/Charts").then((m) => ({ default: m.ChartsPage })));
-const charts = (
-  <Suspense fallback={<RowSkeleton />}>
-    <ChartsPage />
-  </Suspense>
-);
+function page<M, K extends keyof M>(loader: () => Promise<M>, name: K) {
+  return lazy(() => loader().then((m) => ({ default: m[name] as ComponentType })));
+}
+
+// Signed in: start on the shell and the dashboard now, while the session is still being checked,
+// instead of once RequireAuth lets them render.
+if (hasStoredSession()) {
+  void load.shell().catch(() => {});
+  void load.dashboard().catch(() => {});
+}
+
+const AppShell = page(load.shell, "AppShell");
+const Dashboard = page(load.dashboard, "Dashboard");
+const AccountPage = page(load.account, "AccountPage");
+const BackupSettings = page(load.account, "BackupSettings");
+const NotificationSettings = page(load.account, "NotificationSettings");
+const PreferencesSettings = page(load.account, "PreferencesSettings");
+const ProfileSettings = page(load.account, "ProfileSettings");
+const ActivityPage = page(load.activity, "ActivityPage");
+const Login = page(load.auth, "Login");
+// Charts pull in recharts, a third of the old bundle, for a page most visits never open.
+const ChartsPage = page(load.charts, "ChartsPage");
+const ExpenseDetail = page(load.expenseDetail, "ExpenseDetail");
+const AllExpenses = page(load.expenses, "AllExpenses");
+const RecurringExpenses = page(load.expenses, "RecurringExpenses");
+const TrashPage = page(load.expenses, "TrashPage");
+const FriendPage = page(load.friend, "FriendPage");
+const GroupPage = page(load.group, "GroupPage");
+const GroupSettings = page(load.group, "GroupSettings");
+const GroupTotals = page(load.group, "GroupTotals");
+const Join = page(load.join, "Join");
+const Landing = page(load.landing, "Landing");
+const Privacy = page(load.privacy, "Privacy");
+
+/** Outside the shell the page is the whole screen, so the logo loader stands in for it. */
+const full = (node: ReactNode) => <Suspense fallback={<FullPageLoader />}>{node}</Suspense>;
+/** Inside the shell the sidebar and top bar stay put, and rows stand in for the page. */
+const inShell = (node: ReactNode) => <Suspense fallback={<RowSkeleton />}>{node}</Suspense>;
 
 export const router = createBrowserRouter([
-  { path: "/", element: <RedirectIfAuthed><Landing /></RedirectIfAuthed> },
-  { path: "/login", element: <RedirectIfAuthed><Login /></RedirectIfAuthed> },
+  { path: "/", element: <RedirectIfAuthed>{full(<Landing />)}</RedirectIfAuthed> },
+  { path: "/login", element: <RedirectIfAuthed>{full(<Login />)}</RedirectIfAuthed> },
   { path: "/signup", element: <Navigate to="/login" replace /> },
-  { path: "/privacy", element: <Privacy /> },
-  { path: "/join/:code", element: <Join /> },
+  { path: "/privacy", element: full(<Privacy />) },
+  { path: "/join/:code", element: full(<Join />) },
   // entries sent over by UnMoney, to become one expense (src/lib/handoff.ts)
   { path: "/expenses/new", element: <HandoffLanding /> },
   {
     element: (
       <RequireAuth>
-        <AppShell />
+        {full(<AppShell />)}
         {/* Back to a long list lands where it was left; a new page starts at the top. */}
         <ScrollRestoration />
       </RequireAuth>
     ),
     children: [
-      { path: "/dashboard", element: <Dashboard /> },
-      { path: "/activity", element: <ActivityPage /> },
-      { path: "/expenses", element: <AllExpenses /> },
-      { path: "/expenses/recurring", element: <RecurringExpenses /> },
-      { path: "/expenses/:id", element: <ExpenseDetail /> },
-      { path: "/groups/:id", element: <GroupPage /> },
-      { path: "/groups/:id/settings", element: <GroupSettings /> },
-      { path: "/groups/:id/totals", element: <GroupTotals /> },
-      { path: "/groups/:id/charts", element: charts },
-      { path: "/friends/:id", element: <FriendPage /> },
-      { path: "/charts", element: charts },
-      { path: "/account", element: <AccountPage /> },
-      { path: "/account/profile", element: <ProfileSettings /> },
-      { path: "/account/preferences", element: <PreferencesSettings /> },
-      { path: "/account/notifications", element: <NotificationSettings /> },
-      { path: "/account/backup", element: <BackupSettings /> },
-      { path: "/trash", element: <TrashPage /> },
+      { path: "/dashboard", element: inShell(<Dashboard />) },
+      { path: "/activity", element: inShell(<ActivityPage />) },
+      { path: "/expenses", element: inShell(<AllExpenses />) },
+      { path: "/expenses/recurring", element: inShell(<RecurringExpenses />) },
+      { path: "/expenses/:id", element: inShell(<ExpenseDetail />) },
+      { path: "/groups/:id", element: inShell(<GroupPage />) },
+      { path: "/groups/:id/settings", element: inShell(<GroupSettings />) },
+      { path: "/groups/:id/totals", element: inShell(<GroupTotals />) },
+      { path: "/groups/:id/charts", element: inShell(<ChartsPage />) },
+      { path: "/friends/:id", element: inShell(<FriendPage />) },
+      { path: "/charts", element: inShell(<ChartsPage />) },
+      { path: "/account", element: inShell(<AccountPage />) },
+      { path: "/account/profile", element: inShell(<ProfileSettings />) },
+      { path: "/account/preferences", element: inShell(<PreferencesSettings />) },
+      { path: "/account/notifications", element: inShell(<NotificationSettings />) },
+      { path: "/account/backup", element: inShell(<BackupSettings />) },
+      { path: "/trash", element: inShell(<TrashPage />) },
       { path: "*", element: <NotFound /> },
     ],
   },
