@@ -25,6 +25,7 @@ type ExpDeleted = FunctionReturnType<typeof api.expenses.deleted>;
 type GroupList = FunctionReturnType<typeof api.groups.list>;
 type GroupDeleted = FunctionReturnType<typeof api.groups.listDeleted>;
 type GroupGet = FunctionReturnType<typeof api.groups.get>;
+type GroupsForExpense = FunctionReturnType<typeof api.groups.listForExpense>;
 type FriendList = FunctionReturnType<typeof api.friends.list>;
 type FriendGet = FunctionReturnType<typeof api.friends.get>;
 type Me = FunctionReturnType<typeof api.users.me>;
@@ -75,6 +76,7 @@ function placeholder(id: string, name?: string, email?: string): PublicUser {
 export function buildDirectory(entries: Iterable<QueryEntry>, ops: Op[], idMap: Record<string, string>): Directory {
   const users = new Map<string, PublicUser>();
   const groups = new Map<string, GroupInfo>();
+  const memberLists = new Map<string, string[]>();
   const addUser = (u: Partial<PublicUser> | null | undefined) => {
     if (!u || !u._id) return;
     users.set(u._id, { _id: u._id, name: u.name ?? "Someone", email: u.email, image: u.image, isPlaceholder: Boolean(u.isPlaceholder) });
@@ -104,6 +106,13 @@ export function buildDirectory(entries: Iterable<QueryEntry>, ops: Op[], idMap: 
         for (const m of g.members) addUser(m);
         break;
       }
+      case "groups:listForExpense":
+        // members only; applied after the loop, under whatever groups:get says (which also has the name)
+        for (const g of v as GroupsForExpense) {
+          memberLists.set(g._id, g.members.map((m) => m._id));
+          for (const m of g.members) addUser(m);
+        }
+        break;
       case "expenses:get": {
         const x = v as ExpGet;
         for (const s of x.shares) addUser(s.user);
@@ -112,6 +121,10 @@ export function buildDirectory(entries: Iterable<QueryEntry>, ops: Op[], idMap: 
         break;
       }
     }
+  }
+  for (const [id, memberIds] of memberLists) {
+    const g = groups.get(id);
+    if (g && !g.memberIds) groups.set(id, { ...g, memberIds });
   }
   for (const raw of ops) {
     const args = rewriteIds(raw.args, idMap) as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any

@@ -28,6 +28,10 @@ export function useFriendForm({ onAdded }: { onAdded: (id: Id<"users">, alreadyF
       const res = await add({ name: name || undefined, email: email || undefined });
       if (res.alreadyFriends) toast("You're already friends");
       onAdded(res.friendId, res.alreadyFriends);
+      // empty again, for the add-expense form, which keeps this form around for another friend
+      setName("");
+      setEmail("");
+      setBusy(false);
     } catch (err) {
       setError(errorMessage(err));
       setBusy(false);

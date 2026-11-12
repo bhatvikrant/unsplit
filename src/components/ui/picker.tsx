@@ -146,6 +146,15 @@ function matches(text: string, query: string) {
 
 /* ---------- the sheet ---------- */
 
+/**
+ * True when the choice just made put the cursor in a text field (New group's name field). Then the
+ * picker leaves focus there as it closes, instead of handing it back to its trigger.
+ */
+function typingElsewhere() {
+  const el = document.activeElement
+  return el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || (el instanceof HTMLElement && el.isContentEditable)
+}
+
 export type PickerSheetProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -166,12 +175,18 @@ export type PickerSheetProps = {
 
 function PickerSheet({ open, onOpenChange, trigger, title, value = "", onValueChange, searchable, searchPlaceholder = "Search", closeOnSelect = true, footer, children }: PickerSheetProps) {
   const [query, setQuery] = React.useState("")
+  // Choosing a row closes the sheet the way its own Close button does. Setting `open` to false
+  // instead skips vaul's nested-close step, which leaves the sheet underneath (Add expense) shrunk
+  // back as if this one were still on top of it.
+  const closeRef = React.useRef<HTMLButtonElement>(null)
   const state = React.useMemo<SheetState>(
     () => ({
       value,
       select: (v) => {
         onValueChange(v)
-        if (closeOnSelect) onOpenChange(false)
+        if (!closeOnSelect) return
+        if (closeRef.current) closeRef.current.click()
+        else onOpenChange(false)
       },
     }),
     [value, onValueChange, closeOnSelect, onOpenChange],
@@ -201,7 +216,17 @@ function PickerSheet({ open, onOpenChange, trigger, title, value = "", onValueCh
       }}
     >
       <DrawerTrigger asChild>{trigger}</DrawerTrigger>
-      <DrawerContent className={cn(searchable && "h-[calc(var(--sheet-vv-h,100dvh)*0.88)]!")}>
+      <DrawerContent
+        className={cn(searchable && "h-[calc(var(--sheet-vv-h,100dvh)*0.88)]!")}
+        // Focus goes back to the trigger on close, unless the choice moved it on (New group opens a
+        // sheet with its name field focused, and the keyboard must stay up for it).
+        onCloseAutoFocus={(e) => {
+          if (typingElsewhere()) e.preventDefault()
+        }}
+      >
+        <DrawerClose asChild>
+          <button ref={closeRef} type="button" hidden tabIndex={-1} aria-hidden />
+        </DrawerClose>
         <DrawerHeader>
           <DrawerTitle>{title}</DrawerTitle>
           {closeOnSelect ? null : (
@@ -286,7 +311,12 @@ function Picker({ value = "", onValueChange, placeholder, disabled, title, searc
         <SelectTrigger id={id} aria-label={ariaLabel} className={className}>
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent
+          // As in the sheet: when the choice moved focus on (New group's name field), it stays there.
+          onCloseAutoFocus={(e) => {
+            if (typingElsewhere()) e.preventDefault()
+          }}
+        >
           <ModeContext.Provider value="select">{children}</ModeContext.Provider>
         </SelectContent>
       </Select>

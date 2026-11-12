@@ -44,6 +44,11 @@ export function useGroupForm({ onCreated }: { onCreated: (id: Id<"groups">) => v
       ];
       const id = await create({ name, type, members, simplifyDebts: simplify });
       onCreated(id);
+      // empty again, for the add-expense form, which keeps this form around for another group
+      setName("");
+      setPicked({});
+      setNewPeople([]);
+      setBusy(false);
     } catch (err) {
       setError(errorMessage(err));
       setBusy(false);
