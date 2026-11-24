@@ -139,8 +139,11 @@ export function ExpenseRow({
     link
   );
 
-  const order = index === undefined ? undefined : ({ "--i": index } as CSSProperties);
-  if (!animate || reduce) return <li style={order}>{body}</li>;
+  // only the first 8 (about what a phone shows) rise in; the rest just show
+  const settles = index !== undefined && index < 8;
+  const order = settles ? ({ "--i": index } as CSSProperties) : undefined;
+  const settleRow = settles ? "settle-row" : undefined;
+  if (!animate || reduce) return <li style={order} className={settleRow}>{body}</li>;
   // The row grows and collapses in normal flow, so its neighbours move with it; no `layout` prop,
   // which would re-measure every row in the list on each change.
   return (
@@ -150,6 +153,7 @@ export function ExpenseRow({
       exit={{ opacity: 0, height: 0 }}
       transition={{ duration: 0.22, ease: "easeOut" }}
       style={{ overflow: "hidden", ...order }}
+      className={settleRow}
     >
       {body}
     </motion.li>
@@ -174,12 +178,13 @@ export function ExpenseList({
   const swipe = useSwipedRow();
   const del = useDeleteExpense();
   // The rows that are there when the list first shows rise in, a beat apart; later arrivals use
-  // the row's own slide instead.
+  // the row's own slide instead. The class comes off straight in the DOM, not through state: a
+  // re-render of every row just to drop it costs more than the animation.
   const shown = items !== undefined && items.length > 0;
-  const [settling, setSettling] = useState(true);
+  const listRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!shown) return;
-    const t = window.setTimeout(() => setSettling(false), 900);
+    const t = window.setTimeout(() => listRef.current?.querySelectorAll(".settle-in").forEach((el) => el.classList.remove("settle-in")), 900);
     return () => window.clearTimeout(t);
   }, [shown]);
   if (items === undefined) return <RowSkeleton count={6} />;
@@ -193,11 +198,11 @@ export function ExpenseList({
   }
   let order = 0;
   return (
-    <div className="card px-1 pb-1">
+    <div ref={listRef} className="card px-1 pb-1">
       {groups.map((g) => (
         <section key={g.key}>
           <h3 className="text-text-faint px-3 pt-3.5 pb-1.5 text-[11.5px] font-semibold tracking-[0.06em] uppercase">{monthLabel(g.key)}</h3>
-          <ul className={cn(settling && "settle-in")}>
+          <ul className="settle-in">
             {/* initial={false}: rows already there when the page opens don't slide in, only ones that arrive later */}
             <AnimatePresence initial={false}>
               {g.items.map((it) => (

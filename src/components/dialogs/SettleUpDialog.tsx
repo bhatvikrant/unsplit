@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { errorMessage, fromDateInputValue, toDateInputValue } from "@/lib/format";
 import { useDefaultCurrency, useMe } from "@/lib/hooks";
 import { flyMoney } from "@/lib/moneyFlight";
-import { markSettled } from "@/lib/settled";
+import { clearSettled, markSettled } from "@/lib/settled";
 import { play } from "@/lib/sound";
 import { CurrencyPicker } from "./pickers";
 
@@ -151,6 +151,7 @@ export function SettleUpDialog({ options, onClose }: { options: SettleUpOptions;
     const clears = owed.length === 1 && owed[0] === currency && owedByPayer[currency] === minor;
     play("flutter");
     const flight = flyMoney(payerRef.current, payeeRef.current);
+    if (clears) markSettled(Date.now() + flight);
     try {
       await Promise.all([
         record({
@@ -165,12 +166,10 @@ export function SettleUpDialog({ options, onClose }: { options: SettleUpOptions;
         }),
         new Promise((r) => window.setTimeout(r, flight)),
       ]);
-      if (clears) {
-        markSettled();
-        play("bell");
-      } else play("ding");
+      play(clears ? "bell" : "ding");
       onClose();
     } catch (err) {
+      clearSettled();
       setError(errorMessage(err));
       setBusy(false);
     }

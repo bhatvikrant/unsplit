@@ -209,8 +209,22 @@ export function play(name: SoundName, delay = 0) {
   } catch {
     // an audio graph error must never break the action that triggered it
   }
+  sleepSoon(delay);
   const ms = HAPTIC[name];
   if (ms && delay === 0) vibrate(ms);
+}
+
+// A running AudioContext keeps the device's audio thread busy (CPU and battery) even in silence.
+// Suspend it once the last sound has had time to finish; play() resumes it.
+let idleTimer = 0;
+function sleepSoon(delay: number) {
+  window.clearTimeout(idleTimer);
+  idleTimer = window.setTimeout(
+    () => {
+      if (ctx?.state === "running") void ctx.suspend().catch(() => {});
+    },
+    (delay + 2.5) * 1000,
+  );
 }
 
 /** A run of quiet ticks, one per changed digit, as a rolling number settles. */
@@ -218,14 +232,17 @@ export function playTicks(count: number, start = 0.06, gap = 0.045) {
   for (let i = 0; i < Math.min(count, 6); i++) play("tick", start + i * gap);
 }
 
-// iOS starts (and resumes) audio only inside a tap. Make sure the context exists and is running on
-// every tap, so a sound that plays after an awaited step (a confirmation, a save) can still be heard.
+// iOS lets audio start only inside a tap. Create the context on the first one, so a sound that
+// plays after an awaited step (a confirmation, a save) can still be heard; once started inside a
+// tap it can be resumed later without one. It is suspended again when idle (sleepSoon).
 if (typeof window !== "undefined") {
-  window.addEventListener(
-    "pointerdown",
-    () => {
-      if (enabled && (!ctx || ctx.state === "suspended")) audio();
-    },
-    { capture: true, passive: true },
-  );
+  const unlock = () => {
+    if (!enabled || ctx) return;
+    audio();
+    sleepSoon(0);
+  };
+  window.addEventListener("pointerdown", unlock, {
+    capture: true,
+    passive: true,
+  });
 }
