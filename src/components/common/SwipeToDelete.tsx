@@ -14,6 +14,7 @@ import {
 } from "framer-motion";
 import { Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { play } from "@/lib/sound";
 
 /** Width of the Delete button a short swipe uncovers. */
 const REVEAL = 88;
@@ -63,6 +64,8 @@ export function SwipeToDelete({
   const reduce = useReducedMotion();
   const [dragging, setDragging] = useState(false);
   const moved = useRef(false);
+  // past FULL, where letting go deletes: a tick marks the moment it locks in
+  const armed = useRef(false);
 
   const settle = (to: number) =>
     animate(
@@ -87,6 +90,7 @@ export function SwipeToDelete({
     onOpenChange(next);
     // `open` may not change (still open, still shut), so settle here too
     settle(next ? -REVEAL : 0);
+    armed.current = false;
     if (full) onDelete();
   }
 
@@ -128,6 +132,13 @@ export function SwipeToDelete({
         onDragStart={() => {
           moved.current = true;
           setDragging(true);
+        }}
+        onDrag={() => {
+          const a = x.get() < -FULL;
+          if (a !== armed.current) {
+            armed.current = a;
+            if (a) play("tick");
+          }
         }}
         onDragEnd={end}
         onClickCapture={onClickCapture}

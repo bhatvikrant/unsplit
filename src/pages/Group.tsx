@@ -10,6 +10,7 @@ import { GroupAvatar, GROUP_TYPE_LABELS, UserAvatar } from "@/components/common/
 import { ExpenseList } from "@/components/common/ExpenseList";
 import { EmptyState, Field, InfoHint, PageHeader, RowSkeleton, Section } from "@/components/common/Misc";
 import { BalanceChip, BalanceSummary, Money } from "@/components/common/Money";
+import { SettledBell } from "@/components/common/SettledBell";
 import { useDialogs } from "@/components/dialogs/DialogProvider";
 import { FormCard } from "@/components/dialogs/FormRows";
 import { SplitEditor, SplitMethodRow } from "@/components/dialogs/SplitEditor";
@@ -216,7 +217,9 @@ export function GroupPage() {
                 ))}
               </ul>
             ) : (
-              <p className="text-text-faint border-t px-4 py-3 text-xs">Everyone is settled up.</p>
+              <p className="text-text-faint flex items-center gap-1.5 border-t px-4 py-3 text-xs">
+                <SettledBell className="text-brand text-sm" /> Everyone is settled up.
+              </p>
             )}
           </Section>
 

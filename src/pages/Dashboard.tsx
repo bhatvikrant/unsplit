@@ -8,6 +8,7 @@ import { ExpenseRow, useDeleteExpense } from "@/components/common/ExpenseList";
 import { useSwipedRow } from "@/components/common/SwipeToDelete";
 import { EmptyState, PageHeader, RowSkeleton, Section } from "@/components/common/Misc";
 import { BalanceChip, Money } from "@/components/common/Money";
+import { SettledBell } from "@/components/common/SettledBell";
 import { useDialogs } from "@/components/dialogs/DialogProvider";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/format";
@@ -81,7 +82,9 @@ export function Dashboard() {
                   {nets.length === 0 ? "Overall" : nets.every((n) => n.net < 0) ? "Overall, you owe" : nets.every((n) => n.net > 0) ? "Overall, you're owed" : "Overall"}
                 </div>
                 {nets.length === 0 ? (
-                  <div className="mt-1 text-[32px] leading-none font-semibold tracking-[-0.03em]">All settled up</div>
+                  <div className="mt-1 flex items-center gap-2.5 text-[32px] leading-none font-semibold tracking-[-0.03em]">
+                    All settled up <SettledBell className="text-[26px] text-white/90" />
+                  </div>
                 ) : (
                   <div className="mt-1 flex flex-col gap-0.5">
                     {nets.map((n) => (
@@ -173,9 +176,9 @@ export function Dashboard() {
                 </Link>
               }
             >
-              <ul className="p-1">
-                {recentItems.map((it) => (
-                  <ExpenseRow key={it._id} item={it} showGroup swipe={swipe.row(it._id)} onDelete={() => del(it).finally(swipe.close)} />
+              <ul className="settle-in p-1">
+                {recentItems.map((it, i) => (
+                  <ExpenseRow key={it._id} item={it} showGroup index={i} swipe={swipe.row(it._id)} onDelete={() => del(it).finally(swipe.close)} />
                 ))}
               </ul>
             </Section>

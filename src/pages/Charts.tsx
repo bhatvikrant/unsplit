@@ -1,20 +1,22 @@
 import { useQuery } from "@/lib/convex";
 import { useReducedMotion } from "framer-motion";
 import { BarChart3 } from "lucide-react";
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { useParams } from "react-router";
-import { Bar, BarChart, CartesianGrid, Cell, Label, Pie, PieChart, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Cell, Label, Pie, PieChart, XAxis, YAxis, type MouseHandlerDataParam } from "recharts";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { categoryBySlug, CATEGORY_GROUPS } from "@convex/lib/categories";
 import { currencyDecimals } from "@convex/lib/money";
 import { CategoryIcon, EmptyState, PageHeader, RowSkeleton, Section } from "@/components/common/Misc";
 import { Money } from "@/components/common/Money";
+import { RollingNumber } from "@/components/common/RollingNumber";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { Picker, PickerItem } from "@/components/ui/picker";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { monthLabel } from "@/lib/format";
 import { useFormatMoney, useLastDefined } from "@/lib/hooks";
+import { play } from "@/lib/sound";
 import { GroupNav } from "./Group";
 
 /** The theme's five chart hues (src/index.css, light and dark), cycled when there are more groups. */
@@ -36,23 +38,58 @@ function Row({ color, name, value, hint }: { color?: string; name?: string; valu
   );
 }
 
+/**
+ * Spending per month. Dragging or hovering across the bars rolls the headline figure to that
+ * month (a quiet tick per bar crossed) and dims the others; letting go of the chart returns it to
+ * the latest month.
+ */
 function MonthBars({ data, currency }: { data: { key: string; label: string; value: number }[]; currency: string }) {
   const fmt = useFormatMoney();
   const reduce = useReducedMotion();
+  const [active, setActive] = useState<number | null>(null);
   const decimals = currencyDecimals(currency);
   const locale = typeof navigator !== "undefined" ? navigator.language : "en-US";
   const compact = new Intl.NumberFormat(locale, { notation: "compact", maximumFractionDigits: 1 });
   const rows = data.map((d) => ({ ...d, amount: d.value / 10 ** decimals }));
+  const shown = active !== null && active < data.length ? active : data.length - 1;
+  const pick = (state: MouseHandlerDataParam) => {
+    const i = state.activeTooltipIndex == null ? NaN : Number(state.activeTooltipIndex);
+    if (Number.isNaN(i) || i === active) return;
+    setActive(i);
+    play("tick");
+  };
   return (
-    <ChartContainer config={monthConfig} className="h-52 w-full">
-      <BarChart accessibilityLayer data={rows} margin={{ top: 12, right: 8, left: 0, bottom: 0 }} barCategoryGap="28%">
-        <CartesianGrid vertical={false} />
-        <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} minTickGap={16} />
-        <YAxis tickLine={false} axisLine={false} width={44} tickFormatter={(v: number) => compact.format(v)} />
-        <ChartTooltip cursor={{ fillOpacity: 0.5 }} content={<ChartTooltipContent labelFormatter={(_l, items) => monthLabel(String(items?.[0]?.payload?.key ?? ""))} formatter={(_v, _n, item) => <Row color="var(--color-amount)" name="Spent" value={fmt(item.payload?.value ?? 0, currency)} />} />} />
-        <Bar dataKey="amount" fill="var(--color-amount)" radius={[5, 5, 0, 0]} maxBarSize={36} isAnimationActive={!reduce} />
-      </BarChart>
-    </ChartContainer>
+    <div>
+      {shown >= 0 ? (
+        <div className="px-2 pb-1">
+          <div className="text-text-muted text-xs font-medium">{monthLabel(data[shown].key)}</div>
+          <RollingNumber value={fmt(data[shown].value, currency)} className="text-2xl font-semibold tracking-[-0.02em]" />
+        </div>
+      ) : null}
+      <ChartContainer config={monthConfig} className="h-52 w-full touch-pan-y">
+        <BarChart
+          accessibilityLayer
+          data={rows}
+          margin={{ top: 12, right: 8, left: 0, bottom: 0 }}
+          barCategoryGap="28%"
+          onMouseMove={pick}
+          onTouchMove={pick}
+          onTouchStart={pick}
+          onMouseLeave={() => setActive(null)}
+        >
+          <CartesianGrid vertical={false} />
+          <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} minTickGap={16} />
+          <YAxis tickLine={false} axisLine={false} width={44} tickFormatter={(v: number) => compact.format(v)} />
+          {/* The headline above is the readout; the tooltip only draws the cursor band. */}
+          <ChartTooltip cursor={{ fillOpacity: 0.5 }} content={() => null} />
+          <Bar dataKey="amount" fill="var(--color-amount)" radius={[5, 5, 0, 0]} maxBarSize={36} isAnimationActive={!reduce} animationDuration={700} animationEasing="ease-out">
+            {rows.map((r, i) => (
+              <Cell key={r.key} fillOpacity={active === null || i === active ? 1 : 0.4} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ChartContainer>
+    </div>
   );
 }
 
@@ -191,7 +228,7 @@ export function ChartsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {byCategory.map((c) => (
+                {byCategory.map((c, i) => (
                   <tr key={c.slug}>
                     <td className="flex items-center gap-2.5 px-4 py-2">
                       <CategoryIcon slug={c.slug} size="sm" />
@@ -202,7 +239,7 @@ export function ChartsPage() {
                     </td>
                     <td className="w-40 px-4 py-2">
                       <div className="bg-surface-2 h-1.5 w-full overflow-hidden rounded-full">
-                        <div className="h-full rounded-full" style={{ width: `${(c.value / total) * 100}%`, background: parentHue.get(c.parent) }} />
+                        <div className="bar-grow h-full rounded-full" style={{ width: `${(c.value / total) * 100}%`, background: parentHue.get(c.parent), "--i": i } as CSSProperties} />
                       </div>
                     </td>
                   </tr>

@@ -32,6 +32,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Picker, PickerItem } from "@/components/ui/picker";
 import { Switch } from "@/components/ui/switch";
+import { play, setSoundsEnabled, useSoundsEnabled } from "@/lib/sound";
 import { downloadFile, errorMessage } from "@/lib/format";
 import { UNMONEY_URL } from "@/lib/handoff";
 import { AVATAR_EDGE, uploadImage } from "@/lib/image";
@@ -356,7 +357,31 @@ export function PreferencesSettings() {
           </Field>
         </div>
       </Section>
+      <SoundsSetting />
     </div>
+  );
+}
+
+/** Kept on this device rather than the account: whether a phone should make noise is the phone's call. */
+function SoundsSetting() {
+  const on = useSoundsEnabled();
+  return (
+    <Section className="mt-4">
+      <label className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
+        <span>
+          <span className="font-medium">Sounds</span>
+          <span className="text-text-muted block text-xs">Quiet sounds when you settle up, split, open a menu or delete. Only on this device.</span>
+        </span>
+        <Switch
+          size="touch"
+          checked={on}
+          onCheckedChange={(v) => {
+            setSoundsEnabled(v);
+            if (v) play("ding");
+          }}
+        />
+      </label>
+    </Section>
   );
 }
 
