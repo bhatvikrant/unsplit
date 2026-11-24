@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@/lib/convex";
 import { ArrowRight } from "lucide-react";
-import { useLayoutEffect, useMemo, useState, type FormEvent } from "react";
+import { useLayoutEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { minorToDecimalString, parseMoney } from "@convex/lib/money";
@@ -13,6 +13,9 @@ import { Picker, PickerItem } from "@/components/ui/picker";
 import { Textarea } from "@/components/ui/textarea";
 import { errorMessage, fromDateInputValue, toDateInputValue } from "@/lib/format";
 import { useDefaultCurrency, useMe } from "@/lib/hooks";
+import { flyMoney } from "@/lib/moneyFlight";
+import { clearSettled, markSettled } from "@/lib/settled";
+import { play } from "@/lib/sound";
 import { CurrencyPicker } from "./pickers";
 
 /**
@@ -77,6 +80,9 @@ export function SettleUpDialog({ options, onClose }: { options: SettleUpOptions;
   const [date, setDate] = useState(() => Date.now());
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
+  // the bills fly from the payer's field to the recipient's
+  const payerRef = useRef<HTMLDivElement>(null);
+  const payeeRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Non-group balances with the friend in a friend scope; positive = they owe me.
@@ -140,19 +146,30 @@ export function SettleUpDialog({ options, onClose }: { options: SettleUpOptions;
     if (minor === null || minor <= 0) return setError("Enter an amount greater than zero");
     if (!payerId || !payeeId) return setError("Pick who paid whom");
     setBusy(true);
+    // Paying off the whole of what's owed (in the only currency owed) rings the settled-up bell.
+    const owed = Object.keys(owedByPayer);
+    const clears = owed.length === 1 && owed[0] === currency && owedByPayer[currency] === minor;
+    play("flutter");
+    const flight = flyMoney(payerRef.current, payeeRef.current);
+    if (clears) markSettled(Date.now() + flight);
     try {
-      await record({
-        groupId: kind === "group" ? (scopeId as Id<"groups">) : undefined,
-        friendId: kind === "friend" ? (scopeId as Id<"users">) : undefined,
-        payerId: payerId as Id<"users">,
-        payeeId: payeeId as Id<"users">,
-        amountMinor: minor,
-        currency,
-        date,
-        notes: notes || undefined,
-      });
+      await Promise.all([
+        record({
+          groupId: kind === "group" ? (scopeId as Id<"groups">) : undefined,
+          friendId: kind === "friend" ? (scopeId as Id<"users">) : undefined,
+          payerId: payerId as Id<"users">,
+          payeeId: payeeId as Id<"users">,
+          amountMinor: minor,
+          currency,
+          date,
+          notes: notes || undefined,
+        }),
+        new Promise((r) => window.setTimeout(r, flight)),
+      ]);
+      play(clears ? "bell" : "ding");
       onClose();
     } catch (err) {
+      clearSettled();
       setError(errorMessage(err));
       setBusy(false);
     }
@@ -205,9 +222,13 @@ export function SettleUpDialog({ options, onClose }: { options: SettleUpOptions;
               </Picker>
             </Field>
             <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-end gap-2">
-              <Field label="Payer">{personSelect(payerId, pickPayer, "Payer")}</Field>
+              <div ref={payerRef} className="min-w-0">
+                <Field label="Payer">{personSelect(payerId, pickPayer, "Payer")}</Field>
+              </div>
               <ArrowRight className="text-text-faint mb-2.5 size-4" />
-              <Field label="Recipient">{personSelect(payeeId, pickPayee, "Recipient")}</Field>
+              <div ref={payeeRef} className="min-w-0">
+                <Field label="Recipient">{personSelect(payeeId, pickPayee, "Recipient")}</Field>
+              </div>
             </div>
             <Field label="Amount" htmlFor="amount" error={error} hint={Object.keys(owedByPayer).length > 1 ? "There are balances in more than one currency. Record one payment per currency." : undefined}>
               <div className="flex gap-2">

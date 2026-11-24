@@ -1,12 +1,16 @@
+import { useState } from "react";
 import { Check, Equal, Percent, PieChart, Plus, ReceiptText, SlidersHorizontal, Split, Trash2, Undo2 } from "lucide-react";
 import { currencySymbol } from "@convex/lib/currencies";
 import { minorToDecimalString } from "@convex/lib/money";
 import type { SplitMethod } from "@convex/lib/split";
 import { UserAvatar } from "@/components/common/Avatars";
 import { Money } from "@/components/common/Money";
+import { RollingNumber } from "@/components/common/RollingNumber";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { useFormatMoney } from "@/lib/hooks";
+import { play, playTicks } from "@/lib/sound";
 import { cn } from "@/lib/utils";
 import { RowPicker, type RowOption } from "./FormRows";
 import { editExact, newItem, resolveExact, switchMethod, type SplitState } from "./splitState";
@@ -92,6 +96,16 @@ export function SplitEditor({
   payerNames?: string;
 }) {
   const set = (patch: Partial<SplitState>) => onChange({ ...state, ...patch });
+  const fmt = useFormatMoney();
+  // Ticking someone in pops their face in; every share then rolls to its new value, under a short
+  // run of ticks.
+  const [popped, setPopped] = useState<{ id: string; n: number } | null>(null);
+  const toggle = (id: string, on: boolean) => {
+    if (on) setPopped((p) => ({ id, n: (p?.n ?? 0) + 1 }));
+    play(on ? "pop" : "tock");
+    playTicks(4, 0.1);
+    set({ selected: { ...state.selected, [id]: on } });
+  };
   const ids = people.map((p) => p._id);
   const owed = preview && "owed" in preview ? preview.owed : null;
   const exact = state.method === "exact" ? resolveExact(state, ids, totalMinor, currency) : null;
@@ -122,9 +136,11 @@ export function SplitEditor({
             return (
               <li key={p._id} className="flex items-center gap-3 pl-3.5 [&:not(:last-child)>div]:border-b">
                 {checked !== undefined ? (
-                  <Checkbox checked={checked} aria-label={`Include ${p.name}`} onCheckedChange={(v) => set({ selected: { ...state.selected, [p._id]: Boolean(v) } })} />
+                  <Checkbox checked={checked} aria-label={`Include ${p.name}`} onCheckedChange={(v) => toggle(p._id, Boolean(v))} />
                 ) : null}
-                <UserAvatar user={p} size="sm" className={cn(checked === false && "opacity-40")} />
+                <span key={popped?.id === p._id ? `pop${popped.n}` : "still"} className={cn("inline-flex shrink-0", popped?.id === p._id && "pop-in")}>
+                  <UserAvatar user={p} size="sm" className={cn(checked === false && "opacity-40")} />
+                </span>
                 <div className="flex min-h-14 min-w-0 flex-1 items-center gap-3 py-2 pr-3">
                   <span className={cn("min-w-0 flex-1", checked === false && "text-text-faint")}>
                     <span className="block truncate text-[15px] sm:text-sm">{p.name}</span>
@@ -138,7 +154,7 @@ export function SplitEditor({
                   {state.method === "adjustment" && checked && amountInput(state.adjustments[p._id] ?? "", (v) => set({ adjustments: { ...state.adjustments, [p._id]: v } }), `${p.name} extra`, "+")}
                   {state.method === "reimbursement" && amountInput(state.reimbursement[p._id] ?? "", (v) => set({ reimbursement: { ...state.reimbursement, [p._id]: v } }), `${p.name} gets back`)}
                   {owed && (state.method === "equal" || state.method === "adjustment" || state.method === "shares" || state.method === "percent") ? (
-                    <span className={cn("tnum w-20 shrink-0 text-right", state.method === "equal" ? "text-text text-[15px] sm:text-sm" : "text-text-muted text-xs")}>{owed[p._id] !== undefined ? <Money minor={owed[p._id]} currency={currency} /> : "—"}</span>
+                    <span className={cn("tnum w-20 shrink-0 text-right", state.method === "equal" ? "text-text text-[15px] sm:text-sm" : "text-text-muted text-xs")}>{owed[p._id] !== undefined ? <RollingNumber value={fmt(owed[p._id], currency)} /> : "—"}</span>
                   ) : null}
                 </div>
               </li>

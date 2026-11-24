@@ -1,6 +1,6 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { CloudOff, Paperclip, Repeat } from "lucide-react";
-import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from "react";
+import { useEffect, useEffectEvent, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
 import { api } from "@convex/_generated/api";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { errorMessage, monthKey, monthLabel, monthShort } from "@/lib/format";
 import { isTempId, useMutation } from "@/lib/convex";
 import { useMe } from "@/lib/hooks";
+import { play } from "@/lib/sound";
 import { cn } from "@/lib/utils";
 import { useConfirm } from "./ConfirmDialog";
 import { CategoryIcon, RowSkeleton } from "./Misc";
@@ -44,6 +45,7 @@ export function useDeleteExpense() {
   return async (item: Pick<ExpenseListItem, "_id" | "isPayment">) => {
     const what = item.isPayment ? "payment" : "expense";
     if (!(await confirm({ title: `Delete this ${what}?`, description: "Balances update right away. Anyone involved can restore it later from Deleted items.", action: "Delete" }))) return;
+    play("thunk");
     try {
       await remove({ id: item._id });
       toast.success("Deleted", { action: { label: "Undo", onClick: () => void restore({ id: item._id }) } });
@@ -60,6 +62,7 @@ export function ExpenseRow({
   swipe,
   onDelete,
   animate,
+  index,
 }: {
   item: ExpenseListItem;
   showGroup?: boolean;
@@ -69,6 +72,8 @@ export function ExpenseRow({
   onDelete?: () => void;
   /** Inside an AnimatePresence list: arrive with a short slide, leave by collapsing. */
   animate?: boolean;
+  /** Position in the list, for the staggered arrival when the list first shows (`settle-in`). */
+  index?: number;
 }) {
   const me = useMe();
   const reduce = useReducedMotion();
@@ -134,7 +139,11 @@ export function ExpenseRow({
     link
   );
 
-  if (!animate || reduce) return <li>{body}</li>;
+  // only the first 8 (about what a phone shows) rise in; the rest just show
+  const settles = index !== undefined && index < 8;
+  const order = settles ? ({ "--i": index } as CSSProperties) : undefined;
+  const settleRow = settles ? "settle-row" : undefined;
+  if (!animate || reduce) return <li style={order} className={settleRow}>{body}</li>;
   // The row grows and collapses in normal flow, so its neighbours move with it; no `layout` prop,
   // which would re-measure every row in the list on each change.
   return (
@@ -143,7 +152,8 @@ export function ExpenseRow({
       animate={{ opacity: 1, height: "auto" }}
       exit={{ opacity: 0, height: 0 }}
       transition={{ duration: 0.22, ease: "easeOut" }}
-      style={{ overflow: "hidden" }}
+      style={{ overflow: "hidden", ...order }}
+      className={settleRow}
     >
       {body}
     </motion.li>
@@ -167,6 +177,16 @@ export function ExpenseList({
 }) {
   const swipe = useSwipedRow();
   const del = useDeleteExpense();
+  // The rows that are there when the list first shows rise in, a beat apart; later arrivals use
+  // the row's own slide instead. The class comes off straight in the DOM, not through state: a
+  // re-render of every row just to drop it costs more than the animation.
+  const shown = items !== undefined && items.length > 0;
+  const listRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!shown) return;
+    const t = window.setTimeout(() => listRef.current?.querySelectorAll(".settle-in").forEach((el) => el.classList.remove("settle-in")), 900);
+    return () => window.clearTimeout(t);
+  }, [shown]);
   if (items === undefined) return <RowSkeleton count={6} />;
   if (items.length === 0) return <>{empty}</>;
   const groups: { key: string; items: ExpenseListItem[] }[] = [];
@@ -176,16 +196,17 @@ export function ExpenseList({
     if (last && last.key === k) last.items.push(it);
     else groups.push({ key: k, items: [it] });
   }
+  let order = 0;
   return (
-    <div className="card px-1 pb-1">
+    <div ref={listRef} className="card px-1 pb-1">
       {groups.map((g) => (
         <section key={g.key}>
           <h3 className="text-text-faint px-3 pt-3.5 pb-1.5 text-[11.5px] font-semibold tracking-[0.06em] uppercase">{monthLabel(g.key)}</h3>
-          <ul>
+          <ul className="settle-in">
             {/* initial={false}: rows already there when the page opens don't slide in, only ones that arrive later */}
             <AnimatePresence initial={false}>
               {g.items.map((it) => (
-                <ExpenseRow key={it._id} item={it} showGroup={showGroup} swipe={swipe.row(it._id)} onDelete={() => del(it).finally(swipe.close)} animate />
+                <ExpenseRow key={it._id} item={it} showGroup={showGroup} swipe={swipe.row(it._id)} onDelete={() => del(it).finally(swipe.close)} animate index={order++} />
               ))}
             </AnimatePresence>
           </ul>

@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { SettledBell } from "./SettledBell";
 import { useFormatMoney } from "@/lib/hooks";
 
 type Tone = "auto" | "neutral" | "positive" | "negative" | "muted";
@@ -54,7 +55,12 @@ export function BalanceSummary({
 }) {
   const entries = Object.entries(balances).filter(([, v]) => v !== 0);
   if (entries.length === 0) {
-    return <span className={cn("text-text-faint text-sm", className)}>settled up</span>;
+    return (
+      <span className={cn("text-text-faint inline-flex items-center gap-1.5 text-sm", className)}>
+        {compact ? null : <SettledBell className="text-brand" />}
+        settled up
+      </span>
+    );
   }
   const who = subjectName ?? "you";
   return (
