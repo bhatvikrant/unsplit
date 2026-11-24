@@ -1,6 +1,6 @@
 import { useQuery } from "@/lib/convex";
 import { ArrowRight, ChevronRight, HandCoins, Plus, UserPlus, Users } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link } from "react-router";
 import { api } from "@convex/_generated/api";
 import { GroupAvatar, UserAvatar } from "@/components/common/Avatars";
@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/format";
 import { useMe } from "@/lib/hooks";
 import { usePagedExpenses } from "@/lib/usePagedExpenses";
+import { useSettleIn } from "@/lib/useSettleIn";
 import { cn } from "@/lib/utils";
 
 function greeting(now: Date) {
@@ -46,6 +47,8 @@ export function Dashboard() {
   const recentItems = recent.items?.slice(0, 5);
   const swipe = useSwipedRow();
   const del = useDeleteExpense();
+  const recentRef = useRef<HTMLUListElement>(null);
+  useSettleIn(recentRef, ":scope > li", (recentItems?.length ?? 0) > 0);
 
   return (
     <div>
@@ -176,9 +179,9 @@ export function Dashboard() {
                 </Link>
               }
             >
-              <ul className="settle-in p-1">
-                {recentItems.map((it, i) => (
-                  <ExpenseRow key={it._id} item={it} showGroup index={i} swipe={swipe.row(it._id)} onDelete={() => del(it).finally(swipe.close)} />
+              <ul ref={recentRef} className="p-1">
+                {recentItems.map((it) => (
+                  <ExpenseRow key={it._id} item={it} showGroup swipe={swipe.row(it._id)} onDelete={() => del(it).finally(swipe.close)} />
                 ))}
               </ul>
             </Section>
