@@ -5,8 +5,8 @@
  * through the durable outbox.
  */
 import { useConvexAuth as useTokenAuth } from "@convex-dev/auth/react";
-import { useAction as useConvexAction, useQuery as useConvexQuery } from "convex/react";
-import { getFunctionName, type FunctionReference, type FunctionReturnType, type OptionalRestArgs } from "convex/server";
+import { useAction as useConvexAction, useQueries as useConvexQueries, useQuery as useConvexQuery, type RequestForQueries } from "convex/react";
+import { getFunctionName, type FunctionArgs, type FunctionReference, type FunctionReturnType, type OptionalRestArgs } from "convex/server";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { containsTempId, rewriteIds, stableStringify } from "./ids";
 import type { OfflineStore } from "./store";
@@ -66,6 +66,44 @@ export function useQuery<Q extends FunctionReference<"query">>(query: Q, ...args
   }, [store, name, mapped, live]);
   const snapshot = useCallback(() => (mapped === undefined ? undefined : store.getView(name, mapped, live)), [store, name, mapped, live]);
   return useSyncExternalStore(store.subscribe, snapshot) as FunctionReturnType<Q> | undefined;
+}
+
+/** `useQuery` for several argument sets at once (the pages of a list); results line up with `argsList`. */
+export function useQueries<Q extends FunctionReference<"query">>(query: Q, argsList: FunctionArgs<Q>[]): (FunctionReturnType<Q> | undefined)[] {
+  const { store } = useOffline();
+  const name = getFunctionName(query);
+  const listKey = stableStringify(argsList);
+  const opsVersion = useSyncExternalStore(store.subscribe, () => store.opsVersion);
+  // Temp ids are rewritten to real ones as soon as the server hands them back.
+  const mapped = useMemo(
+    () => argsList.map((a) => rewriteIds(a as Record<string, unknown>, store.idMap)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [listKey, opsVersion, store],
+  );
+  // Convex never sees temp ids; those views come purely from the overlay.
+  const request = useMemo(() => {
+    const r: RequestForQueries = {};
+    mapped.forEach((args, i) => {
+      if (!containsTempId(args)) r[i] = { query, args: args as RequestForQueries[string]["args"] };
+    });
+    return r;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapped, name]);
+  const live = useConvexQueries(request);
+  for (const v of Object.values(live)) if (v instanceof Error) throw v;
+  useEffect(() => {
+    mapped.forEach((args, i) => live[i] !== undefined && store.setServerValue(name, args, live[i]));
+  }, [store, name, mapped, live]);
+  // Same array back while no page's view changed, as useSyncExternalStore requires.
+  const snapshot = useMemo(() => {
+    let last: unknown[] | undefined;
+    return () => {
+      const next = mapped.map((args, i) => store.getView(name, args, live[i]));
+      if (last && last.length === next.length && next.every((v, i) => v === last![i])) return last;
+      return (last = next);
+    };
+  }, [store, name, mapped, live]);
+  return useSyncExternalStore(store.subscribe, snapshot) as (FunctionReturnType<Q> | undefined)[];
 }
 
 /** Like `useMutation` from convex/react, but works offline: the change is queued and shown right away. */

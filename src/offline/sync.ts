@@ -167,8 +167,8 @@ export class SyncEngine {
   private *cachedExpenseRows() {
     for (const e of this.store.entries()) {
       if (e.name === "expenses:list") {
-        const v = this.store.readView(e.name, e.args) as { items: never[] } | undefined;
-        if (v) yield* v.items;
+        const v = this.store.readView(e.name, e.args) as { page?: never[] } | undefined;
+        if (v?.page) yield* v.page; // entries cached before pagination have no `page`
       } else if (e.name === "expenses:recurring" || e.name === "expenses:deleted") {
         const v = this.store.readView(e.name, e.args) as never[] | undefined;
         if (v) yield* v;

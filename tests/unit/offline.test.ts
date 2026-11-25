@@ -71,22 +71,27 @@ describe("ids", () => {
   });
 });
 
+const EMPTY = { page: [], isDone: true, continueCursor: "" };
+
 describe("overlay: expenses", () => {
   const dir = buildDirectory(entries, [createDinner], {});
 
   it("adds a row to the group's list, the all-expenses list and the detail view", () => {
-    const list = applyOp(createDinner, { name: "expenses:list", args: { groupId: "g1", limit: 50 } }, { items: [], nextBefore: null }, dir) as { items: { _id: string; groupName: string; mine: { paidMinor: number; owedMinor: number }; payees: unknown[] }[] };
-    expect(list.items).toHaveLength(1);
-    expect(list.items[0]._id).toBe("tmp_expenses_1");
-    expect(list.items[0].groupName).toBe("Trip");
-    expect(list.items[0].mine).toEqual({ paidMinor: 9000, owedMinor: 3000 });
-    expect(list.items[0].payees).toHaveLength(3);
+    const list = applyOp(createDinner, { name: "expenses:list", args: { groupId: "g1", paginationOpts: { numItems: 50, cursor: null } } }, EMPTY, dir) as { page: { _id: string; groupName: string; mine: { paidMinor: number; owedMinor: number }; payees: unknown[] }[] };
+    expect(list.page).toHaveLength(1);
+    expect(list.page[0]._id).toBe("tmp_expenses_1");
+    expect(list.page[0].groupName).toBe("Trip");
+    expect(list.page[0].mine).toEqual({ paidMinor: 9000, owedMinor: 3000 });
+    expect(list.page[0].payees).toHaveLength(3);
 
-    const all = applyOp(createDinner, { name: "expenses:list", args: { limit: 50 } }, undefined, dir) as { items: unknown[] };
-    expect(all.items).toHaveLength(1);
+    const all = applyOp(createDinner, { name: "expenses:list", args: { paginationOpts: { numItems: 50, cursor: null } } }, undefined, dir) as { page: unknown[] };
+    expect(all.page).toHaveLength(1);
 
-    const other = applyOp(createDinner, { name: "expenses:list", args: { groupId: "g2", limit: 50 } }, { items: [], nextBefore: null }, dir) as { items: unknown[] };
-    expect(other.items).toHaveLength(0);
+    const other = applyOp(createDinner, { name: "expenses:list", args: { groupId: "g2", paginationOpts: { numItems: 50, cursor: null } } }, EMPTY, dir) as { page: unknown[] };
+    expect(other.page).toHaveLength(0);
+    // A later page keeps the server's bounds: the new row shows on the first page only.
+    const later = { ...EMPTY, isDone: false, continueCursor: "c1" };
+    expect(applyOp(createDinner, { name: "expenses:list", args: { groupId: "g1", paginationOpts: { numItems: 50, cursor: "c1" } } }, later, dir)).toBe(later);
 
     const detail = applyOp(createDinner, { name: "expenses:get", args: { id: "tmp_expenses_1" } }, undefined, dir) as { description: string; shares: { user: { name: string } }[]; group: { name: string }; participants: unknown[] };
     expect(detail.description).toBe("Dinner");
@@ -122,9 +127,9 @@ describe("overlay: expenses", () => {
     const prev = (applyOp(createDinner, { name: "expenses:get", args: { id: "tmp_expenses_1" } }, undefined, dir) as { shares: { userId: string; paidMinor: number; owedMinor: number }[] });
     const local = { ...prev, shares: prev.shares.map((s) => ({ userId: s.userId, paidMinor: s.paidMinor, owedMinor: s.owedMinor })) };
     const remove = op("expenses:remove", { id: "tmp_expenses_1" }, { extra: { prev: local } });
-    const listed = applyOp(createDinner, { name: "expenses:list", args: { groupId: "g1", limit: 50 } }, { items: [], nextBefore: null }, dir);
-    const afterRemove = applyOp(remove, { name: "expenses:list", args: { groupId: "g1", limit: 50 } }, listed, dir) as { items: unknown[] };
-    expect(afterRemove.items).toHaveLength(0);
+    const listed = applyOp(createDinner, { name: "expenses:list", args: { groupId: "g1", paginationOpts: { numItems: 50, cursor: null } } }, EMPTY, dir);
+    const afterRemove = applyOp(remove, { name: "expenses:list", args: { groupId: "g1", paginationOpts: { numItems: 50, cursor: null } } }, listed, dir) as { page: unknown[] };
+    expect(afterRemove.page).toHaveLength(0);
     const trash = applyOp(remove, { name: "expenses:deleted", args: {} }, [], dir) as { _id: string; deletedByName: string }[];
     expect(trash[0]._id).toBe("tmp_expenses_1");
     expect(trash[0].deletedByName).toBe("Alex");
@@ -140,7 +145,7 @@ describe("overlay: expenses", () => {
 
   it("records a payment against a friend outside a group", () => {
     const pay = op("expenses:recordPayment", { friendId: "u_bea", payerId: "u_bea", payeeId: "u_me", amountMinor: 1200, currency: "USD", date: 1 }, { tempId: "tmp_expenses_2" });
-    const row = (applyOp(pay, { name: "expenses:list", args: { friendId: "u_bea", limit: 50 } }, { items: [], nextBefore: null }, dir) as { items: { description: string; isPayment: boolean; pairKey: string }[] }).items[0];
+    const row = (applyOp(pay, { name: "expenses:list", args: { friendId: "u_bea", paginationOpts: { numItems: 50, cursor: null } } }, EMPTY, dir) as { page: { description: string; isPayment: boolean; pairKey: string }[] }).page[0];
     expect(row.description).toBe("Bea paid Alex");
     expect(row.isPayment).toBe(true);
     expect(row.pairKey).toBe("u_bea:u_me");
@@ -150,12 +155,12 @@ describe("overlay: expenses", () => {
   });
 
   it("search and deleted filters apply to the synthesized row", () => {
-    const miss = applyOp(createDinner, { name: "expenses:list", args: { search: "taxi", limit: 50 } }, { items: [], nextBefore: null }, dir) as { items: unknown[] };
-    expect(miss.items).toHaveLength(0);
-    const hit = applyOp(createDinner, { name: "expenses:list", args: { search: "din", limit: 50 } }, { items: [], nextBefore: null }, dir) as { items: unknown[] };
-    expect(hit.items).toHaveLength(1);
-    const deleted = applyOp(createDinner, { name: "expenses:list", args: { includeDeleted: true, limit: 50 } }, { items: [], nextBefore: null }, dir) as { items: unknown[] };
-    expect(deleted.items).toHaveLength(0);
+    const miss = applyOp(createDinner, { name: "expenses:list", args: { search: "taxi", paginationOpts: { numItems: 50, cursor: null } } }, EMPTY, dir) as { page: unknown[] };
+    expect(miss.page).toHaveLength(0);
+    const hit = applyOp(createDinner, { name: "expenses:list", args: { search: "din", paginationOpts: { numItems: 50, cursor: null } } }, EMPTY, dir) as { page: unknown[] };
+    expect(hit.page).toHaveLength(1);
+    const deleted = applyOp(createDinner, { name: "expenses:list", args: { includeDeleted: true, paginationOpts: { numItems: 50, cursor: null } } }, EMPTY, dir) as { page: unknown[] };
+    expect(deleted.page).toHaveLength(0);
   });
 });
 
@@ -180,8 +185,8 @@ describe("overlay: groups, friends, comments", () => {
     const dir = buildDirectory(entries, [create, exp], idMap);
     expect(dir.groups.get("tmp_groups_1")?.name).toBe("Flat");
     const rewritten = { ...exp, args: rewriteIds(exp.args, idMap) };
-    const list = applyOp(rewritten, { name: "expenses:list", args: { groupId: "g_real", limit: 50 } }, { items: [], nextBefore: null }, dir) as { items: unknown[] };
-    expect(list.items).toHaveLength(1);
+    const list = applyOp(rewritten, { name: "expenses:list", args: { groupId: "g_real", paginationOpts: { numItems: 50, cursor: null } } }, EMPTY, dir) as { page: unknown[] };
+    expect(list.page).toHaveLength(1);
   });
 
   it("group settings, members, delete and restore", () => {

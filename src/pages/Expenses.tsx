@@ -24,7 +24,6 @@ export function AllExpenses() {
   useLayoutEffect(() => setText((t) => (t.trim() === q ? t : q)), [q]);
   // Results follow the typing after a short pause; Enter searches at once. The URL carries the
   // term, so the page can be shared or reloaded.
-  // ponytail: every settled term is cached in IndexedDB like any other query; prune search entries if the cache ever grows large.
   const search = (value: string) => setParams(value.trim() ? { q: value.trim() } : {}, { replace: true });
   useEffect(() => {
     if (text.trim() === q) return;
@@ -32,7 +31,7 @@ export function AllExpenses() {
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [text, q]);
-  const { items, hasMore, loadMore, loadingMore, capped } = usePagedExpenses({ search: q || undefined });
+  const { items, hasMore, loadMore, loadingMore } = usePagedExpenses({ search: q || undefined });
   const dialogs = useDialogs();
 
   return (
@@ -68,7 +67,6 @@ export function AllExpenses() {
         hasMore={hasMore}
         onLoadMore={loadMore}
         loadingMore={loadingMore}
-        capped={capped}
         showGroup
         empty={
           q ? (

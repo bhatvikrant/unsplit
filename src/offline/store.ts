@@ -78,8 +78,9 @@ export class OfflineStore {
     const entry: QueryEntry = { name, args, value, at: Date.now() };
     this.server.set(key, entry);
     this.serverVersion++;
-    // Search results and pagination cursors are one-offs; stored, they would grow the database without bound.
-    if (args.search === undefined && args.before === undefined) void idb.put("queries", key, entry);
+    // Search results and pages past the first are one-offs; stored, they would grow the database without bound.
+    const page = args.paginationOpts as { cursor: string | null } | undefined;
+    if (args.search === undefined && !page?.cursor) void idb.put("queries", key, entry);
     if (name === "users:me" && value && typeof value === "object" && "_id" in value) void this.setOwner((value as { _id: string })._id);
     this.notify();
   }

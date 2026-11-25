@@ -169,7 +169,6 @@ export function ExpenseList({
   hasMore,
   onLoadMore,
   loadingMore,
-  capped,
   showGroup,
   empty,
 }: {
@@ -177,8 +176,6 @@ export function ExpenseList({
   hasMore?: boolean;
   onLoadMore?: () => void;
   loadingMore?: boolean;
-  /** There are older rows this list will not page to (see usePagedExpenses). */
-  capped?: boolean;
   showGroup?: boolean;
   empty: ReactNode;
 }) {
@@ -213,7 +210,6 @@ export function ExpenseList({
         </section>
       ))}
       {hasMore ? <LoadMore onLoadMore={onLoadMore} loading={loadingMore} /> : null}
-      {capped ? <p className="text-text-faint px-3 py-3 text-center text-xs">Older expenses aren't shown here. Search to find one.</p> : null}
     </div>
   );
 }

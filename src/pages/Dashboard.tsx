@@ -27,7 +27,8 @@ export function Dashboard() {
   const me = useMe();
   const friends = useQuery(api.friends.list);
   const groups = useQuery(api.groups.list);
-  const recent = usePagedExpenses({}, 5);
+  // A few spare rows: a page can lose some to the list's filters (a deleted group's expenses).
+  const recent = usePagedExpenses({}, 10);
   const dialogs = useDialogs();
 
   const totals: Record<string, { owe: number; owed: number }> = {};
