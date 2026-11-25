@@ -1,5 +1,5 @@
 import { useAuthActions } from "@convex-dev/auth/react";
-import { AnimatePresence, animate, motion, useMotionValue, useReducedMotion, useTransform, type Transition } from "framer-motion";
+import { AnimatePresence, animate, m, useMotionValue, useReducedMotion, useTransform, type Transition } from "framer-motion";
 import { CloudOff, HandCoins, Receipt } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router";
@@ -65,20 +65,20 @@ export function Login() {
       />
 
       <div className="relative flex min-h-dvh flex-col items-center justify-center px-4 py-10">
-        <motion.div {...rise(0, 8)} className="relative z-10 mb-[12rem]">
+        <m.div {...rise(0, 8)} className="relative z-10 mb-[12rem]">
           <Link to="/" className="focus-visible:ring-ring inline-flex rounded-lg outline-none focus-visible:ring-[3px]">
             <Logo size={34} />
           </Link>
-        </motion.div>
+        </m.div>
 
         <div className="relative w-full max-w-sm">
           <GroupPeek delay={0.35} />
 
-          <motion.div {...rise(0.1)} className="card shadow-pop relative p-6">
+          <m.div {...rise(0.1)} className="card shadow-pop relative p-6">
             <h1 className="text-text text-lg font-semibold tracking-tight">Welcome to UnSplit</h1>
             <p className="text-text-muted mt-1 text-sm">Sign in with Google to split bills with your groups and keep balances in step on every device.</p>
 
-            <motion.button
+            <m.button
               type="button"
               disabled={busy}
               onClick={google}
@@ -101,7 +101,7 @@ export function Login() {
                 </svg>
               )}
               {busy ? "Opening Google…" : "Continue with Google"}
-            </motion.button>
+            </m.button>
             {error ? (
               <p role="alert" className="text-danger mt-3 text-sm">
                 {error}
@@ -110,24 +110,24 @@ export function Login() {
 
             <ul className="mt-6 grid grid-cols-3 gap-2 border-t pt-5">
               {points.map((p, i) => (
-                <motion.li key={p.label} {...rise(0.3 + i * 0.07, 6)} className="flex flex-col items-center gap-1.5 text-center">
+                <m.li key={p.label} {...rise(0.3 + i * 0.07, 6)} className="flex flex-col items-center gap-1.5 text-center">
                   <span className="bg-surface-2 text-text/80 flex size-8 items-center justify-center rounded-lg">
                     <p.icon className="size-4" strokeWidth={1.8} aria-hidden="true" />
                   </span>
                   <span className="text-text-muted text-[11px] leading-tight">{p.label}</span>
-                </motion.li>
+                </m.li>
               ))}
             </ul>
-          </motion.div>
+          </m.div>
         </div>
 
-        <motion.p {...rise(0.5, 6)} className="text-text-faint mt-5 max-w-sm text-center text-xs">
+        <m.p {...rise(0.5, 6)} className="text-text-faint mt-5 max-w-sm text-center text-xs">
           By continuing you agree to UnSplit&apos;s{" "}
           <Link to="/privacy" className="hover:text-text-muted underline underline-offset-2">
             privacy policy
           </Link>
           .
-        </motion.p>
+        </m.p>
       </div>
     </div>
   );
@@ -160,7 +160,7 @@ function Ticker({ minor, className }: { minor: number; className?: string }) {
     const c = animate(mv, minor, { duration: 0.7, ease: [0.23, 1, 0.32, 1] });
     return () => c.stop();
   }, [minor, mv, still]);
-  return <motion.span className={className}>{text}</motion.span>;
+  return <m.span className={className}>{text}</m.span>;
 }
 
 /**
@@ -193,7 +193,7 @@ function GroupPeek({ delay }: { delay: number }) {
   }, [still, delay]);
 
   return (
-    <motion.div
+    <m.div
       aria-hidden="true"
       // rises out from behind the card once the card has landed
       initial={still ? false : { opacity: 0, y: 56 }}
@@ -227,7 +227,7 @@ function GroupPeek({ delay }: { delay: number }) {
         <div className="text-text-faint px-3.5 pt-2.5 pb-1 text-[11px] font-semibold tracking-[0.06em] uppercase">Today</div>
         <AnimatePresence initial={false}>
           {rows.map((r) => (
-            <motion.div
+            <m.div
               key={r.id}
               layout
               initial={{ opacity: 0, y: -10, height: 0 }}
@@ -235,7 +235,7 @@ function GroupPeek({ delay }: { delay: number }) {
               transition={{ duration: 0.55, ease: [0.23, 1, 0.32, 1] }}
               className="overflow-hidden"
             >
-              <motion.div
+              <m.div
                 // a soft brand highlight that settles, the way a just-saved expense does
                 initial={{ backgroundColor: "color-mix(in oklch, var(--brand) 10%, transparent)" }}
                 animate={{ backgroundColor: "color-mix(in oklch, var(--brand) 0%, transparent)" }}
@@ -250,11 +250,11 @@ function GroupPeek({ delay }: { delay: number }) {
                   <span className="text-text-faint block text-[11px]">paid by {r.payer}</span>
                 </span>
                 <span className="text-text tabular font-medium">{money(r.minor)}</span>
-              </motion.div>
-            </motion.div>
+              </m.div>
+            </m.div>
           ))}
         </AnimatePresence>
       </div>
-    </motion.div>
+    </m.div>
   );
 }

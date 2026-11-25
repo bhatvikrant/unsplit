@@ -1,6 +1,6 @@
 import { useConvex, useMutation, useQuery, useRequireOnline } from "@/lib/convex";
 import { ArrowRight, BarChart3, Check, Copy, Download, HandCoins, Link2, Plus, Receipt, RefreshCw, Settings, Sigma, Undo2, UserMinus, UserPlus, X } from "lucide-react";
-import { motion, useReducedMotion } from "framer-motion";
+import { m, useReducedMotion } from "framer-motion";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { toast } from "sonner";
@@ -69,7 +69,7 @@ export function GroupNav({ groupId, current }: { groupId: Id<"groups">; current:
           <it.icon className="hidden size-4 sm:block" />
           <span className="truncate">{it.label}</span>
           {current === it.key ? (
-            <motion.span
+            <m.span
               layoutId="group-nav-indicator"
               aria-hidden
               className="bg-brand absolute right-2.5 bottom-[-1px] left-2.5 h-0.5 rounded-full"

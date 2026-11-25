@@ -1,17 +1,21 @@
-import { motion, useReducedMotion } from "framer-motion";
+import { m, useReducedMotion } from "framer-motion";
 import { Activity, LayoutDashboard, Plus, ReceiptText, CircleEllipsis } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { NavLink, Outlet, useLocation, useSearchParams, type NavLinkProps } from "react-router";
+import { RowSkeleton } from "@/components/common/Misc";
 import { DialogProvider, useDialogs } from "@/components/dialogs/DialogProvider";
 import { CommandPaletteContext } from "@/lib/commandPalette";
 import { takeHandoff } from "@/lib/handoff";
+import { warm, warmLazyChunks } from "@/lib/lazy";
 import { cn } from "@/lib/utils";
-import { CommandPalette } from "./CommandPalette";
 import { InstallBanner } from "./InstallPrompt";
 import { OfflineBanner } from "./OfflineBanner";
 import { useQuickActions } from "./quickActions";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
+
+// The palette and cmdk are not in the app shell's chunk (see lib/lazy.ts).
+const CommandPalette = lazy(warm(() => import("./CommandPalette").then((x) => ({ default: x.CommandPalette }))));
 
 const tabClass = ({ isActive }: { isActive: boolean }) =>
   cn("flex h-full flex-col items-center justify-center gap-0.5 text-[10.5px]", isActive ? "text-brand font-semibold" : "text-text-faint font-medium");
@@ -78,6 +82,9 @@ function isTypingTarget(el: EventTarget | null) {
  */
 function CommandPaletteProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
+  // Mounted on first open and kept mounted after, so closing still animates.
+  const [mounted, setMounted] = useState(false);
+  if (open && !mounted) setMounted(true);
   const value = useMemo(() => ({ open: () => setOpen(true) }), []);
 
   useEffect(() => {
@@ -98,7 +105,11 @@ function CommandPaletteProvider({ children }: { children: ReactNode }) {
   return (
     <CommandPaletteContext.Provider value={value}>
       {children}
-      <CommandPalette open={open} onOpenChange={setOpen} />
+      {mounted ? (
+        <Suspense fallback={null}>
+          <CommandPalette open={open} onOpenChange={setOpen} />
+        </Suspense>
+      ) : null}
     </CommandPaletteContext.Provider>
   );
 }
@@ -139,13 +150,17 @@ function PageTransition() {
   if (reduce) return <Outlet />;
   const section = pathname.split("/").slice(0, 3).join("/");
   return (
-    <motion.div key={section} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18, ease: "easeOut" }}>
+    <m.div key={section} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18, ease: "easeOut" }}>
       <Outlet />
-    </motion.div>
+    </m.div>
   );
 }
 
 export function AppShell() {
+  // The dialogs and pages split out of this chunk are fetched once the shell is idle (lib/lazy.ts).
+  useEffect(() => {
+    (window.requestIdleCallback ?? ((cb: () => void) => setTimeout(cb, 0)))(warmLazyChunks);
+  }, []);
   return (
     <DialogProvider>
       <CommandPaletteProvider>
@@ -161,7 +176,10 @@ export function AppShell() {
               <div className="mx-auto w-full max-w-[1040px]">
                 <OfflineBanner />
                 <InstallBanner />
-                <PageTransition />
+                {/* Above the outlet, so a lazy page's chunk loads behind the current page (see pages/lazy.ts). */}
+                <Suspense fallback={<RowSkeleton />}>
+                  <PageTransition />
+                </Suspense>
               </div>
             </main>
           </div>

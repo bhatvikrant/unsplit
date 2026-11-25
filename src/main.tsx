@@ -1,5 +1,6 @@
 import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
+import { LazyMotion } from "framer-motion";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider } from "react-router";
@@ -17,6 +18,10 @@ import "./index.css";
 import "@/lib/install";
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
+
+// Components animate with `m.*`, never `motion.*` (`strict` throws on one in dev), so the animation
+// features (gestures, drag, layout) load in their own chunk once the app is up.
+const motionFeatures = () => import("@/lib/motion-features").then((x) => x.default);
 
 // Offline layer: last known data in IndexedDB, writes queued until the server takes them.
 const store = new OfflineStore();
@@ -78,16 +83,18 @@ document.addEventListener("touchstart", () => {}, { passive: true });
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <ConvexAuthProvider client={convex}>
-      <OfflineProvider store={store} engine={engine} fallback={<FullPageLoader />}>
-        <TooltipProvider delayDuration={300}>
-          <ConfirmProvider>
-            <RouterProvider router={router} />
-            {/* On phones, sit above the tab bar and the home indicator. */}
-            <Toaster position="bottom-center" richColors closeButton mobileOffset={{ bottom: "calc(var(--tabbar-h) + 1rem)" }} />
-          </ConfirmProvider>
-        </TooltipProvider>
-      </OfflineProvider>
-    </ConvexAuthProvider>
+    <LazyMotion features={motionFeatures} strict>
+      <ConvexAuthProvider client={convex}>
+        <OfflineProvider store={store} engine={engine} fallback={<FullPageLoader />}>
+          <TooltipProvider delayDuration={300}>
+            <ConfirmProvider>
+              <RouterProvider router={router} />
+              {/* On phones, sit above the tab bar and the home indicator. */}
+              <Toaster position="bottom-center" richColors closeButton mobileOffset={{ bottom: "calc(var(--tabbar-h) + 1rem)" }} />
+            </ConfirmProvider>
+          </TooltipProvider>
+        </OfflineProvider>
+      </ConvexAuthProvider>
+    </LazyMotion>
   </StrictMode>,
 );

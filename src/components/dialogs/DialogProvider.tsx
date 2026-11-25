@@ -1,10 +1,17 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, lazy, Suspense, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import type { Id } from "@convex/_generated/dataModel";
-import { AddExpenseDialog, type AddExpenseOptions } from "./AddExpenseDialog";
-import { SettleUpDialog, type SettleUpOptions } from "./SettleUpDialog";
-import { CreateGroupDialog } from "./CreateGroupDialog";
-import { AddFriendDialog } from "./AddFriendDialog";
-import { ConvertCurrencyDialog, type ConvertOptions } from "./ConvertCurrencyDialog";
+import { warm } from "@/lib/lazy";
+import type { AddExpenseOptions } from "./AddExpenseDialog";
+import type { SettleUpOptions } from "./SettleUpDialog";
+import type { ConvertOptions } from "./ConvertCurrencyDialog";
+
+// The dialogs' code (forms, pickers, the date picker) is not in the app shell's chunk: it is fetched
+// once the shell is idle, or on first open if that comes sooner (see lib/lazy.ts).
+const AddExpenseDialog = lazy(warm(() => import("./AddExpenseDialog").then((x) => ({ default: x.AddExpenseDialog }))));
+const SettleUpDialog = lazy(warm(() => import("./SettleUpDialog").then((x) => ({ default: x.SettleUpDialog }))));
+const CreateGroupDialog = lazy(warm(() => import("./CreateGroupDialog").then((x) => ({ default: x.CreateGroupDialog }))));
+const AddFriendDialog = lazy(warm(() => import("./AddFriendDialog").then((x) => ({ default: x.AddFriendDialog }))));
+const ConvertCurrencyDialog = lazy(warm(() => import("./ConvertCurrencyDialog").then((x) => ({ default: x.ConvertCurrencyDialog }))));
 
 type Dialogs = {
   addExpense: (opts?: AddExpenseOptions) => void;
@@ -44,11 +51,14 @@ export function DialogProvider({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider value={api}>
       {children}
-      {expense ? <AddExpenseDialog key={expense.key} options={expense.opts} onClose={closeExpense} /> : null}
-      {settle ? <SettleUpDialog key={settle.key} options={settle.opts} onClose={() => setSettle(null)} /> : null}
-      {group ? <CreateGroupDialog key={group} onClose={() => setGroup(null)} /> : null}
-      {friend ? <AddFriendDialog key={friend} onClose={() => setFriend(null)} /> : null}
-      {convert ? <ConvertCurrencyDialog key={convert.key} options={convert.opts} onClose={() => setConvert(null)} /> : null}
+      {/* Nothing shows while a chunk loads; the dialog then opens with its usual animation. */}
+      <Suspense fallback={null}>
+        {expense ? <AddExpenseDialog key={expense.key} options={expense.opts} onClose={closeExpense} /> : null}
+        {settle ? <SettleUpDialog key={settle.key} options={settle.opts} onClose={() => setSettle(null)} /> : null}
+        {group ? <CreateGroupDialog key={group} onClose={() => setGroup(null)} /> : null}
+        {friend ? <AddFriendDialog key={friend} onClose={() => setFriend(null)} /> : null}
+        {convert ? <ConvertCurrencyDialog key={convert.key} options={convert.opts} onClose={() => setConvert(null)} /> : null}
+      </Suspense>
     </Ctx.Provider>
   );
 }

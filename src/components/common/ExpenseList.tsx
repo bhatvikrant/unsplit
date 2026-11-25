@@ -1,4 +1,4 @@
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, m, useReducedMotion } from "framer-motion";
 import { CloudOff, Paperclip, Repeat } from "lucide-react";
 import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router";
@@ -152,7 +152,7 @@ export function ExpenseRow({
   // The row grows and collapses in normal flow, so its neighbours move with it; no `layout` prop,
   // which would re-measure every row in the list on each change.
   return (
-    <motion.li
+    <m.li
       initial={{ opacity: 0, height: 0 }}
       animate={{ opacity: 1, height: "auto" }}
       exit={{ opacity: 0, height: 0 }}
@@ -160,7 +160,7 @@ export function ExpenseRow({
       style={{ overflow: "hidden" }}
     >
       {body}
-    </motion.li>
+    </m.li>
   );
 }
 

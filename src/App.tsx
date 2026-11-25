@@ -1,30 +1,16 @@
-import { lazy, Suspense } from "react";
 import { createBrowserRouter, Navigate, ScrollRestoration } from "react-router";
-import { RowSkeleton } from "@/components/common/Misc";
 import { AppShell } from "@/components/layout/AppShell";
 import { RedirectIfAuthed, RequireAuth } from "@/components/layout/RequireAuth";
-import { AccountPage, BackupSettings, NotificationSettings, PreferencesSettings, ProfileSettings } from "@/pages/Account";
-import { ActivityPage } from "@/pages/ActivityPage";
 import { Login } from "@/pages/Auth";
 import { Dashboard } from "@/pages/Dashboard";
-import { ExpenseDetail } from "@/pages/ExpenseDetail";
 import { AllExpenses, RecurringExpenses, TrashPage } from "@/pages/Expenses";
 import { FriendPage } from "@/pages/Friend";
-import { GroupPage, GroupSettings, GroupTotals } from "@/pages/Group";
 import { HandoffLanding } from "@/pages/Handoff";
 import { Join } from "@/pages/Join";
 import { Landing } from "@/pages/Landing";
+import { AccountPage, ActivityPage, BackupSettings, ChartsPage, ExpenseDetail, GroupPage, GroupSettings, GroupTotals, NotificationSettings, PreferencesSettings, ProfileSettings } from "@/pages/lazy";
 import { NotFound, RouteError } from "@/pages/NotFound";
 import { Privacy } from "@/pages/Privacy";
-
-// Charts pull in recharts, a third of the bundle, for a page most visits never open. It loads on
-// first use; the service worker precaches the chunk, so it is still there offline.
-const ChartsPage = lazy(() => import("@/pages/Charts").then((m) => ({ default: m.ChartsPage })));
-const charts = (
-  <Suspense fallback={<RowSkeleton />}>
-    <ChartsPage />
-  </Suspense>
-);
 
 export const router = createBrowserRouter([
   { path: "/", element: <RedirectIfAuthed><Landing /></RedirectIfAuthed> },
@@ -56,9 +42,9 @@ export const router = createBrowserRouter([
           { path: "/groups/:id", element: <GroupPage /> },
           { path: "/groups/:id/settings", element: <GroupSettings /> },
           { path: "/groups/:id/totals", element: <GroupTotals /> },
-          { path: "/groups/:id/charts", element: charts },
+          { path: "/groups/:id/charts", element: <ChartsPage /> },
           { path: "/friends/:id", element: <FriendPage /> },
-          { path: "/charts", element: charts },
+          { path: "/charts", element: <ChartsPage /> },
           { path: "/account", element: <AccountPage /> },
           { path: "/account/profile", element: <ProfileSettings /> },
           { path: "/account/preferences", element: <PreferencesSettings /> },

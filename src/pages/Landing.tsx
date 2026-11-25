@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { ArrowRight, Calculator, Globe, Receipt, Repeat, ScanLine, Users } from "lucide-react";
 import { Link } from "react-router";
 import { Logo } from "@/components/layout/Logo";
@@ -26,7 +26,7 @@ export function Landing() {
       </header>
       <main className="mx-auto max-w-5xl px-5">
         <section className="py-16 sm:py-24">
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+          <m.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
             <h1 className="text-text max-w-2xl text-4xl font-semibold tracking-tight sm:text-5xl">Shared costs, settled without the spreadsheet.</h1>
             <p className="text-text-muted mt-5 max-w-xl text-lg">
               UnSplit tracks who paid for what and who owes whom, across every group you're in. Every feature is free. No limits, no ads, nothing locked.
@@ -38,11 +38,11 @@ export function Landing() {
                 </Link>
               </Button>
             </div>
-          </motion.div>
+          </m.div>
         </section>
         <section className="grid grid-cols-1 gap-4 pb-24 sm:grid-cols-2 lg:grid-cols-3">
           {features.map((f, i) => (
-            <motion.div
+            <m.div
               key={f.title}
               initial={{ opacity: 0, y: 10 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -55,7 +55,7 @@ export function Landing() {
               </div>
               <h2 className="text-text font-semibold">{f.title}</h2>
               <p className="text-text-muted mt-1 text-sm">{f.body}</p>
-            </motion.div>
+            </m.div>
           ))}
         </section>
       </main>

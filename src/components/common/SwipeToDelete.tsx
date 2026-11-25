@@ -7,7 +7,7 @@ import {
 } from "react";
 import {
   animate,
-  motion,
+  m,
   useMotionValue,
   useReducedMotion,
   type PanInfo,
@@ -119,7 +119,7 @@ export function SwipeToDelete({
         <Trash2 className="size-4" />
         {label}
       </button>
-      <motion.div
+      <m.div
         style={{ x, touchAction: "pan-y" }}
         drag="x"
         dragDirectionLock
@@ -146,7 +146,7 @@ export function SwipeToDelete({
       >
         {/* Rows are links: without this a mouse drag starts the browser's own link drag and the swipe never begins. */}
         <div onDragStart={(e) => e.preventDefault()}>{children}</div>
-      </motion.div>
+      </m.div>
     </div>
   );
 }
