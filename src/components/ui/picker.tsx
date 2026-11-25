@@ -2,7 +2,9 @@
 
 import * as React from "react"
 import { CheckIcon, ChevronDownIcon, SearchIcon } from "lucide-react"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { usePhone } from "@/lib/media"
 import { cn } from "@/lib/utils"
@@ -304,6 +306,65 @@ export type PickerProps = {
 function Picker({ value = "", onValueChange, placeholder, disabled, title, searchable, searchPlaceholder, className, id, "aria-label": ariaLabel, children }: PickerProps) {
   const phone = usePhone()
   const [open, setOpen] = React.useState(false)
+
+  // Desktop, long lists (time zones): a popover with a search field; the Select below has only type-ahead.
+  if (!phone && searchable) {
+    const entries: Entry[] = []
+    collect(children, entries)
+    const chosen = value ? entries.find((e) => e.value === value) : undefined
+    return (
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            id={id}
+            role="combobox"
+            aria-label={ariaLabel}
+            aria-expanded={open}
+            disabled={disabled}
+            data-slot="picker-trigger"
+            className={cn(
+              "bg-surface shadow-card text-text hover:bg-surface-2 focus-visible:ring-ring flex h-9 w-full items-center justify-between gap-2 rounded-[10px] px-3 text-left text-sm outline-none select-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50",
+              !chosen && "text-text-faint",
+              className,
+            )}
+          >
+            <span className="flex min-w-0 flex-1 items-center gap-2 truncate">
+              {chosen?.icon}
+              <span className="min-w-0 truncate">{chosen ? chosen.label : placeholder}</span>
+            </span>
+            <ChevronDownIcon className="text-text-faint size-4 shrink-0" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-(--radix-popover-trigger-width) min-w-[260px] p-0" align="start">
+          <Command>
+            <CommandInput placeholder={searchPlaceholder ?? "Search"} />
+            <CommandList>
+              <CommandEmpty>No match.</CommandEmpty>
+              <CommandGroup>
+                {entries.map((e) => (
+                  <CommandItem
+                    key={e.value}
+                    value={e.text}
+                    disabled={e.disabled}
+                    onSelect={() => {
+                      onValueChange(e.value)
+                      setOpen(false)
+                    }}
+                  >
+                    {e.icon}
+                    <span className="min-w-0 flex-1 truncate">{e.label}</span>
+                    {e.meta !== undefined && e.meta !== null ? <span className="text-text-faint ml-auto">{e.meta}</span> : null}
+                    {e.value === value ? <CheckIcon className="ml-1 size-4" /> : null}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    )
+  }
 
   if (!phone) {
     return (

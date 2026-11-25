@@ -41,6 +41,12 @@ function validateCommon(args: { description: string; amountMinor: number; curren
   return { description, currency, category: isCategory(args.category) ? args.category : "general" };
 }
 
+function cleanNotes(notes: string | undefined): string | undefined {
+  const n = notes?.trim();
+  if (n && n.length > 2000) throw new ConvexError("Notes are too long (2000 characters max)");
+  return n || undefined;
+}
+
 function sharesOrThrow(total: number, currency: string, payers: { userId: Id<"users">; paidMinor: number }[], spec: SplitSpec, allowed: Id<"users">[]): Share[] {
   const allowedSet = new Set<string>(allowed);
   try {
@@ -183,30 +189,42 @@ export const list = query({
     const limit = Math.min(args.limit ?? 50, 200);
     const before = args.before ?? Number.MAX_SAFE_INTEGER;
     const search = args.search?.trim();
-    const scanCap = search ? 3000 : limit * 3 + 50;
+    const scanCap = search ? 1500 : limit * 3 + 50;
     const nameCache: NameCache = new Map();
     const sharesCache = new Map<Id<"expenses">, Doc<"expenseShares">[]>();
     let candidates: Doc<"expenses">[];
     let scanned: number;
+    let oldest: number | null = null;
 
     // Independent reads go out together (Promise.all) rather than one round trip per row.
     if (args.groupId) {
       await assertGroupMember(ctx, args.groupId, me, { allowDeleted: true });
       candidates = await ctx.db
         .query("expenses")
-        .withIndex("by_group_date", (q) => q.eq("groupId", args.groupId).lt("date", before))
+        .withIndex("by_group_date", (q) => q.eq("groupId", args.groupId).lte("date", before))
         .order("desc")
         .take(scanCap);
       scanned = candidates.length;
+      oldest = candidates[candidates.length - 1]?.date ?? null;
     } else {
       const shares = await ctx.db
         .query("expenseShares")
-        .withIndex("by_user_date", (q) => q.eq("userId", me).eq("deleted", Boolean(args.includeDeleted)).lt("date", before))
+        .withIndex("by_user_date", (q) => q.eq("userId", me).eq("deleted", Boolean(args.includeDeleted)).lte("date", before))
         .order("desc")
         .take(scanCap);
       scanned = shares.length;
+      oldest = shares[shares.length - 1]?.date ?? null;
       const ids = [...new Set(shares.map((s) => s.expenseId))];
       candidates = (await Promise.all(ids.map((id) => ctx.db.get(id)))).filter((e): e is Doc<"expenses"> => e !== null);
+      // A deleted group's expenses stay out of these lists, as they stay out of the balances.
+      const groups = new Map<Id<"groups">, Promise<Doc<"groups"> | null>>();
+      const inLiveGroup = (gid: Id<"groups">) => {
+        let p = groups.get(gid);
+        if (!p) { p = ctx.db.get(gid); groups.set(gid, p); }
+        return p.then((g) => Boolean(g && !g.deletedAt));
+      };
+      const live = await Promise.all(candidates.map((e) => (e.groupId ? inLiveGroup(e.groupId) : true)));
+      candidates = candidates.filter((_, i) => live[i]);
       if (args.friendId) {
         const pk = pairKeyOf(me, args.friendId);
         const shared = await Promise.all(
@@ -226,7 +244,12 @@ export const list = query({
     const page = kept.slice(0, limit);
     const items = await Promise.all(page.map((e) => toRow(ctx, e, me, nameCache, sharesCache.get(e._id))));
     const exhausted = scanned < scanCap && kept.length <= limit;
-    return { items, nextBefore: exhausted ? null : (page[page.length - 1]?.date ?? null) };
+    // The next page starts at the last date shown (the range is inclusive and the client drops
+    // repeats, so expenses sharing that date are not skipped), or, when nothing in this scan
+    // window was kept (a search, a friend's group expenses, a deleted group), at the oldest date
+    // scanned, so older rows stay reachable.
+    // shortcut: more than `limit` expenses with the very same date stall paging there; move to a (date, id) cursor if that ever happens.
+    return { items, nextBefore: exhausted ? null : (page[page.length - 1]?.date ?? oldest) };
   },
 });
 
@@ -344,7 +367,7 @@ export const create = mutation({
       groupId: scope.groupId,
       pairKey: scope.pairKey,
       description: common.description,
-      notes: args.notes?.trim() || undefined,
+      notes: cleanNotes(args.notes),
       amountMinor: args.amountMinor,
       currency: common.currency,
       date: args.date,
@@ -378,10 +401,13 @@ export const update = mutation({
     id: v.id("expenses"),
     groupId: v.optional(v.union(v.id("groups"), v.null())),
     friendId: v.optional(v.id("users")),
+    clientKey: v.optional(v.string()),
     ...expenseInput,
   },
   handler: async (ctx, args) => {
     const me = await requireUser(ctx);
+    // Keyed like `create`: a replay after a reload mid-sync must not log (and email) the edit twice.
+    return await idempotent(ctx, me._id, args.clientKey, async () => {
     const old = await ctx.db.get(args.id);
     if (!old) throw new ConvexError("Expense not found");
     if (old.deletedAt) throw new ConvexError("Restore this expense before editing it");
@@ -410,7 +436,7 @@ export const update = mutation({
       groupId,
       pairKey,
       description: common.description,
-      notes: args.notes?.trim() || undefined,
+      notes: cleanNotes(args.notes),
       amountMinor: args.amountMinor,
       currency: common.currency,
       date: args.date,
@@ -446,6 +472,7 @@ export const update = mutation({
       type: "expense_updated", actorId: me._id, groupId: fresh.groupId, expenseId: fresh._id,
       payload: { description: fresh.description, amountMinor: fresh.amountMinor, currency: fresh.currency, changed },
       recipients: [...new Set([...allowed, ...oldShares.map((s) => s.userId)])],
+    });
     });
   },
 });
@@ -504,6 +531,7 @@ export const cancelRecurring = mutation({
     const e = await ctx.db.get(id);
     if (!e) throw new ConvexError("Expense not found");
     await assertExpenseAccess(ctx, e, me);
+    if (e.repeat === "never") return; // already stopped: a replayed sync
     await ctx.db.patch(id, { repeat: "never", nextRepeatAt: undefined, updatedBy: me, updatedAt: Date.now() });
     await logActivity(ctx, {
       type: "expense_updated", actorId: me, groupId: e.groupId, expenseId: id,
@@ -542,7 +570,7 @@ export const recordPayment = mutation({
       groupId: scope.groupId,
       pairKey: scope.pairKey,
       description: `${payer?.name ?? "Someone"} paid ${payee?.name ?? "someone"}`,
-      notes: args.notes?.trim() || undefined,
+      notes: cleanNotes(args.notes),
       amountMinor: args.amountMinor,
       currency,
       date: args.date,

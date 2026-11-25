@@ -8,11 +8,14 @@
  */
 import { idb } from "./db";
 import { queryKey, rewriteIds } from "./ids";
-import { applyOp, buildDirectory, type Directory, type Query } from "./overlay";
+import { applyOp, buildDirectory, withMappedIds, type Directory, type Query } from "./overlay";
 import type { MeInfo, Op, QueryEntry } from "./types";
 
 type Listener = () => void;
 type ViewEntry = { base: unknown; opsVersion: number; value: unknown };
+
+/** A cached result nobody has looked at for this long is dropped at launch instead of loaded. */
+const KEEP_QUERIES_MS = 30 * 24 * 3600_000;
 
 export class OfflineStore {
   private server = new Map<string, QueryEntry>();
@@ -37,7 +40,12 @@ export class OfflineStore {
 
   private async hydrate() {
     const [queries, outbox, meta] = await Promise.all([idb.getAll<QueryEntry>("queries"), idb.getAll<Op>("outbox"), idb.getAll<unknown>("meta")]);
-    for (const q of queries) if (q.value && typeof q.value === "object" && "name" in q.value) this.server.set(q.key, q.value);
+    const stale = Date.now() - KEEP_QUERIES_MS;
+    for (const q of queries) {
+      if (!(q.value && typeof q.value === "object" && "name" in q.value)) continue;
+      if (q.value.at < stale) void idb.delete("queries", q.key);
+      else this.server.set(q.key, q.value);
+    }
     this.ops = outbox.map((o) => o.value).filter((o) => o && typeof o === "object" && "fn" in o).sort((a, b) => a.seq - b.seq);
     for (const op of this.ops) this.seq = Math.max(this.seq, op.seq);
     for (const m of meta) {
@@ -70,7 +78,8 @@ export class OfflineStore {
     const entry: QueryEntry = { name, args, value, at: Date.now() };
     this.server.set(key, entry);
     this.serverVersion++;
-    void idb.put("queries", key, entry);
+    // Search results and pagination cursors are one-offs; stored, they would grow the database without bound.
+    if (args.search === undefined && args.before === undefined) void idb.put("queries", key, entry);
     if (name === "users:me" && value && typeof value === "object" && "_id" in value) void this.setOwner((value as { _id: string })._id);
     this.notify();
   }
@@ -114,7 +123,7 @@ export class OfflineStore {
     let v = base;
     for (const op of this.ops) {
       try {
-        v = applyOp({ ...op, args: rewriteIds(op.args, this._idMap) }, q, v, dir);
+        v = applyOp(withMappedIds(op, this._idMap), q, v, dir);
       } catch (e) {
         if (import.meta.env.DEV) console.warn("offline overlay failed", op.fn, e);
       }
@@ -144,16 +153,25 @@ export class OfflineStore {
     return this.ops;
   }
 
+  /** Ops queued by any tab of this browser, from the database itself. */
+  async pendingOnDisk(): Promise<number> {
+    return Math.max(this.ops.length, (await idb.getAll("outbox")).length);
+  }
+
   nextSeq(): number {
     return ++this.seq;
   }
 
-  /** Durable first, visible second: once the UI shows a change it has already been written to disk. */
-  async enqueue(op: Op) {
-    await idb.put("outbox", op.id, op);
+  /**
+   * Durable first, visible second: once the UI shows a change it has already been written to disk.
+   * Resolves false when the write did not reach the database (none, full, or hung): the op then lives in memory only.
+   */
+  async enqueue(op: Op): Promise<boolean> {
+    const saved = (await idb.put("outbox", op.id, op)) !== undefined;
     this.ops = [...this.ops, op];
     this.opsVersion++;
     this.notify();
+    return saved;
   }
 
   async updateOp(id: string, patch: Partial<Op>) {

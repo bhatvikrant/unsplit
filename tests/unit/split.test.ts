@@ -8,6 +8,9 @@ describe("money", () => {
   it("parses and formats", () => {
     expect(parseMoney("12.34", "USD")).toBe(1234);
     expect(parseMoney("$1,234.5", "USD")).toBe(123450);
+    expect(parseMoney("12,50", "USD")).toBe(1250);
+    expect(parseMoney("1,5", "EUR")).toBe(150);
+    expect(parseMoney("1,250", "USD")).toBe(125000);
     expect(parseMoney("12.345", "USD")).toBeNull();
     expect(parseMoney("1000", "JPY")).toBe(1000);
     expect(parseMoney("1.5", "JPY")).toBeNull();

@@ -38,6 +38,17 @@ function Row({ color, name, value, hint }: { color?: string; name?: string; valu
   );
 }
 
+// Building an Intl.NumberFormat is the expensive part; one per locale, kept.
+const compactFormatters = new Map<string, Intl.NumberFormat>();
+function compactFormatter(locale: string): Intl.NumberFormat {
+  let f = compactFormatters.get(locale);
+  if (!f) {
+    f = new Intl.NumberFormat(locale, { notation: "compact", maximumFractionDigits: 1 });
+    compactFormatters.set(locale, f);
+  }
+  return f;
+}
+
 /**
  * Spending per month. Dragging or hovering across the bars rolls the headline figure to that
  * month (a quiet tick per bar crossed) and dims the others; letting go of the chart returns it to
@@ -49,7 +60,7 @@ function MonthBars({ data, currency }: { data: { key: string; label: string; val
   const [active, setActive] = useState<number | null>(null);
   const decimals = currencyDecimals(currency);
   const locale = typeof navigator !== "undefined" ? navigator.language : "en-US";
-  const compact = new Intl.NumberFormat(locale, { notation: "compact", maximumFractionDigits: 1 });
+  const compact = compactFormatter(locale);
   const rows = data.map((d) => ({ ...d, amount: d.value / 10 ** decimals }));
   const shown = active !== null && active < data.length ? active : data.length - 1;
   const pick = (state: MouseHandlerDataParam) => {
@@ -131,7 +142,7 @@ export function ChartsPage() {
   const [months, setMonths] = useState(6);
   const group = useQuery(api.groups.get, groupId ? { groupId } : "skip");
   // Changing the period or mode keeps the current charts up until the new numbers arrive.
-  const data = useLastDefined(useQuery(api.insights.charts, { groupId, mode, months }));
+  const data = useLastDefined(useQuery(api.insights.charts, { groupId, mode, months, tzOffset: new Date().getTimezoneOffset() }));
   const [currency, setCurrency] = useState<string | null>(null);
   const fmt = useFormatMoney();
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { applyOp, buildDirectory } from "../../src/offline/overlay";
+import { SPECS } from "../../src/offline/specs";
 import { containsTempId, pairKeyOf, queryKey, rewriteIds, stableStringify } from "../../src/offline/ids";
 import type { Op, QueryEntry } from "../../src/offline/types";
 
@@ -226,5 +227,23 @@ describe("overlay: groups, friends, comments", () => {
     const feed = { items: [], nextBefore: null };
     expect(applyOp(createDinner, { name: "activity:feed", args: {} }, feed, dir)).toBe(feed);
     expect(applyOp(createDinner, { name: "groups:get", args: { groupId: "g2" } }, groupGet, dir)).toBe(groupGet);
+  });
+});
+
+describe("groups:create result mapping", () => {
+  const create = op(
+    "groups:create",
+    { name: "Flat", type: "home", members: [{ userId: "u_bea" }, { name: "Dana" }, { email: "eve@x.io" }] },
+    { tempId: "tmp_groups_1", extra: { newPeople: [{ id: "tmp_users_1", name: "Dana" }, { id: "tmp_users_2", email: "eve@x.io" }] } },
+  );
+  it("maps the group's temp id and each new person's", () => {
+    expect(SPECS["groups:create"].mapResult!(create, { groupId: "g_1", memberIds: ["u_bea", "u_dana", "u_eve"] })).toEqual([
+      ["tmp_groups_1", "g_1"],
+      ["tmp_users_1", "u_dana"],
+      ["tmp_users_2", "u_eve"],
+    ]);
+  });
+  it("still reads an answer stored before memberIds existed", () => {
+    expect(SPECS["groups:create"].mapResult!(create, "g_1")).toEqual([["tmp_groups_1", "g_1"]]);
   });
 });

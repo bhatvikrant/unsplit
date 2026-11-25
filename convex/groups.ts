@@ -141,8 +141,11 @@ export const create = mutation({
     const now = Date.now();
     await ctx.db.insert("groupMembers", { groupId, userId: me._id, joinedAt: now });
     const added: Id<"users">[] = [];
+    // One id per entry of `args.members`, in order: the offline outbox maps the temp ids it gave new people from these.
+    const memberIds: Id<"users">[] = [];
     for (const m of args.members) {
       const id = await resolveMember(ctx, me._id, m);
+      memberIds.push(id);
       if (id === me._id || added.includes(id)) continue;
       await ctx.db.insert("groupMembers", { groupId, userId: id, joinedAt: now, addedBy: me._id });
       added.push(id);
@@ -150,7 +153,7 @@ export const create = mutation({
     for (const a of [me._id, ...added]) for (const b of added) if (a !== b) await ensureFriendship(ctx, a, b, me._id);
     await logActivity(ctx, { type: "group_created", actorId: me._id, groupId, payload: { name }, recipients: [me._id, ...added] });
     for (const id of added) await maybeEmailGroupInvite(ctx, groupId, id, me._id);
-    return groupId;
+    return { groupId, memberIds };
     });
   },
 });
@@ -240,7 +243,7 @@ export const removeMember = mutation({
     const me = await requireUserId(ctx);
     const g = await assertGroupMember(ctx, groupId, me);
     const m = await getMembership(ctx, groupId, userId);
-    if (!m) throw new ConvexError("They're not in this group");
+    if (!m) return; // already gone: a replayed sync, or someone else removed them
     if (!isSettled(await userNetInGroup(ctx, g, userId))) throw new ConvexError("They need to be settled up in this group before being removed");
     await ctx.db.delete(m._id);
     const u = await ctx.db.get(userId);
@@ -257,7 +260,8 @@ export const remove = mutation({
   args: { groupId: v.id("groups") },
   handler: async (ctx, { groupId }) => {
     const me = await requireUserId(ctx);
-    const g = await assertGroupMember(ctx, groupId, me);
+    const g = await assertGroupMember(ctx, groupId, me, { allowDeleted: true });
+    if (g.deletedAt) return; // already deleted: a replayed sync
     await ctx.db.patch(groupId, { deletedAt: Date.now(), deletedBy: me });
     await logActivity(ctx, { type: "group_deleted", actorId: me, groupId, payload: { name: g.name }, scope: { groupId } });
   },
@@ -322,15 +326,17 @@ export const regenerateInvite = mutation({
 
 /** The six "totals" metrics, per currency, for a month ("YYYY-MM") or all time. */
 export const totals = query({
-  args: { groupId: v.id("groups"), month: v.optional(v.string()) },
-  handler: async (ctx, { groupId, month }) => {
+  /** `tzOffset`: the viewer's `getTimezoneOffset()` in minutes, so a month runs from their midnight, not UTC's. */
+  args: { groupId: v.id("groups"), month: v.optional(v.string()), tzOffset: v.optional(v.number()) },
+  handler: async (ctx, { groupId, month, tzOffset }) => {
     const me = await requireUserId(ctx);
     await assertGroupMember(ctx, groupId, me, { allowDeleted: true });
+    const shift = (Number.isFinite(tzOffset) ? (tzOffset as number) : 0) * 60_000;
     let from = -Infinity, to = Infinity;
     if (month) {
       const [y, m] = month.split("-").map(Number);
-      from = Date.UTC(y, m - 1, 1) - 14 * 3600_000; // generous for time zones
-      to = Date.UTC(y, m, 1) + 14 * 3600_000;
+      from = Date.UTC(y, m - 1, 1) + shift;
+      to = Date.UTC(y, m, 1) + shift;
     }
     const expenses = await ctx.db
       .query("expenses")
@@ -340,20 +346,21 @@ export const totals = query({
     const per: Record<string, Row> = {};
     const row = (c: string) => (per[c] ??= { groupSpending: 0, youPaid: 0, yourShare: 0, paymentsMade: 0, paymentsReceived: 0, change: 0 });
     const months = new Set<string>();
-    for (const e of expenses) {
-      if (e.deletedAt) continue;
-      const d = new Date(e.date);
+    const live = expenses.filter((e) => !e.deletedAt);
+    // Independent reads: every expense's shares at once, not one round trip per expense.
+    const allShares = await Promise.all(live.map((e) => ctx.db.query("expenseShares").withIndex("by_expense", (q) => q.eq("expenseId", e._id)).collect()));
+    live.forEach((e, i) => {
+      const d = new Date(e.date - shift); // the viewer's wall-clock month, read through the UTC getters
       months.add(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`);
       const r = row(e.currency);
-      const shares = await ctx.db.query("expenseShares").withIndex("by_expense", (q) => q.eq("expenseId", e._id)).collect();
-      const mine = shares.find((s) => s.userId === me);
+      const mine = allShares[i].find((s) => s.userId === me);
       if (e.isPayment) {
         if (mine) { r.paymentsMade += mine.paidMinor; r.paymentsReceived += mine.owedMinor; }
       } else {
         r.groupSpending += e.amountMinor;
         if (mine) { r.youPaid += mine.paidMinor; r.yourShare += mine.owedMinor; }
       }
-    }
+    });
     for (const r of Object.values(per)) r.change = r.youPaid - r.yourShare + r.paymentsMade - r.paymentsReceived;
     return { totals: per, months: [...months].sort().reverse() };
   },

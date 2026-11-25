@@ -20,6 +20,13 @@ export function useMediaQuery(query: string): boolean {
 
 /** Tailwind's `sm` breakpoint (40rem). */
 const SM = "(min-width: 40rem)";
+/** Tailwind's `lg` breakpoint (64rem): where the sidebar appears. */
+const LG = "(min-width: 64rem)";
+
+/** True from Tailwind's `lg` breakpoint: the layout with a sidebar. */
+export function useDesktop(): boolean {
+  return useMediaQuery(LG);
+}
 
 /** True below Tailwind's `sm` breakpoint: the phone layer, where popovers become sheets. */
 export function usePhone(): boolean {

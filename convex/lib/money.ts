@@ -16,9 +16,18 @@ export function currencyDecimals(code: string): number {
   return 2;
 }
 
+/**
+ * "12,50" typed on a keyboard whose decimal key is a comma means 12.50, not 1250: a lone comma
+ * followed by one or two digits is the decimal mark. "1,250" (three digits) stays a thousands group.
+ */
+export function normalizeDecimal(text: string): string {
+  const t = text.trim();
+  return !t.includes(".") && /^[^,]*,\d{1,2}$/.test(t) ? t.replace(",", ".") : t;
+}
+
 /** "12.34" -> 1234 for a 2-decimal currency. Returns null on bad input. */
 export function parseMoney(text: string, currency: string): number | null {
-  const cleaned = text.replace(/[,\s]/g, "").replace(/^[^\d.-]+/, "");
+  const cleaned = normalizeDecimal(text).replace(/[,\s]/g, "").replace(/^[^\d.-]+/, "");
   if (cleaned === "" || cleaned === "-" || cleaned === ".") return null;
   if (!/^-?\d*(\.\d*)?$/.test(cleaned)) return null;
   const decimals = currencyDecimals(currency);

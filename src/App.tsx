@@ -14,7 +14,7 @@ import { GroupPage, GroupSettings, GroupTotals } from "@/pages/Group";
 import { HandoffLanding } from "@/pages/Handoff";
 import { Join } from "@/pages/Join";
 import { Landing } from "@/pages/Landing";
-import { NotFound } from "@/pages/NotFound";
+import { NotFound, RouteError } from "@/pages/NotFound";
 import { Privacy } from "@/pages/Privacy";
 
 // Charts pull in recharts, a third of the bundle, for a page most visits never open. It loads on
@@ -42,25 +42,32 @@ export const router = createBrowserRouter([
         <ScrollRestoration />
       </RequireAuth>
     ),
+    errorElement: <RouteError />,
     children: [
-      { path: "/dashboard", element: <Dashboard /> },
-      { path: "/activity", element: <ActivityPage /> },
-      { path: "/expenses", element: <AllExpenses /> },
-      { path: "/expenses/recurring", element: <RecurringExpenses /> },
-      { path: "/expenses/:id", element: <ExpenseDetail /> },
-      { path: "/groups/:id", element: <GroupPage /> },
-      { path: "/groups/:id/settings", element: <GroupSettings /> },
-      { path: "/groups/:id/totals", element: <GroupTotals /> },
-      { path: "/groups/:id/charts", element: charts },
-      { path: "/friends/:id", element: <FriendPage /> },
-      { path: "/charts", element: charts },
-      { path: "/account", element: <AccountPage /> },
-      { path: "/account/profile", element: <ProfileSettings /> },
-      { path: "/account/preferences", element: <PreferencesSettings /> },
-      { path: "/account/notifications", element: <NotificationSettings /> },
-      { path: "/account/backup", element: <BackupSettings /> },
-      { path: "/trash", element: <TrashPage /> },
-      { path: "*", element: <NotFound /> },
+      {
+        // A page whose query throws (a stale link, no access) shows this inside the shell instead of react-router's bare error screen.
+        errorElement: <RouteError />,
+        children: [
+          { path: "/dashboard", element: <Dashboard /> },
+          { path: "/activity", element: <ActivityPage /> },
+          { path: "/expenses", element: <AllExpenses /> },
+          { path: "/expenses/recurring", element: <RecurringExpenses /> },
+          { path: "/expenses/:id", element: <ExpenseDetail /> },
+          { path: "/groups/:id", element: <GroupPage /> },
+          { path: "/groups/:id/settings", element: <GroupSettings /> },
+          { path: "/groups/:id/totals", element: <GroupTotals /> },
+          { path: "/groups/:id/charts", element: charts },
+          { path: "/friends/:id", element: <FriendPage /> },
+          { path: "/charts", element: charts },
+          { path: "/account", element: <AccountPage /> },
+          { path: "/account/profile", element: <ProfileSettings /> },
+          { path: "/account/preferences", element: <PreferencesSettings /> },
+          { path: "/account/notifications", element: <NotificationSettings /> },
+          { path: "/account/backup", element: <BackupSettings /> },
+          { path: "/trash", element: <TrashPage /> },
+          { path: "*", element: <NotFound /> },
+        ],
+      },
     ],
   },
 ]);

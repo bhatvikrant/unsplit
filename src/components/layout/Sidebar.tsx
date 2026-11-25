@@ -5,6 +5,7 @@ import { api } from "@convex/_generated/api";
 import { GroupAvatar, UserAvatar } from "@/components/common/Avatars";
 import { BalanceChip } from "@/components/common/Money";
 import { useDialogs } from "@/components/dialogs/DialogProvider";
+import { useDesktop } from "@/lib/media";
 import { cn } from "@/lib/utils";
 import { Logo } from "./Logo";
 import { UserMenu } from "./UserMenu";
@@ -104,8 +105,11 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 export function Sidebar() {
+  // Below `lg` the sidebar is not shown; not mounting it saves its three subscriptions and the avatars on phones.
+  const desktop = useDesktop();
+  if (!desktop) return null;
   return (
-    <aside className="sticky top-0 hidden h-dvh w-[248px] shrink-0 flex-col gap-4 overflow-y-auto border-r px-3 pt-3 pb-3 lg:flex">
+    <aside className="sticky top-0 flex h-dvh w-[248px] shrink-0 flex-col gap-4 overflow-y-auto border-r px-3 pt-3 pb-3">
       <Link to="/dashboard" className="mb-1 inline-flex w-fit rounded-lg px-2 py-1.5 outline-none focus-visible:ring-[3px] focus-visible:ring-ring" aria-label="UnSplit home">
         <Logo />
       </Link>

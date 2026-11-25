@@ -2,6 +2,7 @@ import { ConvexError, v } from "convex/values";
 import { action } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { currencyDecimals } from "./lib/money";
+import { enforceLimit } from "./lib/rateLimit";
 
 export type ScannedReceipt = {
   merchant: string | null;
@@ -26,6 +27,7 @@ export const scan = action({
     if (!userId) throw new ConvexError("You need to be signed in");
     const key = process.env.ANTHROPIC_API_KEY;
     if (!key) throw new ConvexError("Receipt scanning isn't set up on this deployment (ANTHROPIC_API_KEY missing)");
+    await enforceLimit(ctx, "receiptScan", userId, "Receipt scanning");
     const blob = await ctx.storage.get(storageId);
     if (!blob) throw new ConvexError("Receipt image not found");
     if (blob.size > 10 * 1024 * 1024) throw new ConvexError("Receipt image is too large (10 MB max)");

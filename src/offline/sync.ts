@@ -150,7 +150,10 @@ export class SyncEngine {
       createdAt: Date.now(),
       attempts: 0,
     };
-    await this.store.enqueue(op);
+    const durable = await this.store.enqueue(op);
+    if (!durable && !this.isConnected()) {
+      toast.warning("This change couldn't be saved on this device. Keep the app open until you're back online, or it will be lost.", { id: "outbox-volatile", duration: 8000 });
+    }
     if (!this.isConnected()) {
       void this.drain();
       return prepared.result;
@@ -233,7 +236,9 @@ export class SyncEngine {
       w.reject(error ?? new Error(reason));
     } else {
       // Nobody is waiting (it was queued offline): say so, since the UI showed it as done.
-      toast.error(`${spec?.label ?? "A change"} couldn't be synced: ${reason}`, { duration: 8000 });
+      const label = spec?.label ?? "A change";
+      const what = typeof op.args.description === "string" && op.args.description ? `${label} "${op.args.description}"` : label;
+      toast.error(`${what} couldn't be synced: ${reason}`, { duration: 8000 });
     }
     this.status = { ...this.status, lastError: reason };
   }
