@@ -1,3 +1,4 @@
+import { ConvexError } from "convex/values";
 import type { Doc, Id } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 
@@ -58,7 +59,7 @@ export async function findOrCreateUser(
     const existing = await ctx.db.query("users").withIndex("email", (q) => q.eq("email", email)).unique();
     if (existing) return existing._id;
   }
-  if (!name && !email) throw new Error("A name or an email is required");
+  if (!name && !email) throw new ConvexError("A name or an email is required");
   return await ctx.db.insert("users", {
     name: name || email!.split("@")[0],
     email,

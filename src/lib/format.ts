@@ -55,7 +55,8 @@ export function downloadFile(name: string, content: string, type = "text/plain")
   document.body.appendChild(a);
   a.click();
   a.remove();
-  URL.revokeObjectURL(url);
+  // Revoking at once can abort the download in Firefox.
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 export function toCsv(headers: string[], rows: string[][]): string {

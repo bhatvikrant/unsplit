@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@/lib/convex";
-import { Plus, ReceiptText, Repeat, Search, Trash2, Undo2, Users } from "lucide-react";
+import { Plus, ReceiptText, Repeat, Search, Trash2, Undo2 } from "lucide-react";
 import { useEffect, useLayoutEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
@@ -13,6 +13,7 @@ import { useDialogs } from "@/components/dialogs/DialogProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { errorMessage, formatDate, relativeTime } from "@/lib/format";
+import { useMe } from "@/lib/hooks";
 import { usePagedExpenses } from "@/lib/usePagedExpenses";
 
 export function AllExpenses() {
@@ -31,7 +32,7 @@ export function AllExpenses() {
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [text, q]);
-  const { items, hasMore, loadMore, loadingMore } = usePagedExpenses({ search: q || undefined });
+  const { items, hasMore, loadMore, loadingMore, capped } = usePagedExpenses({ search: q || undefined });
   const dialogs = useDialogs();
 
   return (
@@ -67,6 +68,7 @@ export function AllExpenses() {
         hasMore={hasMore}
         onLoadMore={loadMore}
         loadingMore={loadingMore}
+        capped={capped}
         showGroup
         empty={
           q ? (
@@ -81,6 +83,7 @@ export function AllExpenses() {
 }
 
 export function RecurringExpenses() {
+  const me = useMe();
   const items = useQuery(api.expenses.recurring);
   const cancel = useMutation(api.expenses.cancelRecurring);
   const confirm = useConfirm();
@@ -97,6 +100,7 @@ export function RecurringExpenses() {
             <ExpenseRow
               key={it._id}
               item={it}
+              meId={me?._id}
               showGroup
               trailing={
                 <div className="ml-2 flex shrink-0 flex-col items-end gap-1 text-xs">
@@ -105,8 +109,7 @@ export function RecurringExpenses() {
                   <Button
                     variant="ghost"
                     size="xs"
-                    onClick={async (e) => {
-                      e.preventDefault();
+                    onClick={async () => {
                       if (!(await confirm({ title: `Stop repeating "${it.description}"?`, description: "Expenses already posted stay. No new ones are added.", action: "Stop repeating" }))) return;
                       try {
                         await cancel({ id: it._id });
@@ -128,6 +131,7 @@ export function RecurringExpenses() {
 }
 
 export function TrashPage() {
+  const me = useMe();
   const deletedExpenses = useQuery(api.expenses.deleted);
   const deletedGroups = useQuery(api.groups.listDeleted);
   const restoreExpense = useMutation(api.expenses.restore);
@@ -183,14 +187,14 @@ export function TrashPage() {
                   <ExpenseRow
                     key={it._id}
                     item={it}
+                    meId={me?._id}
                     showGroup
                     trailing={
                       <Button
                         size="sm"
                         variant="outline"
                         className="ml-2"
-                        onClick={async (e) => {
-                          e.preventDefault();
+                        onClick={async () => {
                           try {
                             await restoreExpense({ id: it._id });
                           } catch (err) {
@@ -208,7 +212,6 @@ export function TrashPage() {
           ) : null}
         </>
       )}
-      {!empty && groups.length === 0 && expenses.length === 0 ? <Users className="hidden" /> : null}
     </div>
   );
 }

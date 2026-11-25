@@ -13,6 +13,7 @@ import { useDialogs } from "@/components/dialogs/DialogProvider";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/format";
 import { useMe } from "@/lib/hooks";
+import { useDesktop } from "@/lib/media";
 import { usePagedExpenses } from "@/lib/usePagedExpenses";
 import { useSettleIn } from "@/lib/useSettleIn";
 import { cn } from "@/lib/utils";
@@ -39,11 +40,14 @@ export function Dashboard() {
   }
   const currencies = Object.keys(totals);
   const nets = currencies.map((c) => ({ currency: c, net: totals[c].owed - totals[c].owe })).filter((x) => x.net !== 0);
+  // Currencies that disagree in direction are shown signed; otherwise the label carries the direction.
+  const mixed = nets.some((n) => n.net < 0) && nets.some((n) => n.net > 0);
   const owe = (friends ?? []).filter((f) => Object.values(f.balances).some((v) => v < 0));
   const owed = (friends ?? []).filter((f) => Object.values(f.balances).some((v) => v > 0));
   const settled = (friends ?? []).filter((f) => Object.values(f.balances).every((v) => v === 0));
   const nothingYet = friends?.length === 0 && groups?.length === 0;
   const [now] = useState(() => new Date());
+  const desktop = useDesktop();
   const recentItems = recent.items?.slice(0, 5);
   const swipe = useSwipedRow();
   const del = useDeleteExpense();
@@ -95,8 +99,8 @@ export function Dashboard() {
                         key={n.currency}
                         minor={n.net}
                         currency={n.currency}
-                        abs
-                        signDisplay={nets.every((x) => x.net < 0) || nets.every((x) => x.net > 0) ? "never" : "always"}
+                        abs={!mixed}
+                        signDisplay={mixed ? "always" : "never"}
                         className={cn("block leading-none font-semibold tracking-[-0.03em]", nets.length === 1 ? "text-[40px]" : "text-[26px]")}
                       />
                     ))}
@@ -142,7 +146,8 @@ export function Dashboard() {
           </div>
 
           {/* Phones and tablets have no sidebar: the groups and friends live here, on the Home tab. */}
-          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:hidden">
+          {desktop ? null : (
+          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
             <Section title="Groups" actions={<AddButton label="Create a group" onClick={() => dialogs.createGroup()} />}>
               {groups === undefined ? (
                 <p className="text-text-faint px-4 py-7 text-center text-sm">Loading…</p>
@@ -168,6 +173,7 @@ export function Dashboard() {
               )}
             </Section>
           </div>
+          )}
 
           {recentItems && recentItems.length > 0 ? (
             <Section
@@ -181,7 +187,7 @@ export function Dashboard() {
             >
               <ul ref={recentRef} className="p-1">
                 {recentItems.map((it) => (
-                  <ExpenseRow key={it._id} item={it} showGroup swipe={swipe.row(it._id)} onDelete={() => del(it).finally(swipe.close)} />
+                  <ExpenseRow key={it._id} item={it} meId={me?._id} showGroup swipe={swipe.row(it._id)} onDelete={() => del(it).finally(swipe.close)} />
                 ))}
               </ul>
             </Section>

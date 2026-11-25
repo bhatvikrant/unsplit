@@ -4,7 +4,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { endOfDay, endOfMonth, format, isThisYear, isToday, isYesterday, startOfDay, startOfMonth, startOfToday, startOfWeek, subMonths } from "date-fns";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
@@ -56,7 +56,7 @@ function periodRange(period: Period, custom: { from: number; to: number }): { af
 function periodLabel(period: Period, custom: { from: number; to: number }): string {
   if (period === "custom") {
     const f = new Date(custom.from), t = new Date(custom.to);
-    const fmt = (d: Date) => format(d, isThisYear(d) ? "d MMM" : "d MMM yy");
+    const fmt = (d: Date) => format(d, isThisYear(d) ? "d MMM" : "d MMM yyyy");
     return f.getTime() === t.getTime() ? fmt(f) : `${fmt(f)} – ${fmt(t)}`;
   }
   return PERIODS.find((p) => p.value === period)?.label ?? "Any time";
@@ -283,7 +283,7 @@ function Row({ it, meId }: { it: Item; meId: Id<"users"> | undefined }) {
   const p = it.payload as { content?: string };
   return (
     <li className={cn("relative flex gap-3 px-3.5 py-2.5", !it.read && "bg-brand-soft/35")}>
-      {!it.read ? <span className="bg-brand absolute top-1/2 left-1.5 size-1.5 -translate-y-1/2 rounded-full" aria-label="Unread" /> : null}
+      {!it.read ? <span className="bg-brand absolute top-1/2 left-1.5 size-1.5 -translate-y-1/2 rounded-full"><span className="sr-only">Unread</span></span> : null}
       <div className="relative shrink-0 self-start">
         {it.actor ? <UserAvatar user={it.actor} size="sm" /> : <div className="size-8" />}
         <TypeBadge type={it.type} />
@@ -312,7 +312,7 @@ function BurstRow({ items }: { items: Item[] }) {
   const deleted = head.type === "expense_deleted";
   return (
     <li className={cn("relative flex gap-3 px-3.5 py-2.5", unread && "bg-brand-soft/35")}>
-      {unread ? <span className="bg-brand absolute top-1/2 left-1.5 size-1.5 -translate-y-1/2 rounded-full" aria-label="Unread" /> : null}
+      {unread ? <span className="bg-brand absolute top-1/2 left-1.5 size-1.5 -translate-y-1/2 rounded-full"><span className="sr-only">Unread</span></span> : null}
       <div className="relative shrink-0 self-start">
         {head.actor ? <UserAvatar user={head.actor} size="sm" /> : <div className="size-8" />}
         <TypeBadge type={head.type} />
@@ -424,7 +424,7 @@ function DateFilter({ period, custom, onChange }: { period: Period; custom: { fr
     setOpen(o);
   };
   const chip = (
-    <Chip active={active} className={cn(active && "bg-brand text-on-brand", "select-none")} aria-label="Filter by date">
+    <Chip active={active} className={cn(active && "bg-brand text-on-brand", "select-none")} aria-label={`${periodLabel(period, custom)}, filter by date`}>
       <CalendarDays className="size-3.5" />
       {periodLabel(period, custom)}
       <ChevronDown className="size-3.5 opacity-70" />
@@ -497,6 +497,9 @@ export function ActivityPage() {
   const [period, setPeriod] = useState<Period>("any");
   const [custom, setCustom] = useState(() => ({ from: startOfToday().getTime(), to: startOfToday().getTime() }));
   const [cursors, setCursors] = useState<number[]>([]);
+  // Pages fetched by "Show more", kept as they land: `more` only ever holds the newest one.
+  const [extra, setExtra] = useState<Item[]>([]);
+  const landed = useRef<number | null>(null);
   const range = useMemo(() => periodRange(period, custom), [period, custom]);
   const filterArgs = { kind: kind === "all" ? undefined : kind, after: range.after };
 
@@ -504,12 +507,25 @@ export function ActivityPage() {
   const more = useQuery(api.activity.feed, cursors.length > 0 ? { limit: PAGE, before: cursors[cursors.length - 1], ...filterArgs } : "skip");
   const firstShown = useLastDefined(first);
   const markRead = useMutation(api.activity.markAllRead);
+  // Rows unread when the page opened keep their highlight: marking them read (below) must not strip it before it is seen.
+  const unreadAtOpen = useRef<Set<string> | null>(null);
+  if (first && !unreadAtOpen.current) unreadAtOpen.current = new Set(first.items.filter((i) => !i.read).map((i) => i._id));
   useEffect(() => {
-    if (first && first.items.some((i) => !i.read)) void markRead();
+    // Failing to mark read only leaves the badge until next time.
+    if (first && first.items.some((i) => !i.read)) markRead().catch(() => {});
   }, [first, markRead]);
+  useEffect(() => {
+    const cursor = cursors[cursors.length - 1];
+    if (!more || cursor === undefined || landed.current === cursor) return;
+    landed.current = cursor;
+    setExtra((x) => [...x, ...more.items]);
+  }, [more, cursors]);
 
-  const moreItems = cursors.length > 0 && more ? more.items : undefined;
-  const items = useMemo(() => (firstShown ? [...firstShown.items, ...(moreItems ?? [])] : undefined), [firstShown, moreItems]);
+  const items = useMemo(() => {
+    if (!firstShown) return undefined;
+    const keep = unreadAtOpen.current;
+    return [...firstShown.items, ...extra].map((it) => (keep?.has(it._id) ? { ...it, read: false } : it));
+  }, [firstShown, extra]);
   const last = cursors.length > 0 ? more : first;
   const days = useMemo(() => (items ? groupByDay(items) : []), [items]);
   const filtered = kind !== "all" || period !== "any";
@@ -519,6 +535,8 @@ export function ActivityPage() {
     if (next.period !== undefined) setPeriod(next.period);
     if (next.custom !== undefined) setCustom(next.custom);
     setCursors([]);
+    setExtra([]);
+    landed.current = null;
   };
   const noun = (n: number) => { const k = KINDS.find((x) => x.value === kind) ?? KINDS[0]; return n === 1 ? k.noun[0] : k.noun[1]; };
 

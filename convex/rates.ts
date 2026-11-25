@@ -5,6 +5,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { assertFriends, assertGroupMember, pairKeyOf, requireUserId } from "./lib/access";
 import { applyDebts, scopeOf } from "./lib/balances";
 import { logActivity } from "./lib/activity";
+import { CURRENCY_CODES } from "./lib/currencies";
 import { allocate, currencyDecimals } from "./lib/money";
 import { pairwiseDebts } from "./lib/split";
 
@@ -77,6 +78,7 @@ export const preview = action({
   handler: async (ctx, args): Promise<{ target: string; lines: { currency: string; amountMinor: number; count: number; rate: number | null; convertedMinor: number | null }[]; unsupported: string[]; fetchedAt: number }> => {
     const userId = await requireUserId(ctx as never);
     const target = args.target.toUpperCase();
+    if (!CURRENCY_CODES.has(target)) throw new ConvexError("Unknown currency");
     const totals = await ctx.runQuery(internal.rates.scopeCurrencies, { groupId: args.groupId, friendId: args.friendId, userId });
     const sources = Object.keys(totals).filter((c) => c !== target);
     // Rates are stored as source -> target. Fetch from each source base to the target.
@@ -121,12 +123,13 @@ export const apply = mutation({
   handler: async (ctx, args) => {
     const me = await requireUserId(ctx);
     const target = args.target.toUpperCase();
+    if (!CURRENCY_CODES.has(target)) throw new ConvexError("Unknown currency");
     const expenses = await scopeExpenses(ctx, me, args);
     let converted = 0;
     for (const e of expenses) {
       if (e.currency === target) continue;
       const rate = args.rates[e.currency];
-      if (!rate || rate <= 0) continue;
+      if (!Number.isFinite(rate) || rate <= 0) continue;
       const newTotal = convertMinor(e.amountMinor, e.currency, target, rate);
       const shares = await ctx.db.query("expenseShares").withIndex("by_expense", (q) => q.eq("expenseId", e._id)).collect();
       const paid = allocate(newTotal, shares.map((s) => s.paidMinor));

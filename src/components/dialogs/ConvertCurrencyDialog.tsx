@@ -71,8 +71,8 @@ export function ConvertCurrencyDialog({ options, onClose }: { options: ConvertOp
           <DialogDescription>Every expense here, including settled ones, is rewritten at today's rate. Everyone sees the converted amounts. The original amounts stay on each expense.</DialogDescription>
         </DialogHeader>
         <div className="mt-2 space-y-4">
-          <Field label="Convert everything to">
-            <CurrencyPicker value={target} onChange={setTarget} />
+          <Field label="Convert everything to" htmlFor="target">
+            <CurrencyPicker id="target" value={target} onChange={setTarget} />
           </Field>
           {loading ? (
             <div className="text-text-muted flex items-center gap-2 text-sm">

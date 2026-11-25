@@ -49,11 +49,14 @@ export function usePagedExpenses(args: Args, pageSize = 50) {
   }, [first, ...extras]);
 
   const lastPage = pages[pages.length - 1];
-  const hasMore = Boolean(lastPage && lastPage.nextBefore !== null) && extraCursor.length < 8;
+  const more = Boolean(lastPage && lastPage.nextBefore !== null);
+  const hasMore = more && extraCursor.length < 8;
+  // shortcut: 8 fixed query slots (~450 rows); the list says so instead of stopping silently. Move to Convex `paginate` if anyone needs more.
+  const capped = more && extraCursor.length >= 8;
   const loadingMore = extraCursor.length > 0 && lastPage === undefined;
   const loadMore = () => {
     const next = lastPage?.nextBefore;
     if (next && !extraCursor.includes(next)) setPaging({ key, cursors: [...extraCursor, next] });
   };
-  return { items: useLastDefined(items), hasMore, loadMore, loadingMore };
+  return { items: useLastDefined(items), hasMore, loadMore, loadingMore, capped };
 }

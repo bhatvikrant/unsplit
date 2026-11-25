@@ -1,22 +1,31 @@
 import { useAuthActions } from "@convex-dev/auth/react";
 import { BarChart3, ChevronsUpDown, LogOut, Repeat, Settings, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router";
+import { toast } from "sonner";
 import { UserAvatar } from "@/components/common/Avatars";
 import { useConfirm } from "@/components/common/ConfirmDialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { useOfflineStatus } from "@/lib/convex";
+import { useOffline } from "@/offline/context";
+import { errorMessage } from "@/lib/format";
 import { useMe } from "@/lib/hooks";
 import { cn } from "@/lib/utils";
 
 /** Logs out and returns to the landing page, after a warning when offline changes would be lost. */
 export function useLogOut() {
   const { signOut } = useAuthActions();
-  const { pending } = useOfflineStatus();
+  const { store } = useOffline();
   const confirm = useConfirm();
   const navigate = useNavigate();
   return async () => {
+    // Counted from the database, so changes queued in another tab of this browser are not thrown away unasked.
+    const pending = await store.pendingOnDisk();
     if (pending > 0 && !(await confirm({ title: "Log out anyway?", description: `${pending} change${pending === 1 ? "" : "s"} haven't synced yet and would be lost.`, action: "Log out" }))) return;
-    await signOut();
+    try {
+      await signOut();
+    } catch (e) {
+      toast.error(errorMessage(e));
+      return;
+    }
     navigate("/");
   };
 }

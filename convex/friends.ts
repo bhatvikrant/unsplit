@@ -83,7 +83,8 @@ export const remove = mutation({
   args: { friendId: v.id("users") },
   handler: async (ctx, { friendId }) => {
     const me = await requireUserId(ctx);
-    const f = await assertFriends(ctx, me, friendId);
+    const f = await friendshipOf(ctx, me, friendId);
+    if (!f) return; // already gone: a replayed sync
     const balances = await computeUserBalances(ctx, me);
     const rec = mapToRecord(balances.byFriend.get(friendId));
     if (Object.keys(rec).length > 0) throw new ConvexError("Settle up before removing this friend");

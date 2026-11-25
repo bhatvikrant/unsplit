@@ -165,6 +165,7 @@ export function AccountPage() {
   const logOut = useLogOut();
   const confirm = useConfirm();
   const navigate = useNavigate();
+  const deleting = useRef(false);
   if (!me) return <RowSkeleton />;
 
   const prefs = Object.values(me.notifPrefs);
@@ -235,6 +236,7 @@ export function AccountPage() {
           hint="Settle up with everyone first. Shared expenses stay, without your name."
           onClick={async () => {
             if (
+              deleting.current ||
               !(await confirm({
                 title: "Delete your account?",
                 description: "This can't be undone. Your name is removed from shared expenses, but the expenses stay so other people's balances stay correct. You'll be signed out and your login removed.",
@@ -242,11 +244,13 @@ export function AccountPage() {
               }))
             )
               return;
+            deleting.current = true;
             try {
               await deleteAccount();
               await signOut();
               navigate("/");
             } catch (e) {
+              deleting.current = false;
               toast.error(errorMessage(e));
             }
           }}
@@ -300,6 +304,7 @@ export function ProfileSettings() {
                 className="hidden"
                 onChange={async (e) => {
                   const f = e.target.files?.[0];
+                  e.target.value = ""; // so choosing the same photo again fires change
                   if (!f) return;
                   try {
                     const { storageId } = await uploadImage(uploadUrl, f, AVATAR_EDGE);
@@ -320,7 +325,7 @@ export function ProfileSettings() {
             </div>
           </div>
           <Field label="Name" htmlFor="name">
-            <Input id="name" value={name} maxLength={80} onChange={(e) => setName(e.target.value)} onBlur={() => name.trim() && name !== me.name && save({ name })} />
+            <Input id="name" value={name} maxLength={80} onChange={(e) => setName(e.target.value)} onBlur={() => { if (!name.trim()) setName(me.name); else if (name !== me.name) void save({ name }); }} />
           </Field>
           <Field label="Email" htmlFor="email" hint="Your email is how friends find you. It can't be changed here yet.">
             <Input id="email" value={me.email ?? ""} readOnly className="bg-surface" />
@@ -343,11 +348,11 @@ export function PreferencesSettings() {
       <PageHeader back={BACK} title="Preferences" />
       <Section>
         <div className="space-y-4 p-4">
-          <Field label="Default currency" hint="New expenses start in this currency, and totals are shown in it where possible.">
-            <CurrencyPicker value={me.defaultCurrency} onChange={(c) => save({ defaultCurrency: c })} />
+          <Field label="Default currency" htmlFor="currency" hint="New expenses start in this currency, and totals are shown in it where possible.">
+            <CurrencyPicker id="currency" value={me.defaultCurrency} onChange={(c) => save({ defaultCurrency: c })} />
           </Field>
-          <Field label="Time zone" hint={`Your browser reports ${browserTz}.`}>
-            <Picker value={me.timeZone ?? browserTz} onValueChange={(v) => save({ timeZone: v })} aria-label="Time zone" searchable searchPlaceholder="Search time zones" className="w-full max-w-xs">
+          <Field label="Time zone" htmlFor="tz" hint={`Your browser reports ${browserTz}.`}>
+            <Picker id="tz" value={me.timeZone ?? browserTz} onValueChange={(v) => save({ timeZone: v })} aria-label="Time zone" searchable searchPlaceholder="Search time zones" className="w-full max-w-xs">
               {(TIME_ZONES.length ? TIME_ZONES : [browserTz]).map((tz) => (
                 <PickerItem key={tz} value={tz}>
                   {tz}

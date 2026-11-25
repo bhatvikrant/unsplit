@@ -1,11 +1,13 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireUserId } from "./lib/access";
+import { enforceLimit } from "./lib/rateLimit";
 
 export const generateUploadUrl = mutation({
   args: {},
   handler: async (ctx) => {
-    await requireUserId(ctx);
+    const me = await requireUserId(ctx);
+    await enforceLimit(ctx, "upload", me, "Upload");
     return await ctx.storage.generateUploadUrl();
   },
 });

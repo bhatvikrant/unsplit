@@ -181,7 +181,7 @@ export function SplitEditor({
                       type="button"
                       aria-pressed={on}
                       onClick={() => set({ items: state.items.map((x) => (x.id === it.id ? { ...x, assignees: { ...x.assignees, [p._id]: !on } } : x)) })}
-                      className={cn("flex items-center gap-1.5 shadow-ring rounded-full py-0.5 pr-2.5 pl-0.5 text-xs transition-colors", on ? "bg-brand-soft text-brand-ink shadow-[0_0_0_1px_var(--brand)]" : "text-text-faint")}
+                      className={cn("flex min-h-8 items-center gap-1.5 shadow-ring rounded-full py-0.5 pr-2.5 pl-0.5 text-xs transition-colors coarse:min-h-10 coarse:pr-3 coarse:pl-1", on ? "bg-brand-soft text-brand-ink shadow-[0_0_0_1px_var(--brand)]" : "text-text-faint")}
                     >
                       <UserAvatar user={p} size="xs" className="size-5 text-[9px]" />
                       {p.name.split(" ")[0]}

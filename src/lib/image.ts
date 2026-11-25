@@ -2,8 +2,8 @@ import type { Id } from "@convex/_generated/dataModel";
 
 /** Longest side kept for receipts: a 12 MP phone shot (4032×3024) comes down to 2560×1920, still sharp enough to read the lines. */
 export const RECEIPT_EDGE = 2560;
-/** Covers show at most a few hundred pixels wide. */
-export const COVER_EDGE = 1600;
+/** Covers show at 80 CSS px at most; 640 leaves room for sharp screens and a larger header later. */
+export const COVER_EDGE = 640;
 /** Avatars show at 80px at most. */
 export const AVATAR_EDGE = 512;
 /** WebP at this quality is visually indistinguishable from the original photo at a fraction of the size. */

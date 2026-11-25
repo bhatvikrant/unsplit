@@ -27,7 +27,7 @@ export function FriendPage() {
   const requireOnline = useRequireOnline();
   const dialogs = useDialogs();
   const navigate = useNavigate();
-  const { items, hasMore, loadMore, loadingMore } = usePagedExpenses({ friendId });
+  const { items, hasMore, loadMore, loadingMore, capped } = usePagedExpenses({ friendId });
   const [failed, setFailed] = useState(false);
   const [reminding, setReminding] = useState(false);
   useEffect(() => {
@@ -69,6 +69,7 @@ export function FriendPage() {
             hasMore={hasMore}
             onLoadMore={loadMore}
             loadingMore={loadingMore}
+            capped={capped}
             showGroup
             empty={<EmptyState icon={Receipt} title={`Nothing shared with ${friend.user.name} yet`} description="Expenses you share directly or in a group together show up here." action={<Button onClick={() => dialogs.addExpense({ friendId })}><Plus /> Add expense</Button>} />}
           />

@@ -11,11 +11,11 @@ import { usePhone } from "@/lib/media";
 import { cn } from "@/lib/utils";
 
 /** Searchable currency list: a Command popover on desktop, a picker sheet with search on phones. */
-export function CurrencyPicker({ value, onChange, className, compact, symbol }: { value: string; onChange: (code: string) => void; className?: string; compact?: boolean; /** The trigger is just the currency's symbol, for sitting in front of an amount. */ symbol?: boolean }) {
+export function CurrencyPicker({ value, onChange, className, compact, symbol, id }: { value: string; onChange: (code: string) => void; className?: string; compact?: boolean; id?: string; /** The trigger is just the currency's symbol, for sitting in front of an amount. */ symbol?: boolean }) {
   const [open, setOpen] = useState(false);
   const phone = usePhone();
   const symbolTrigger = symbol ? (
-    <button type="button" role="combobox" aria-expanded={open} aria-label={`Currency: ${value}`} title="Change currency" className={cn("text-text-faint hover:text-text-muted active:bg-surface-2 flex min-h-11 shrink-0 items-center gap-0.5 rounded-lg px-1 font-medium select-none", className)}>
+    <button type="button" id={id} role="combobox" aria-expanded={open} aria-label={`Currency: ${value}`} title="Change currency" className={cn("text-text-faint hover:text-text-muted active:bg-surface-2 flex min-h-11 shrink-0 items-center gap-0.5 rounded-lg px-1 font-medium select-none", className)}>
       <span className="text-2xl">{currencySymbol(value)}</span>
       <ChevronDown className="size-3.5" />
     </button>
@@ -31,7 +31,7 @@ export function CurrencyPicker({ value, onChange, className, compact, symbol }: 
         searchable
         searchPlaceholder="Search currencies"
         trigger={symbolTrigger ?? (
-          <Button type="button" variant="outline" role="combobox" aria-expanded={open} aria-label={`Currency: ${value}`} className={cn("shadow-ring h-11 justify-between font-medium select-none", compact ? "w-[84px] px-2" : "w-[120px]", className)}>
+          <Button type="button" id={id} variant="outline" role="combobox" aria-expanded={open} aria-label={`Currency: ${value}`} className={cn("shadow-ring h-11 justify-between font-medium select-none", compact ? "w-[84px] px-2" : "w-[120px]", className)}>
             <span className="tnum">{compact ? value : `${currencySymbol(value)} ${value}`}</span>
             <ChevronsUpDown className="text-text-faint size-3.5" />
           </Button>
@@ -50,7 +50,7 @@ export function CurrencyPicker({ value, onChange, className, compact, symbol }: 
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         {symbolTrigger ?? (
-          <Button type="button" variant="outline" role="combobox" aria-expanded={open} aria-label={`Currency: ${value}`} className={cn("shadow-ring justify-between font-medium", compact ? "w-[84px] px-2" : "w-[120px]", className)}>
+          <Button type="button" id={id} variant="outline" role="combobox" aria-expanded={open} aria-label={`Currency: ${value}`} className={cn("shadow-ring justify-between font-medium", compact ? "w-[84px] px-2" : "w-[120px]", className)}>
             <span className="tnum">{compact ? value : `${currencySymbol(value)} ${value}`}</span>
             <ChevronsUpDown className="text-text-faint size-3.5" />
           </Button>
