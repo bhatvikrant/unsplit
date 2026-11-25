@@ -82,6 +82,16 @@ export default defineConfig({
       devOptions: { enabled: false },
     }),
   ],
+  build: {
+    rolldownOptions: {
+      output: {
+        // Rolldown gives a module that two chunks import (the entry and a lazy dialog, say) a common
+        // chunk of its own, which breaks the app shell into dozens of small files. Everything the
+        // entry imports statically stays in one chunk; the lazy chunks keep only what it does not.
+        codeSplitting: { groups: [{ name: "app", tags: ["$initial"] }] },
+      },
+    },
+  },
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "./src"),
