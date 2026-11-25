@@ -75,7 +75,7 @@ export default defineConfig({
             // Receipts, avatars and covers served by Convex file storage.
             urlPattern: ({ url }) => url.pathname.startsWith("/api/storage/"),
             handler: "CacheFirst",
-            options: { cacheName: "convex-files", expiration: { maxEntries: 300, maxAgeSeconds: 30 * 24 * 3600 }, cacheableResponse: { statuses: [0, 200] } },
+            options: { cacheName: "convex-files", expiration: { maxEntries: 60, maxAgeSeconds: 30 * 24 * 3600 }, cacheableResponse: { statuses: [0, 200] } },
           },
         ],
       },

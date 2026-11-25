@@ -116,7 +116,7 @@ export function ExpenseDetail() {
                   if (!(await confirm({ title: `Delete this ${e.isPayment ? "payment" : "expense"}?`, description: "Balances update right away. Anyone involved can restore it later from Deleted items.", action: "Delete" }))) return;
                   try {
                     await remove({ id: e._id });
-                    toast.success("Deleted", { action: { label: "Undo", onClick: () => void restore({ id: e._id }) } });
+                    toast.success("Deleted", { action: { label: "Undo", onClick: () => restore({ id: e._id }).catch((err) => toast.error(errorMessage(err))) } });
                     navigate(back);
                   } catch (err) {
                     setError(errorMessage(err));
@@ -258,7 +258,7 @@ export function ExpenseDetail() {
                         <button
                           type="button"
                           aria-label="Delete comment"
-                          className="text-text-faint hover:text-danger ml-auto text-xs"
+                          className="text-text-faint hover:text-danger -my-2 ml-auto px-2 py-2 text-xs coarse:min-h-11"
                           onClick={async () => {
                             if (!(await confirm({ title: "Delete this comment?", action: "Delete" }))) return;
                             removeComment({ commentId: c._id }).catch((err) => toast.error(errorMessage(err)));

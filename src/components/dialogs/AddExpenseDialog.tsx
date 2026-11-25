@@ -16,7 +16,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Picker, PickerGroup, PickerItem, PickerLabel, PickerSeparator } from "@/components/ui/picker";
 import { RECEIPT_EDGE, uploadImage } from "@/lib/image";
-import { errorMessage, formatDate, fromDateInputValue, toDateInputValue } from "@/lib/format";
+import { errorMessage, formatDate, fromDateInputValue, pluralize, toDateInputValue } from "@/lib/format";
 import { useDefaultCurrency, useMe } from "@/lib/hooks";
 import { CURRENCY_CODES } from "@convex/lib/currencies";
 import { amountText, returnUrl, type Handoff } from "@/lib/handoff";
@@ -249,7 +249,10 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
     try {
       // shrunk first (src/lib/image.ts), so a full-size phone shot goes through and takes a fraction of the space
       const { storageId, file: small } = await uploadImage(uploadUrl, file, RECEIPT_EDGE);
-      setReceipt({ storageId, previewUrl: URL.createObjectURL(small) });
+      setReceipt((prev) => {
+        if (prev && prev !== "remove" && prev.previewUrl.startsWith("blob:")) URL.revokeObjectURL(prev.previewUrl);
+        return { storageId, previewUrl: URL.createObjectURL(small) };
+      });
     } catch (e) {
       toast.error(errorMessage(e));
     } finally {
@@ -278,7 +281,7 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
           tip: r.tipMinor ? minorToDecimalString(r.tipMinor, cur) : "",
           discount: r.discountMinor ? minorToDecimalString(r.discountMinor, cur) : "",
         }));
-        toast.success(`Found ${r.items.length} items. Assign each one.`);
+        toast.success(`Found ${pluralize(r.items.length, "item")}. Assign each one.`);
       } else if (r.totalMinor) {
         setAmount(minorToDecimalString(r.totalMinor, cur));
         toast.success("Read the total. No line items found.");
@@ -350,6 +353,8 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
 
   const editing = Boolean(options.expenseId);
   const loadingEdit = editing && !existing;
+  // Something typed, or a save or upload in flight: a stray tap on the scrim or Esc must not throw it away (Cancel still does).
+  const dirty = busy || uploading || scanning || Boolean(description.trim() || amount || notes || (receipt && receipt !== "remove"));
   const myNet = preview && "owed" in preview && me ? (payerList.find((p) => p.userId === me._id)?.paidMinor ?? 0) - (preview.owed?.[me._id] ?? 0) : null;
 
   return (
@@ -358,6 +363,8 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
         className="max-h-[92dvh] overflow-y-auto p-0 sm:max-w-lg"
         size="full"
         sheetClassName="pb-0 [--sheet-px:0px]"
+        onInteractOutside={(e) => dirty && e.preventDefault()}
+        onEscapeKeyDown={(e) => dirty && e.preventDefault()}
         action={{ label: busy ? "Saving…" : "Save", type: "submit", disabled: busy || loadingEdit || !scope || Boolean(preview && "error" in preview) }}
       >
         <form onSubmit={submit} className="flex flex-col">
@@ -596,7 +603,7 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
 
             {/* Details */}
             <FormCard title="Details">
-              <div data-row="" className="relative">
+              <div data-row="" className="relative has-[input:focus-visible]:bg-surface-2">
                 <RowButton icon={<CalendarDays />} label="Date" value={dateLabel(date)} tabIndex={-1} aria-hidden className="pointer-events-none" />
                 {/* The real control: an invisible date input over the whole row, so a tap opens the system date picker. */}
                 <input
@@ -648,7 +655,13 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
                     <Button type="button" size="sm" variant="secondary" disabled={scanning} onClick={() => void scan()}>
                       {scanning ? <Loader2 className="animate-spin" /> : <ScanText />} {scanning ? "Reading…" : "Scan"}
                     </Button>
-                    <Button type="button" variant="ghost" size="icon-sm" aria-label="Remove receipt" onClick={() => setReceipt(editing ? "remove" : null)}>
+                    <Button type="button" variant="ghost" size="icon-sm" aria-label="Remove receipt" onClick={() =>
+                        setReceipt((prev) => {
+                          if (prev && prev !== "remove" && prev.previewUrl.startsWith("blob:")) URL.revokeObjectURL(prev.previewUrl);
+                          return editing ? "remove" : null;
+                        })
+                      }
+                    >
                       <X />
                     </Button>
                   </RowBody>
@@ -673,7 +686,17 @@ export function AddExpenseDialog({ options, onClose }: { options: AddExpenseOpti
                 </RowBody>
               </Row>
             </FormCard>
-            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && void onFile(e.target.files[0])} />
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = ""; // so choosing the same photo again fires change
+                if (f) void onFile(f);
+              }}
+            />
 
             {error ? (
               <p role="alert" className="text-danger text-sm">

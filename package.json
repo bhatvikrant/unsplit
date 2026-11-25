@@ -33,22 +33,19 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
-    "cn": "^0.4.0",
     "convex": "^1.46.0",
     "date-fns": "^4.4.0",
     "framer-motion": "^14.2.0",
     "lucide-react": "^1.57.0",
     "radix-ui": "^1.8.1",
     "react": "^19.2.8",
-    "react-day-picker": "^10.0.2",
     "react-dom": "^19.2.8",
     "react-router": "^8.4.0",
     "recharts": "^3.10.1",
     "sonner": "^2.0.8",
     "tailwind-merge": "^3.7.0",
     "tailwindcss": "^4.3.3",
-    "vaul": "^1.1.2",
-    "zod": "^4.6.7"
+    "vaul": "^1.1.2"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",

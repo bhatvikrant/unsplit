@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { query } from "./_generated/server";
 import { assertFriends, assertGroupMember, friendIdsOf, groupMemberIds, pairKeyOf, requireUser, requireUserId } from "./lib/access";
 import { minorToDecimalString } from "./lib/money";
@@ -26,7 +26,7 @@ export const csv = query({
       const pk = pairKeyOf(me, args.friendId);
       expenses = await ctx.db.query("expenses").withIndex("by_pair_date", (q) => q.eq("pairKey", pk)).order("asc").collect();
     } else {
-      throw new Error("Pick a group or a friend");
+      throw new ConvexError("Pick a group or a friend");
     }
     const names: string[] = [];
     for (const id of people) names.push((await ctx.db.get(id))?.name ?? "Someone");

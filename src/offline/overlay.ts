@@ -15,10 +15,19 @@ import type { PublicUser } from "@convex/lib/users";
 import { nextOccurrence, type RepeatInterval } from "@convex/lib/recurring";
 import { buildShares, pairwiseDebts, simplifyDebts, type Debt, type Share, type SplitSpec } from "@convex/lib/split";
 import { pairKeyOf, pairUsers, rewriteIds } from "./ids";
+
+/**
+ * The op with every temp id the server has since answered for replaced, in its args and in the
+ * snapshot under `extra` (an edit's `prev`). Its own `tempId` stays: that names what it creates,
+ * which is mapped only once the op itself is done.
+ */
+export function withMappedIds(op: Op, idMap: Record<string, string>): Op {
+  return { ...op, args: rewriteIds(op.args, idMap), extra: op.extra ? rewriteIds(op.extra, idMap) : op.extra };
+}
 import type { MeInfo, Op, QueryEntry } from "./types";
 
 type ExpList = FunctionReturnType<typeof api.expenses.list>;
-type ExpRow = ExpList["items"][number];
+type ExpRow = ExpList["page"][number];
 type ExpGet = FunctionReturnType<typeof api.expenses.get>;
 type ExpRecurring = FunctionReturnType<typeof api.expenses.recurring>;
 type ExpDeleted = FunctionReturnType<typeof api.expenses.deleted>;
@@ -127,8 +136,8 @@ export function buildDirectory(entries: Iterable<QueryEntry>, ops: Op[], idMap: 
     if (g && !g.memberIds) groups.set(id, { ...g, memberIds });
   }
   for (const raw of ops) {
-    const args = rewriteIds(raw.args, idMap) as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
-    const op = { ...raw, args };
+    const op = withMappedIds(raw, idMap);
+    const args = op.args as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
     switch (op.fn) {
       case "friends:add":
         if (op.tempId) users.set(op.tempId, placeholder(op.tempId, args.name, args.email));
@@ -484,9 +493,8 @@ function toGet(e: LocalExpense, dir: Directory, me: MeInfo, base: ExpGet | undef
 }
 
 function listMatches(args: Record<string, unknown>, e: LocalExpense, me: string): boolean {
-  const a = args as { groupId?: string; friendId?: string; search?: string; before?: number; includeDeleted?: boolean };
+  const a = args as { groupId?: string; friendId?: string; search?: string; includeDeleted?: boolean };
   if (Boolean(a.includeDeleted) !== Boolean(e.deletedAt)) return false;
-  if (a.before !== undefined && !(e.date < a.before)) return false;
   const q = a.search?.trim().toLowerCase();
   if (q && !e.description.toLowerCase().includes(q) && !(e.notes ?? "").toLowerCase().includes(q)) return false;
   if (a.groupId) return e.groupId === a.groupId;
@@ -521,14 +529,16 @@ function afterExpenseWrite(q: Query, base: unknown, dir: Directory, me: MeInfo, 
   switch (q.name) {
     case "expenses:list": {
       const v = base as ExpList | undefined;
-      const existed = Boolean(v?.items.some((x) => x._id === id));
+      // Only the first page takes rows it didn't have; where a later page starts and ends is the server's (opaque cursors).
+      const first = (q.args.paginationOpts as { cursor: string | null } | undefined)?.cursor == null;
+      const existed = Boolean(v?.page.some((x) => x._id === id));
       const belongs = next ? listMatches(q.args, next, myId) : false;
       if (!v) {
-        if (!belongs || q.args.before !== undefined) return base;
-        return { items: [toRow(next!, dir, me)], nextBefore: null } satisfies ExpList;
+        if (!belongs || !first) return base;
+        return { page: [toRow(next!, dir, me)], isDone: true, continueCursor: "" } satisfies ExpList;
       }
-      if (belongs && (existed || q.args.before === undefined)) return { ...v, items: upsertSorted(v.items, toRow(next!, dir, me), byDateDesc) };
-      if (existed) return { ...v, items: v.items.filter((x) => x._id !== id) };
+      if (belongs && (existed || first)) return { ...v, page: upsertSorted(v.page, toRow(next!, dir, me), byDateDesc) };
+      if (existed) return { ...v, page: v.page.filter((x) => x._id !== id) };
       return base;
     }
     case "expenses:get": {
@@ -611,7 +621,13 @@ export function applyOp(op: Op, q: Query, base: unknown, dir: Directory): unknow
     case "expenses:update": {
       if (!prev) return base;
       const e = fromUpdate(op, args, prev);
-      return e ? afterExpenseWrite(q, base, dir, me, prev._id, prev, e) : base;
+      if (!e) return base;
+      // Moved to another group or friend: the old scope loses it and the new one gains it, as on the server.
+      if ((prev.groupId ?? prev.pairKey) !== (e.groupId ?? e.pairKey)) {
+        const gone = afterExpenseWrite(q, base, dir, me, prev._id, prev, { ...prev, deletedAt: op.createdAt });
+        return afterExpenseWrite(q, gone, dir, me, prev._id, null, e);
+      }
+      return afterExpenseWrite(q, base, dir, me, prev._id, prev, e);
     }
     case "expenses:remove": {
       if (!prev || prev.deletedAt) return base;

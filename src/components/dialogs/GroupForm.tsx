@@ -42,8 +42,8 @@ export function useGroupForm({ onCreated }: { onCreated: (id: Id<"groups">) => v
         ...Object.entries(picked).filter(([, v]) => v).map(([id]) => ({ userId: id as Id<"users"> })),
         ...newPeople.filter((p) => p.name.trim() || p.email.trim()).map((p) => ({ name: p.name.trim() || undefined, email: p.email.trim() || undefined })),
       ];
-      const id = await create({ name, type, members, simplifyDebts: simplify });
-      onCreated(id);
+      const { groupId } = await create({ name, type, members, simplifyDebts: simplify });
+      onCreated(groupId);
       // empty again, for the add-expense form, which keeps this form around for another group
       setName("");
       setPicked({});
@@ -79,7 +79,7 @@ export function GroupFormFields({ form, friends, compact, idPrefix = "g" }: { fo
       </Field>
       <div className="space-y-1.5">
         <div className="text-sm font-medium">Type</div>
-        <RadioGroup value={type} onValueChange={(v) => setType(v as GroupType)} className="grid grid-cols-4 gap-2">
+        <RadioGroup aria-label="Type" value={type} onValueChange={(v) => setType(v as GroupType)} className="grid grid-cols-4 gap-2">
           {(Object.keys(GROUP_TYPE_LABELS) as GroupType[]).map((t) => (
             <label key={t} className="pressable shadow-ring hover:bg-surface-2 has-data-[state=checked]:bg-brand-soft has-data-[state=checked]:text-brand-ink has-data-[state=checked]:shadow-[0_0_0_1px_var(--brand)] flex cursor-pointer items-center justify-center gap-2 rounded-[10px] px-2 py-2 text-sm font-medium">
               <RadioGroupItem value={t} className="sr-only" />

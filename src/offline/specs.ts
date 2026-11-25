@@ -21,7 +21,7 @@ export type PrepareCtx = {
   /** Read a query through the overlay (server value plus pending ops). */
   read: (name: string, args: Record<string, unknown>) => unknown;
   /** Every cached expense list / recurring / deleted entry, for finding an expense by id. */
-  expenseRows: () => Iterable<ExpList["items"][number]>;
+  expenseRows: () => Iterable<ExpList["page"][number]>;
 };
 
 export type Prepared = {
@@ -51,6 +51,15 @@ function findExpense(id: string, ctx: PrepareCtx): LocalExpense | null {
 
 const idResult = (op: Op, result: unknown): [string, string][] => (op.tempId && typeof result === "string" ? [[op.tempId, result]] : []);
 
+type MemberInput = { userId?: string; name?: string; email?: string };
+const isNewPerson = (m: MemberInput) => !m.userId && Boolean(m.name?.trim() || m.email?.trim());
+
+/** Each entry of `args.members` as the id the UI knows it by: the given one, or the temp id made for a new person. */
+function memberIdsOf(args: Record<string, unknown>, newPeople: { id: string }[]): string[] {
+  let j = 0;
+  return ((args.members ?? []) as MemberInput[]).flatMap((m) => (m.userId ? [m.userId] : isNewPerson(m) ? [newPeople[j++].id] : []));
+}
+
 export const SPECS: Record<string, Spec> = {
   "expenses:create": {
     label: "Expense",
@@ -72,6 +81,7 @@ export const SPECS: Record<string, Spec> = {
   },
   "expenses:update": {
     label: "Expense edit",
+    clientKey: true,
     prepare: (args, ctx) => ({ args, extra: { prev: findExpense(String(args.id), ctx) }, result: null }),
   },
   "expenses:remove": {
@@ -92,11 +102,26 @@ export const SPECS: Record<string, Spec> = {
     clientKey: true,
     prepare: (args) => {
       const id = tempId("groups");
-      const members = ((args.members ?? []) as { userId?: string; name?: string; email?: string }[]).filter((m) => !m.userId && (m.name?.trim() || m.email?.trim()));
+      const members = ((args.members ?? []) as MemberInput[]).filter(isNewPerson);
       const newPeople = members.map((m) => ({ id: tempId("users"), name: m.name, email: m.email }));
-      return { args, tempId: id, extra: { newPeople }, result: id };
+      return { args, tempId: id, extra: { newPeople }, result: { groupId: id, memberIds: memberIdsOf(args, newPeople) } };
     },
-    mapResult: idResult,
+    // The server answers with one id per member sent, so the new people's temp ids map too: an
+    // expense queued behind the group may name them.
+    mapResult: (op, result) => {
+      if (typeof result === "string") return idResult(op, result); // an answer stored before memberIds existed
+      const r = result as { groupId?: string; memberIds?: string[] } | null;
+      const pairs: [string, string][] = op.tempId && r?.groupId ? [[op.tempId, r.groupId]] : [];
+      const newPeople = (op.extra?.newPeople ?? []) as { id: string }[];
+      const real = r?.memberIds ?? [];
+      let j = 0;
+      ((op.args.members ?? []) as MemberInput[]).forEach((m, i) => {
+        if (!isNewPerson(m)) return;
+        if (newPeople[j] && real[i]) pairs.push([newPeople[j].id, real[i]]);
+        j++;
+      });
+      return pairs;
+    },
   },
   "groups:update": { label: "Group settings", prepare: (args) => ({ args, result: null }) },
   "groups:addMember": {

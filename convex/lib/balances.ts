@@ -173,15 +173,4 @@ export function mapToRecord(m: Map<string, number> | undefined): Record<string, 
   return out;
 }
 
-/** Rebuild the balances table for one scope from its live shares. Repair tool. */
-export async function rebuildScope(ctx: MutationCtx, scope: string, expenses: Doc<"expenses">[]): Promise<void> {
-  for (const row of await scopeRows(ctx, scope)) await ctx.db.delete(row._id);
-  const { pairwiseDebts } = await import("./split");
-  for (const e of expenses) {
-    if (e.deletedAt) continue;
-    const shares = await ctx.db.query("expenseShares").withIndex("by_expense", (q) => q.eq("expenseId", e._id)).collect();
-    await applyDebts(ctx, scope, e.currency, pairwiseDebts(shares.map((s) => ({ userId: s.userId, paidMinor: s.paidMinor, owedMinor: s.owedMinor }))), 1);
-  }
-}
-
 export { groupMemberIds };

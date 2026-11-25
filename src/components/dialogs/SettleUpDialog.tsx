@@ -188,8 +188,8 @@ export function SettleUpDialog({ options, onClose }: { options: SettleUpOptions;
     setAmountTouched(false);
   };
 
-  const personSelect = (value: string, onChange: (v: string) => void, label: string) => (
-    <Picker value={value} onValueChange={onChange} aria-label={label} placeholder={label} className="w-full">
+  const personSelect = (value: string, onChange: (v: string) => void, label: string, id: string) => (
+    <Picker id={id} value={value} onValueChange={onChange} aria-label={label} placeholder={label} className="w-full">
       {people.map((p) => (
         <PickerItem key={p._id} value={p._id} icon={<UserAvatar user={p} size="xs" />}>
           {p._id === me?._id ? "You" : p.name}
@@ -200,7 +200,14 @@ export function SettleUpDialog({ options, onClose }: { options: SettleUpOptions;
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-md" size="full" action={{ label: busy ? "Saving…" : "Record", type: "submit", disabled: busy || !scope || !payerId || !payeeId || payerId === payeeId }}>
+      <DialogContent
+        className="sm:max-w-md"
+        size="full"
+        action={{ label: busy ? "Saving…" : "Record", type: "submit", disabled: busy || !scope || !payerId || !payeeId || payerId === payeeId }}
+        // Dismissing mid-save would hide the outcome.
+        onInteractOutside={(e) => busy && e.preventDefault()}
+        onEscapeKeyDown={(e) => busy && e.preventDefault()}
+      >
         <form onSubmit={submit}>
           <DialogHeader>
             <DialogTitle>Settle up</DialogTitle>
@@ -223,11 +230,11 @@ export function SettleUpDialog({ options, onClose }: { options: SettleUpOptions;
             </Field>
             <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-end gap-2">
               <div ref={payerRef} className="min-w-0">
-                <Field label="Payer">{personSelect(payerId, pickPayer, "Payer")}</Field>
+                <Field label="Payer" htmlFor="payer">{personSelect(payerId, pickPayer, "Payer", "payer")}</Field>
               </div>
               <ArrowRight className="text-text-faint mb-2.5 size-4" />
               <div ref={payeeRef} className="min-w-0">
-                <Field label="Recipient">{personSelect(payeeId, pickPayee, "Recipient")}</Field>
+                <Field label="Recipient" htmlFor="payee">{personSelect(payeeId, pickPayee, "Recipient", "payee")}</Field>
               </div>
             </div>
             <Field label="Amount" htmlFor="amount" error={error} hint={Object.keys(owedByPayer).length > 1 ? "There are balances in more than one currency. Record one payment per currency." : undefined}>

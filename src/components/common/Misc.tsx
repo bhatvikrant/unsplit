@@ -94,7 +94,7 @@ export function CategoryIcon({ slug, className, size = "md" }: { slug: string; c
   const sz = { sm: "size-7 rounded-lg [&>svg]:size-3.5", md: "size-10 rounded-xl [&>svg]:size-[18px]", lg: "size-12 rounded-[14px] [&>svg]:size-[22px]" }[size];
   if (slug === "payment") {
     return (
-      <div className={cn("flex shrink-0 items-center justify-center", sz, className)} style={tint(160)} title="Payment" aria-label="Payment">
+      <div className={cn("flex shrink-0 items-center justify-center", sz, className)} style={tint(160)} role="img" title="Payment" aria-label="Payment">
         <ArrowLeftRight strokeWidth={1.75} />
       </div>
     );
@@ -102,7 +102,7 @@ export function CategoryIcon({ slug, className, size = "md" }: { slug: string; c
   const cat = categoryBySlug(slug);
   const Icon = CATEGORY_ICONS[cat.icon] ?? Receipt;
   return (
-    <div className={cn("flex shrink-0 items-center justify-center", sz, className)} style={tint(CATEGORY_HUES[cat.parent] ?? 60)} title={cat.name} aria-label={cat.name}>
+    <div className={cn("flex shrink-0 items-center justify-center", sz, className)} style={tint(CATEGORY_HUES[cat.parent] ?? 60)} role="img" title={cat.name} aria-label={cat.name}>
       <Icon strokeWidth={1.75} />
     </div>
   );

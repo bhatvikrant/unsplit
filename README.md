@@ -121,8 +121,11 @@ npm run test:e2e:offline
 ## Deploy
 
 Production runs the Convex backend on a cloud deployment and the static `dist/`
-on Vercel. The live instance is https://unsplit.vercel.app (Convex project
-`vikrant-bhat/unsplit`, EU West).
+on Vercel. The live instance is https://unsplit.vikrantbhat.com (Convex project
+`vikrant-bhat/unsplit`, EU West; `unsplit.vercel.app` redirects there). Once the
+project is set up, merging to `main` is the release: Vercel builds it and that
+build pushes the Convex functions, so backend and frontend go out together (see
+"Every release"). `npm run deploy` is only the manual fallback.
 
 ### First time
 
@@ -137,10 +140,12 @@ on Vercel. The live instance is https://unsplit.vercel.app (Convex project
    (creates the project, Vite preset). `vercel.json` sets the build command to
    `npx convex deploy -y --cmd 'npm run build' && node scripts/convex-preview-env.mjs`
    (the second part only does something on previews) and the SPA rewrite.
-4. **Deploy**: `npm run deploy`. It builds locally with the Vercel CLI (which
+4. **First deploy**: `npm run deploy`. It builds locally with the Vercel CLI (which
    runs the Convex deploy and `vite build` against the production URL) and
    uploads the prebuilt output to production. The first run prints the public
-   URL (`https://<project>.vercel.app`).
+   URL (`https://<project>.vercel.app`). Later releases go out from `main`
+   (step 9); this manual path only works on a machine with `.env.cloud.local`,
+   the Vercel CLI and the linked project.
 5. **Auth keys and site URL**: `SITE_URL=https://<your public url> ./scripts/setup-auth-env.sh --prod`.
    Check `https://<CONVEX_SITE_URL>/.well-known/jwks.json` returns 200.
 6. **Google sign-in**: in [Google Cloud Console → APIs & Services → Credentials](https://console.cloud.google.com/apis/credentials)
@@ -233,10 +238,25 @@ unless `VERCEL_ENV` is `preview`.
 
 ### Every release
 
+Open a PR. CI (`.github/workflows/ci.yml`) runs the typecheck, lint and unit
+tests on it, and Vercel builds a preview with its own Convex preview deployment.
+Merging to `main` is the deploy: Vercel builds `main` with the command in
+`vercel.json`, which runs `npx convex deploy` first and then publishes the
+frontend, so the functions and the app that calls them always change together.
+
+To confirm a release landed:
+
 ```bash
-npm run typecheck && npm test
-npm run deploy
+gh api repos/bhatvikrant/unsplit/commits/<sha>/status --jq '.statuses[] | "\(.context): \(.state)"'   # "Vercel: success"
+curl -sI https://unsplit.vikrantbhat.com/ | grep -i x-frame-options                                  # the headers from vercel.json
+CONVEX_DEPLOYMENT=prod:<production deployment> npx convex function-spec                              # what is live on the backend
 ```
+
+(The production deployment's name is `PROD_DEPLOYMENT` in `scripts/delete-convex-preview.mjs`.)
+
+Fallback, when Vercel's build fails or the Git integration is off:
+`npm run typecheck && npm test && npm run deploy`, from a machine with
+`.env.cloud.local`, the Vercel CLI and the linked project (steps 1 and 3 above).
 
 ### Smoke test after deploying
 

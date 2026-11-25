@@ -53,7 +53,7 @@ export function parseHandoff(hash: string): Handoff | null {
   const raw = new URLSearchParams(hash.replace(/^#/, "")).get("unmoney");
   const p = raw ? decodePayload<Record<string, unknown>>(raw) : null;
   if (!p || p.v !== 1 || p.source !== "unmoney") return null;
-  if (!Array.isArray(p.refs) || !p.refs.length || !p.refs.every((r) => typeof r === "string" && r)) return null;
+  if (!Array.isArray(p.refs) || !p.refs.length || p.refs.length > MAX_ITEMS || !p.refs.every((r) => typeof r === "string" && r && r.length <= 64)) return null;
   const description = str(p.description, 200);
   const currency = str(p.currency, 8)?.toUpperCase();
   const date = str(p.date, 10);

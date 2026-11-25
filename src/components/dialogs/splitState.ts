@@ -1,3 +1,4 @@
+import { normalizeDecimal } from "@convex/lib/money";
 import { allocate, parseMoney } from "@convex/lib/money";
 import type { SplitMethod, SplitSpec } from "@convex/lib/split";
 
@@ -41,7 +42,7 @@ export function newItem(participantIds: string[]): ItemState {
   return { id: `i${Date.now()}_${itemSeq++}`, name: "", amount: "", assignees: Object.fromEntries(participantIds.map((id) => [id, true])) };
 }
 
-const num = (s: string) => (s.trim() === "" ? 0 : Number(s));
+const num = (s: string) => (s.trim() === "" ? 0 : Number(normalizeDecimal(s)));
 
 /** Change the split method. Itemized starts with one empty line; exact amounts start people who were unticked under "Equally" at 0. */
 export function switchMethod(s: SplitState, method: SplitMethod, ids: string[]): SplitState {

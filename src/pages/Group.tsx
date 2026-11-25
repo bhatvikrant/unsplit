@@ -210,7 +210,7 @@ export function GroupPage() {
                         )}
                         onClick={() => dialogs.settleUp({ groupId, payerId: d.from as Id<"users">, payeeId: d.to as Id<"users">, amountMinor: d.amountMinor, currency: d.currency })}
                       >
-                        {d.from === me?._id ? "Settle" : d.to === me?._id ? "Remind" : "Record"}
+                        {d.from === me?._id ? "Settle" : "Record"}
                       </button>
                     ) : null}
                   </li>
@@ -240,11 +240,15 @@ export function GroupPage() {
                 size="icon-sm"
                 variant="ghost"
                 aria-label="Copy invite link"
-                onClick={() => {
-                  void navigator.clipboard.writeText(inviteLink);
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 1500);
-                }}
+                onClick={() =>
+                  navigator.clipboard.writeText(inviteLink).then(
+                    () => {
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 1500);
+                    },
+                    () => toast.error("Couldn't copy the link"),
+                  )
+                }
               >
                 {copied ? <Check className="text-positive" /> : <Copy />}
               </Button>
@@ -271,7 +275,7 @@ export function GroupPage() {
 export function GroupTotals() {
   const { groupId, group, failed } = useGroup();
   const [month, setMonth] = useState<string>("all");
-  const totals = useLastDefined(useQuery(api.groups.totals, { groupId, month: month === "all" ? undefined : month }));
+  const totals = useLastDefined(useQuery(api.groups.totals, { groupId, month: month === "all" ? undefined : month, tzOffset: new Date().getTimezoneOffset() }));
   if (group === undefined) return failed ? <NotFound /> : <RowSkeleton />;
   const metrics = [
     ["groupSpending", "Total group spending"],
@@ -342,6 +346,8 @@ export function GroupSettings() {
   const [split, setSplit] = useState<SplitState | null>(null);
   const [defaultOn, setDefaultOn] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const deleting = useRef(false);
   const loaded = useRef(false);
 
   const memberIds = useMemo(() => group?.members.map((m) => m._id) ?? [], [group]);
@@ -405,7 +411,17 @@ export function GroupSettings() {
             <div className="flex items-center gap-4">
               <GroupAvatar group={{ ...group, name }} size="xl" />
               <div className="space-x-2">
-                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && void onCover(e.target.files[0])} />
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    e.target.value = ""; // so choosing the same photo again fires change
+                    if (f) void onCover(f);
+                  }}
+                />
                 <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
                   Upload cover
                 </Button>
@@ -417,13 +433,14 @@ export function GroupSettings() {
               </div>
             </div>
             <Field label="Name" htmlFor="gname">
-              <Input id="gname" value={name} maxLength={80} onChange={(e) => setName(e.target.value)} onBlur={() => name.trim() && name !== group.name && save({ name })} />
+              <Input id="gname" value={name} maxLength={80} onChange={(e) => setName(e.target.value)} onBlur={() => { if (!name.trim()) setName(group.name); else if (name !== group.name) void save({ name }); }} />
             </Field>
             <div className="space-y-1.5">
               <div className="flex items-center gap-1 text-sm font-medium">
                 Type <InfoHint text="Only picks the group's icon. Splits, balances and settings work the same for every type." />
               </div>
               <RadioGroup
+                aria-label="Type"
                 value={type}
                 onValueChange={(v) => {
                   setType(v as GroupType);
@@ -496,13 +513,16 @@ export function GroupSettings() {
                 </Picker>
                 <Button
                   variant="secondary"
-                  disabled={!pickFriend}
+                  disabled={!pickFriend || adding}
                   onClick={async () => {
+                    setAdding(true);
                     try {
                       await addMember({ groupId, member: { userId: pickFriend as Id<"users"> } });
                       setPickFriend("");
                     } catch (e) {
                       toast.error(errorMessage(e));
+                    } finally {
+                      setAdding(false);
                     }
                   }}
                 >
@@ -514,18 +534,22 @@ export function GroupSettings() {
               className="flex flex-col gap-2 sm:flex-row"
               onSubmit={async (e) => {
                 e.preventDefault();
+                if (adding) return;
+                setAdding(true);
                 try {
                   await addMember({ groupId, member: { name: newName || undefined, email: newEmail || undefined } });
                   setNewName("");
                   setNewEmail("");
                 } catch (err) {
                   toast.error(errorMessage(err));
+                } finally {
+                  setAdding(false);
                 }
               }}
             >
               <Input placeholder="Name" aria-label="New member name" value={newName} onChange={(e) => setNewName(e.target.value)} />
               <Input placeholder="Email (optional)" type="email" aria-label="New member email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} />
-              <Button type="submit" variant="secondary" disabled={!newName.trim() && !newEmail.trim()}>
+              <Button type="submit" variant="secondary" disabled={(!newName.trim() && !newEmail.trim()) || adding}>
                 <UserPlus /> Invite
               </Button>
             </form>
@@ -576,7 +600,7 @@ export function GroupSettings() {
           <div className="flex flex-wrap items-center gap-2 p-4 text-sm">
             {/* Its own full-width line on phones; beside Copy and Reset there it shrank to "http…". */}
             <code className="bg-surface min-w-0 flex-1 basis-full truncate rounded px-2 py-1.5 text-xs sm:basis-0">{`${window.location.host}/join/${group.inviteCode}`}</code>
-            <Button size="sm" variant="outline" onClick={() => { void navigator.clipboard.writeText(`${window.location.origin}/join/${group.inviteCode}`); toast.success("Link copied"); }}>
+            <Button size="sm" variant="outline" onClick={() => navigator.clipboard.writeText(`${window.location.origin}/join/${group.inviteCode}`).then(() => toast.success("Link copied"), () => toast.error("Couldn't copy the link"))}>
               <Copy /> Copy
             </Button>
             <Button
@@ -602,11 +626,13 @@ export function GroupSettings() {
               variant="destructive"
               size="sm"
               onClick={async () => {
-                if (!(await confirm({ title: `Delete "${group.name}"?`, description: "Everyone in the group loses these balances until someone restores it from Deleted items.", action: "Delete group" }))) return;
+                if (deleting.current || !(await confirm({ title: `Delete "${group.name}"?`, description: "Everyone in the group loses these balances until someone restores it from Deleted items.", action: "Delete group" }))) return;
+                deleting.current = true;
                 try {
                   await remove({ groupId });
                   navigate("/dashboard");
                 } catch (e) {
+                  deleting.current = false;
                   toast.error(errorMessage(e));
                 }
               }}

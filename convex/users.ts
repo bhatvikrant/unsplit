@@ -46,7 +46,11 @@ export const update = mutation({
       if (!CURRENCY_CODES.has(c)) throw new ConvexError("Unknown currency");
       patch.defaultCurrency = c;
     }
-    if (args.timeZone !== undefined) patch.timeZone = args.timeZone;
+    if (args.timeZone !== undefined) {
+      // IANA names ("Europe/Lisbon", "Etc/GMT+5"); kept to the shape rather than Intl, which this runtime may lack zones for.
+      if (!/^[A-Za-z][A-Za-z0-9_+\-]*(\/[A-Za-z0-9_+\-]+){0,2}$/.test(args.timeZone) || args.timeZone.length > 64) throw new ConvexError("Unknown time zone");
+      patch.timeZone = args.timeZone;
+    }
     if (args.notifPrefs !== undefined) patch.notifPrefs = args.notifPrefs;
     if (args.avatarId !== undefined) {
       if (user.avatarId && user.avatarId !== args.avatarId) await ctx.storage.delete(user.avatarId);

@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@/lib/convex";
-import { Plus, ReceiptText, Repeat, Search, Trash2, Undo2, Users } from "lucide-react";
+import { Plus, ReceiptText, Repeat, Search, Trash2, Undo2 } from "lucide-react";
 import { useEffect, useLayoutEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
@@ -13,6 +13,7 @@ import { useDialogs } from "@/components/dialogs/DialogProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { errorMessage, formatDate, relativeTime } from "@/lib/format";
+import { useMe } from "@/lib/hooks";
 import { usePagedExpenses } from "@/lib/usePagedExpenses";
 
 export function AllExpenses() {
@@ -23,7 +24,6 @@ export function AllExpenses() {
   useLayoutEffect(() => setText((t) => (t.trim() === q ? t : q)), [q]);
   // Results follow the typing after a short pause; Enter searches at once. The URL carries the
   // term, so the page can be shared or reloaded.
-  // ponytail: every settled term is cached in IndexedDB like any other query; prune search entries if the cache ever grows large.
   const search = (value: string) => setParams(value.trim() ? { q: value.trim() } : {}, { replace: true });
   useEffect(() => {
     if (text.trim() === q) return;
@@ -81,6 +81,7 @@ export function AllExpenses() {
 }
 
 export function RecurringExpenses() {
+  const me = useMe();
   const items = useQuery(api.expenses.recurring);
   const cancel = useMutation(api.expenses.cancelRecurring);
   const confirm = useConfirm();
@@ -97,6 +98,7 @@ export function RecurringExpenses() {
             <ExpenseRow
               key={it._id}
               item={it}
+              meId={me?._id}
               showGroup
               trailing={
                 <div className="ml-2 flex shrink-0 flex-col items-end gap-1 text-xs">
@@ -105,8 +107,7 @@ export function RecurringExpenses() {
                   <Button
                     variant="ghost"
                     size="xs"
-                    onClick={async (e) => {
-                      e.preventDefault();
+                    onClick={async () => {
                       if (!(await confirm({ title: `Stop repeating "${it.description}"?`, description: "Expenses already posted stay. No new ones are added.", action: "Stop repeating" }))) return;
                       try {
                         await cancel({ id: it._id });
@@ -128,6 +129,7 @@ export function RecurringExpenses() {
 }
 
 export function TrashPage() {
+  const me = useMe();
   const deletedExpenses = useQuery(api.expenses.deleted);
   const deletedGroups = useQuery(api.groups.listDeleted);
   const restoreExpense = useMutation(api.expenses.restore);
@@ -183,14 +185,14 @@ export function TrashPage() {
                   <ExpenseRow
                     key={it._id}
                     item={it}
+                    meId={me?._id}
                     showGroup
                     trailing={
                       <Button
                         size="sm"
                         variant="outline"
                         className="ml-2"
-                        onClick={async (e) => {
-                          e.preventDefault();
+                        onClick={async () => {
                           try {
                             await restoreExpense({ id: it._id });
                           } catch (err) {
@@ -208,7 +210,6 @@ export function TrashPage() {
           ) : null}
         </>
       )}
-      {!empty && groups.length === 0 && expenses.length === 0 ? <Users className="hidden" /> : null}
     </div>
   );
 }
