@@ -20,9 +20,12 @@ export function usePagedExpenses(args: Args, pageSize = 50) {
   const cursors = paging.key === key ? paging.cursors : [];
   // shortcut: a search reads 500 rows a page so a rare term doesn't take dozens of round trips; add a search index if lists grow past a few thousand rows.
   const numItems = args.search ? 500 : pageSize;
+  // Every page but the last is pinned to the range it had when the next one was loaded
+  // (`endCursor`, as Convex's own usePaginatedQuery does); otherwise a new expense pushing page
+  // 1's last row past `numItems` would drop that row into no page at all until a reload.
   const pages = useQueries(
     api.expenses.list,
-    [null, ...cursors].map((cursor) => ({ ...args, paginationOpts: { numItems, cursor } })),
+    [null, ...cursors].map((cursor, i) => ({ ...args, paginationOpts: { numItems, cursor, endCursor: cursors[i] } })),
   );
   const last = pages[pages.length - 1];
   const next = last && !last.isDone ? last.continueCursor : null;
