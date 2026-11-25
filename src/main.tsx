@@ -1,6 +1,6 @@
 import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
-import { LazyMotion } from "framer-motion";
+import { domMax, LazyMotion } from "framer-motion";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider } from "react-router";
@@ -19,10 +19,9 @@ import "@/lib/install";
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
 
-// Components animate with `m.*`, never `motion.*` (`strict` throws on one in dev), so the animation
-// features (gestures, drag, layout) load in their own chunk once the app is up.
-const motionFeatures = () => import("@/lib/motion-features").then((x) => x.default);
-
+// Components animate with `m.*`, never `motion.*` (`strict` throws on one in dev). The features are
+// bundled, not loaded async: until they arrive, `m` elements render in their `initial` state, so the
+// login card and every page body would sit at opacity 0 on a cold first visit and then pop in.
 // Offline layer: last known data in IndexedDB, writes queued until the server takes them.
 const store = new OfflineStore();
 const engine = new SyncEngine(convex, store);
@@ -83,7 +82,7 @@ document.addEventListener("touchstart", () => {}, { passive: true });
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <LazyMotion features={motionFeatures} strict>
+    <LazyMotion features={domMax} strict>
       <ConvexAuthProvider client={convex}>
         <OfflineProvider store={store} engine={engine} fallback={<FullPageLoader />}>
           <TooltipProvider delayDuration={300}>
