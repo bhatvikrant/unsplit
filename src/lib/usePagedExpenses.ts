@@ -1,5 +1,5 @@
-import { useQuery } from "@/lib/convex";
-import { useMemo, useState } from "react";
+import { useQueries } from "@/lib/convex";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import type { ExpenseListItem } from "@/components/common/ExpenseList";
@@ -8,55 +8,53 @@ import { useLastDefined } from "@/lib/hooks";
 type Args = { groupId?: Id<"groups">; friendId?: Id<"users">; search?: string; includeDeleted?: boolean };
 
 /**
- * First page is a live subscription (new expenses appear instantly). Extra
- * pages are fetched by date cursor and appended. While the arguments change
- * (a new search) the previous list stays up instead of a skeleton.
+ * Convex pagination over `expenses.list`: every loaded page is a live subscription through the
+ * offline layer, so queued changes show on any page and new expenses land in the first, and the
+ * server keeps pages adjacent as rows come and go. While the arguments change (a new search) the
+ * previous list stays up instead of a skeleton.
  */
 export function usePagedExpenses(args: Args, pageSize = 50) {
   const key = JSON.stringify(args);
-  const first = useQuery(api.expenses.list, { ...args, limit: pageSize });
   // Cursors belong to one set of arguments; a new key starts from the first page again.
-  const [paging, setPaging] = useState<{ key: string; cursors: number[] }>({ key, cursors: [] });
-  const extraCursor = paging.key === key ? paging.cursors : [];
-  const pages = [first];
-  // Hooks can't be called in a loop with variable count, so cap at 8 extra pages.
-  const extras = [
-    useQuery(api.expenses.list, extraCursor[0] !== undefined ? { ...args, limit: pageSize, before: extraCursor[0] } : "skip"),
-    useQuery(api.expenses.list, extraCursor[1] !== undefined ? { ...args, limit: pageSize, before: extraCursor[1] } : "skip"),
-    useQuery(api.expenses.list, extraCursor[2] !== undefined ? { ...args, limit: pageSize, before: extraCursor[2] } : "skip"),
-    useQuery(api.expenses.list, extraCursor[3] !== undefined ? { ...args, limit: pageSize, before: extraCursor[3] } : "skip"),
-    useQuery(api.expenses.list, extraCursor[4] !== undefined ? { ...args, limit: pageSize, before: extraCursor[4] } : "skip"),
-    useQuery(api.expenses.list, extraCursor[5] !== undefined ? { ...args, limit: pageSize, before: extraCursor[5] } : "skip"),
-    useQuery(api.expenses.list, extraCursor[6] !== undefined ? { ...args, limit: pageSize, before: extraCursor[6] } : "skip"),
-    useQuery(api.expenses.list, extraCursor[7] !== undefined ? { ...args, limit: pageSize, before: extraCursor[7] } : "skip"),
-  ];
-  pages.push(...extras.slice(0, extraCursor.length));
+  const [paging, setPaging] = useState<{ key: string; cursors: string[] }>({ key, cursors: [] });
+  const cursors = paging.key === key ? paging.cursors : [];
+  // shortcut: a search reads 500 rows a page so a rare term doesn't take dozens of round trips; add a search index if lists grow past a few thousand rows.
+  const numItems = args.search ? 500 : pageSize;
+  // Every page but the last is pinned to the range it had when the next one was loaded
+  // (`endCursor`, as Convex's own usePaginatedQuery does); otherwise a new expense pushing page
+  // 1's last row past `numItems` would drop that row into no page at all until a reload.
+  const pages = useQueries(
+    api.expenses.list,
+    [null, ...cursors].map((cursor, i) => ({ ...args, paginationOpts: { numItems, cursor, endCursor: cursors[i] } })),
+  );
+  const last = pages[pages.length - 1];
+  const next = last && !last.isDone ? last.continueCursor : null;
+  const hasMore = next !== null;
+  const loadingMore = cursors.length > 0 && last === undefined;
 
   const items = useMemo(() => {
-    if (!first) return undefined;
+    if (!pages[0]) return undefined;
     const seen = new Set<string>();
     const out: ExpenseListItem[] = [];
     for (const p of pages) {
-      if (!p) continue;
-      for (const it of p.items) {
+      for (const it of p?.page ?? []) {
         if (seen.has(it._id)) continue;
         seen.add(it._id);
         out.push(it as ExpenseListItem);
       }
     }
-    return out;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [first, ...extras]);
+    // Nothing kept yet with more to read is still loading, not empty.
+    return out.length === 0 && hasMore ? undefined : out;
+  }, [pages, hasMore]);
 
-  const lastPage = pages[pages.length - 1];
-  const more = Boolean(lastPage && lastPage.nextBefore !== null);
-  const hasMore = more && extraCursor.length < 8;
-  // shortcut: 8 fixed query slots (~450 rows); the list says so instead of stopping silently. Move to Convex `paginate` if anyone needs more.
-  const capped = more && extraCursor.length >= 8;
-  const loadingMore = extraCursor.length > 0 && lastPage === undefined;
   const loadMore = () => {
-    const next = lastPage?.nextBefore;
-    if (next && !extraCursor.includes(next)) setPaging({ key, cursors: [...extraCursor, next] });
+    if (next && !cursors.includes(next)) setPaging({ key, cursors: [...cursors, next] });
   };
-  return { items: useLastDefined(items), hasMore, loadMore, loadingMore, capped };
+  // The list's filters run after a page is read, so a page can come back empty (a rare search
+  // term, a friend's group expenses); keep reading until a row or the end turns up.
+  useEffect(() => {
+    if (hasMore && items === undefined) loadMore();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasMore, items]);
+  return { items: useLastDefined(items), hasMore, loadMore, loadingMore };
 }

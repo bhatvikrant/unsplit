@@ -89,7 +89,7 @@ export function GroupPage() {
   const restore = useMutation(api.groups.restore);
   const convex = useConvex();
   const requireOnline = useRequireOnline();
-  const { items, hasMore, loadMore, loadingMore, capped } = usePagedExpenses({ groupId });
+  const { items, hasMore, loadMore, loadingMore } = usePagedExpenses({ groupId });
   const [copied, setCopied] = useState(false);
 
   if (group === undefined) return failed ? <NotFound /> : <RowSkeleton />;
@@ -154,7 +154,6 @@ export function GroupPage() {
             hasMore={hasMore}
             onLoadMore={loadMore}
             loadingMore={loadingMore}
-            capped={capped}
             empty={
               <EmptyState
                 icon={Receipt}

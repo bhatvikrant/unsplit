@@ -1,3 +1,4 @@
+import { paginationOptsValidator, type PaginationResult } from "convex/server";
 import { ConvexError, v } from "convex/values";
 import { internalMutation, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -177,58 +178,49 @@ function matches(e: Doc<"expenses">, q: string) {
 
 export const list = query({
   args: {
+    paginationOpts: paginationOptsValidator,
     groupId: v.optional(v.id("groups")),
     friendId: v.optional(v.id("users")),
     search: v.optional(v.string()),
-    before: v.optional(v.number()),
-    limit: v.optional(v.number()),
     includeDeleted: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const me = await requireUserId(ctx);
-    const limit = Math.min(args.limit ?? 50, 200);
-    const before = args.before ?? Number.MAX_SAFE_INTEGER;
     const search = args.search?.trim();
-    const scanCap = search ? 1500 : limit * 3 + 50;
     const nameCache: NameCache = new Map();
     const sharesCache = new Map<Id<"expenses">, Doc<"expenseShares">[]>();
-    let candidates: Doc<"expenses">[];
-    let scanned: number;
-    let oldest: number | null = null;
+    let paged: PaginationResult<Doc<"expenses">>;
 
-    // Independent reads go out together (Promise.all) rather than one round trip per row.
+    // The filters below run after the index page is read, so a page can come back short or even
+    // empty; the client keeps paging until `isDone`. Independent reads go out together (Promise.all).
     if (args.groupId) {
       await assertGroupMember(ctx, args.groupId, me, { allowDeleted: true });
-      candidates = await ctx.db
+      paged = await ctx.db
         .query("expenses")
-        .withIndex("by_group_date", (q) => q.eq("groupId", args.groupId).lte("date", before))
+        .withIndex("by_group_date", (q) => q.eq("groupId", args.groupId))
         .order("desc")
-        .take(scanCap);
-      scanned = candidates.length;
-      oldest = candidates[candidates.length - 1]?.date ?? null;
+        .paginate(args.paginationOpts);
     } else {
       const shares = await ctx.db
         .query("expenseShares")
-        .withIndex("by_user_date", (q) => q.eq("userId", me).eq("deleted", Boolean(args.includeDeleted)).lte("date", before))
+        .withIndex("by_user_date", (q) => q.eq("userId", me).eq("deleted", Boolean(args.includeDeleted)))
         .order("desc")
-        .take(scanCap);
-      scanned = shares.length;
-      oldest = shares[shares.length - 1]?.date ?? null;
-      const ids = [...new Set(shares.map((s) => s.expenseId))];
-      candidates = (await Promise.all(ids.map((id) => ctx.db.get(id)))).filter((e): e is Doc<"expenses"> => e !== null);
+        .paginate(args.paginationOpts);
+      const ids = [...new Set(shares.page.map((s) => s.expenseId))];
+      let found = (await Promise.all(ids.map((id) => ctx.db.get(id)))).filter((e): e is Doc<"expenses"> => e !== null);
       // A deleted group's expenses stay out of these lists, as they stay out of the balances.
-      const groups = new Map<Id<"groups">, Promise<Doc<"groups"> | null>>();
+      const groupLive = new Map<Id<"groups">, Promise<boolean>>();
       const inLiveGroup = (gid: Id<"groups">) => {
-        let p = groups.get(gid);
-        if (!p) { p = ctx.db.get(gid); groups.set(gid, p); }
-        return p.then((g) => Boolean(g && !g.deletedAt));
+        let p = groupLive.get(gid);
+        if (!p) groupLive.set(gid, (p = ctx.db.get(gid).then((g) => Boolean(g && !g.deletedAt))));
+        return p;
       };
-      const live = await Promise.all(candidates.map((e) => (e.groupId ? inLiveGroup(e.groupId) : true)));
-      candidates = candidates.filter((_, i) => live[i]);
+      const live = await Promise.all(found.map((e) => (e.groupId ? inLiveGroup(e.groupId) : true)));
+      found = found.filter((_, i) => live[i]);
       if (args.friendId) {
         const pk = pairKeyOf(me, args.friendId);
         const shared = await Promise.all(
-          candidates.map(async (e) => {
+          found.map(async (e) => {
             if (e.pairKey === pk) return true;
             if (!e.groupId) return false;
             const rows = await loadShares(ctx, e._id);
@@ -236,20 +228,14 @@ export const list = query({
             return rows.some((x) => x.userId === args.friendId);
           }),
         );
-        candidates = candidates.filter((_, i) => shared[i]);
+        found = found.filter((_, i) => shared[i]);
       }
+      paged = { ...shares, page: found };
     }
 
-    const kept = candidates.filter((e) => Boolean(e.deletedAt) === Boolean(args.includeDeleted) && (!search || matches(e, search)));
-    const page = kept.slice(0, limit);
-    const items = await Promise.all(page.map((e) => toRow(ctx, e, me, nameCache, sharesCache.get(e._id))));
-    const exhausted = scanned < scanCap && kept.length <= limit;
-    // The next page starts at the last date shown (the range is inclusive and the client drops
-    // repeats, so expenses sharing that date are not skipped), or, when nothing in this scan
-    // window was kept (a search, a friend's group expenses, a deleted group), at the oldest date
-    // scanned, so older rows stay reachable.
-    // shortcut: more than `limit` expenses with the very same date stall paging there; move to a (date, id) cursor if that ever happens.
-    return { items, nextBefore: exhausted ? null : (page[page.length - 1]?.date ?? oldest) };
+    const kept = paged.page.filter((e) => Boolean(e.deletedAt) === Boolean(args.includeDeleted) && (!search || matches(e, search)));
+    const page = await Promise.all(kept.map((e) => toRow(ctx, e, me, nameCache, sharesCache.get(e._id))));
+    return { ...paged, page };
   },
 });
 

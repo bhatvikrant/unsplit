@@ -21,7 +21,7 @@ export type PrepareCtx = {
   /** Read a query through the overlay (server value plus pending ops). */
   read: (name: string, args: Record<string, unknown>) => unknown;
   /** Every cached expense list / recurring / deleted entry, for finding an expense by id. */
-  expenseRows: () => Iterable<ExpList["items"][number]>;
+  expenseRows: () => Iterable<ExpList["page"][number]>;
 };
 
 export type Prepared = {
